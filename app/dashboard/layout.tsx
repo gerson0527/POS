@@ -125,7 +125,7 @@ export default function DashboardLayout({
       <div className="md:hidden flex items-center justify-between px-4 py-3 bg-sidebar border-b border-line">
         <div className="flex items-center gap-2">
           <Terminal className="w-5 h-5 text-accent" />
-          <span className="font-mono text-sm font-bold tracking-wider text-fg">
+          <span className="text-sm font-bold text-fg">
             POS DIAN
           </span>
         </div>
@@ -150,14 +150,14 @@ export default function DashboardLayout({
               className="flex items-center gap-2.5 group"
               onClick={() => setIsMobileOpen(false)}
             >
-              <div className="w-7 h-7 bg-accent flex items-center justify-center rounded-[4px] font-mono text-white font-extrabold text-xs shadow-[0_0_12px_var(--accent)]">
+              <div className="w-7 h-7 bg-accent flex items-center justify-center rounded-[4px] text-white font-extrabold text-xs shadow-[0_0_12px_var(--accent)]">
                 PD
               </div>
               <div>
-                <div className="font-mono font-bold text-sm tracking-wider text-fg group-hover:text-accent transition-colors">
+                <div className="font-bold text-sm text-fg group-hover:text-accent transition-colors">
                   POS DIAN
                 </div>
-                <div className="font-mono text-[10px] text-fg-muted tracking-widest uppercase">
+                <div className="text-[10px] text-fg-muted">
                   v1.0.4
                 </div>
               </div>
@@ -182,8 +182,8 @@ export default function DashboardLayout({
                   key={item.href}
                   href={item.href}
                   onClick={() => setIsMobileOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[4px] font-mono text-xs font-bold tracking-wider transition-all duration-150 relative ${isActive
-                      ? 'bg-accent text-white shadow-md font-extrabold'
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[4px] text-xs font-medium transition-all duration-150 relative ${isActive
+                      ? 'bg-accent text-white shadow-md font-semibold'
                       : 'text-fg-mid hover:bg-hover hover:text-fg'
                     }`}
                 >

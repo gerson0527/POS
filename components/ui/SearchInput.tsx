@@ -21,7 +21,7 @@ export function SearchInput({ wrapperClassName, inputClassName, size = 'md', ...
       <input
         type="text"
         className={cn(
-          'w-full bg-surface text-fg rounded border border-line text-xs uppercase outline-none focus:border-accent',
+          'w-full bg-surface text-fg rounded border border-line text-xs outline-none focus:border-accent',
           s.input,
           inputClassName,
         )}

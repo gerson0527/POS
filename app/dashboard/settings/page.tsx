@@ -30,7 +30,7 @@ export default function SettingsPage() {
   ]
 
   return (
-    <div className="space-y-6 font-mono">
+    <div className="space-y-6">
       {/* Header Banner */}
       <PageHeader
         icon={<Settings className="w-4 h-4" />}

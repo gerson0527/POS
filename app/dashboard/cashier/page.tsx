@@ -153,7 +153,7 @@ export default function CashierPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-line-soft pb-4">
         <div>
-          <div className="flex items-center gap-2 text-accent font-mono text-xs tracking-widest uppercase font-bold">
+          <div className="flex items-center gap-2 text-accent text-xs font-semibold">
             <span>MÓDULO DE CAJA // ARQUEOS Y CIERRES Z</span>
           </div>
         </div>
@@ -177,7 +177,7 @@ export default function CashierPage() {
 
       {/* BANNER DE ALERTA DE TURNO VENCIDO */}
       {activeSessionSummary?.hasOpenSession && activeSessionSummary?.isOverdue && (
-        <div className="bg-danger-dim border-2 border-alert rounded-lg p-4 font-mono text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-red-soft animate-pulse shadow-xl">
+        <div className="bg-danger-dim border-2 border-alert rounded-lg p-4 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-red-soft animate-pulse shadow-xl">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-6 h-6 text-alert shrink-0" />
             <div>

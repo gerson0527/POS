@@ -69,7 +69,7 @@ function LoginForm() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-6 h-6 text-accent" />
-              <span className="text-[11px] text-accent font-bold uppercase tracking-widest bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
+              <span className="text-[11px] text-accent font-semibold bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
                 POS DIAN
               </span>
             </div>
@@ -142,7 +142,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 bg-accent hover:bg-accent-hover disabled:bg-accent/50 text-white font-bold uppercase text-xs tracking-wider py-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-accent/20 hover:shadow-accent/40 disabled:cursor-not-allowed cursor-pointer"
+            className="w-full mt-2 bg-accent hover:bg-accent-hover disabled:bg-accent/50 text-white font-semibold text-sm py-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-accent/20 hover:shadow-accent/40 disabled:cursor-not-allowed cursor-pointer"
           >
             {loading ? (
               <>

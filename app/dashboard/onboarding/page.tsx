@@ -168,7 +168,7 @@ export default function OnboardingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-app font-mono">
+      <div className="min-h-screen flex items-center justify-center bg-app">
         <div className="flex items-center gap-2 text-accent text-sm">
           <Loader2 className="w-4 h-4 animate-spin" />
           <span>CARGANDO WIZARD DE ONBOARDING...</span>
@@ -179,7 +179,7 @@ export default function OnboardingPage() {
 
   if (!isAdmin || alreadyCompleted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-app font-mono p-6">
+      <div className="min-h-screen flex items-center justify-center bg-app p-6">
         <div className="bg-panel border border-line rounded-[6px] p-6 max-w-md text-center">
           <AlertCircle className="w-10 h-10 text-warning mx-auto mb-3" />
           <h2 className="text-fg font-bold uppercase text-sm mb-2">
@@ -195,7 +195,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-app font-mono py-8 px-4 flex items-center justify-center">
+    <div className="min-h-screen bg-app py-8 px-4 flex items-center justify-center">
       <div className="w-full max-w-3xl space-y-6">
         {/* Header Banner */}
         <div className="bg-gradient-to-r from-panel via-veil to-ember border border-accent/30 rounded-[8px] p-6 border-l-4 border-l-accent shadow-2xl">
@@ -277,7 +277,7 @@ export default function OnboardingPage() {
                     value={form.nit}
                     onChange={(e) => setForm({ ...form, nit: e.target.value })}
                     placeholder="900123456-7"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
                 <Field icon={<Hash className="w-3.5 h-3.5" />} label="DV (opcional, ya incluido en el NIT)">
@@ -287,7 +287,7 @@ export default function OnboardingPage() {
                     value={form.dv}
                     onChange={(e) => setForm({ ...form, dv: e.target.value.replace(/\D/g, '') })}
                     placeholder="7"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
                 <Field icon={<Building2 className="w-3.5 h-3.5" />} label="Razón social *">
@@ -296,7 +296,7 @@ export default function OnboardingPage() {
                     value={form.legalName}
                     onChange={(e) => setForm({ ...form, legalName: e.target.value })}
                     placeholder="Razón social registrada en cámara de comercio"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
                 <Field icon={<Building2 className="w-3.5 h-3.5" />} label="Nombre comercial *">
@@ -305,7 +305,7 @@ export default function OnboardingPage() {
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     placeholder="Cómo te conocen tus clientes"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
                 <Field icon={<FileText className="w-3.5 h-3.5" />} label="Razón social comercial (opcional)">
@@ -314,7 +314,7 @@ export default function OnboardingPage() {
                     value={form.tradeName}
                     onChange={(e) => setForm({ ...form, tradeName: e.target.value })}
                     placeholder="Si difiere de la razón social"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
               </div>
@@ -335,7 +335,7 @@ export default function OnboardingPage() {
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     placeholder="contacto@empresa.com"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
                 <Field icon={<Phone className="w-3.5 h-3.5" />} label="Teléfono *">
@@ -344,7 +344,7 @@ export default function OnboardingPage() {
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     placeholder="+57 601 123 4567"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
                 <Field icon={<MapPin className="w-3.5 h-3.5" />} label="Dirección *">
@@ -353,7 +353,7 @@ export default function OnboardingPage() {
                     value={form.address}
                     onChange={(e) => setForm({ ...form, address: e.target.value })}
                     placeholder="Calle 100 # 15-20"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
                 <Field icon={<MapPin className="w-3.5 h-3.5" />} label="Ciudad / Municipio *">
@@ -362,7 +362,7 @@ export default function OnboardingPage() {
                     value={form.city}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
                     placeholder="Bogotá D.C."
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
                 <Field icon={<MapPin className="w-3.5 h-3.5" />} label="Departamento *">
@@ -371,7 +371,7 @@ export default function OnboardingPage() {
                     value={form.department}
                     onChange={(e) => setForm({ ...form, department: e.target.value })}
                     placeholder="Cundinamarca"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
                 <Field icon={<Globe className="w-3.5 h-3.5" />} label="País">
@@ -379,7 +379,7 @@ export default function OnboardingPage() {
                     type="text"
                     value={form.country}
                     onChange={(e) => setForm({ ...form, country: e.target.value })}
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
               </div>
@@ -400,7 +400,7 @@ export default function OnboardingPage() {
                     value={form.legalRepresentative}
                     onChange={(e) => setForm({ ...form, legalRepresentative: e.target.value })}
                     placeholder="Nombre del representante legal"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
                 <Field icon={<Hash className="w-3.5 h-3.5" />} label="Cédula del representante">
@@ -409,7 +409,7 @@ export default function OnboardingPage() {
                     value={form.legalRepDocNumber}
                     onChange={(e) => setForm({ ...form, legalRepDocNumber: e.target.value })}
                     placeholder="1234567890"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
                 <Field
@@ -422,7 +422,7 @@ export default function OnboardingPage() {
                     value={form.economicActivity}
                     onChange={(e) => setForm({ ...form, economicActivity: e.target.value })}
                     placeholder="4711"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
                 <Field icon={<Globe className="w-3.5 h-3.5" />} label="Sitio web">
@@ -431,7 +431,7 @@ export default function OnboardingPage() {
                     value={form.website}
                     onChange={(e) => setForm({ ...form, website: e.target.value })}
                     placeholder="https://empresa.com"
-                    className="px-3 py-2.5 font-mono text-xs outline-none"
+                    className="px-3 py-2.5 text-xs outline-none"
                   />
                 </Field>
               </div>
@@ -525,7 +525,7 @@ function Field({
         {label}
       </Label>
       {children}
-      {help && <p className="text-[10px] text-fg-faint font-mono">{help}</p>}
+      {help && <p className="text-[10px] text-fg-faint">{help}</p>}
     </div>
   )
 }

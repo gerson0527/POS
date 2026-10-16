@@ -31,7 +31,7 @@ export function SectionPanel({
             <div className="w-1.5 h-3.5 bg-accent rounded-sm" />
             <div>
               {title && (
-                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-fg">
+                <h3 className="text-sm font-semibold text-fg">
                   {title}
                 </h3>
               )}

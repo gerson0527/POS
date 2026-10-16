@@ -22,7 +22,7 @@ export function TacticalButton({
   ...props
 }: TacticalButtonProps) {
   let baseStyles =
-    'inline-flex items-center justify-center gap-2 whitespace-nowrap flex-nowrap font-mono uppercase font-bold tracking-wider rounded-[4px] border transition-all duration-150 select-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none'
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap flex-nowrap font-semibold rounded-md border transition-all duration-150 select-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none'
 
   let variantStyles = ''
   if (variant === 'primary') {
@@ -44,11 +44,11 @@ export function TacticalButton({
 
   let sizeStyles = ''
   if (size === 'sm') {
-    sizeStyles = 'px-3 py-1.5 text-[11px] h-8'
+    sizeStyles = 'px-3 py-1.5 text-xs h-8'
   } else if (size === 'md') {
-    sizeStyles = 'px-4 py-2 text-xs h-9'
+    sizeStyles = 'px-4 py-2 text-sm h-9'
   } else if (size === 'lg') {
-    sizeStyles = 'px-6 py-2.5 text-sm h-11'
+    sizeStyles = 'px-6 py-2.5 text-base h-11'
   }
 
   return (

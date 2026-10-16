@@ -28,7 +28,7 @@ export function Tabs<T extends string>({ items, value, onChange, variant = 'pill
               key={tab.id}
               onClick={() => onChange(tab.id)}
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-wider border-b-2 transition-colors cursor-pointer',
+                'flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer',
                 isActive
                   ? 'border-accent text-accent'
                   : 'border-transparent text-fg-muted hover:text-fg',
@@ -63,7 +63,7 @@ export function Tabs<T extends string>({ items, value, onChange, variant = 'pill
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded font-mono text-xs font-bold tracking-wider transition-all cursor-pointer',
+              'flex items-center gap-2 px-4 py-2 rounded text-xs font-semibold transition-all cursor-pointer',
               isActive
                 ? 'bg-accent text-white border border-accent'
                 : 'bg-surface text-fg-muted border border-line hover:text-fg hover:border-line-strong',

@@ -115,7 +115,7 @@ export function Pagination({
               <button
                 key={pageNum}
                 onClick={() => onPageChange(pageNum)}
-                className={`min-w-[28px] h-7 px-2 rounded font-mono text-xs font-bold transition-all ${
+                className={`min-w-[28px] h-7 px-2 rounded text-xs font-medium transition-all ${
                   isActive
                     ? 'bg-accent text-white shadow-sm'
                     : 'bg-hover border border-line text-fg hover:border-accent hover:text-accent'

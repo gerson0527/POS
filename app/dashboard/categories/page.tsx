@@ -180,7 +180,7 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="space-y-6 font-mono">
+    <div className="space-y-6">
       <PageHeader
         icon={<Tags className="w-4 h-4" />}
         kicker="PRODUCT TAXONOMY // TAXONOMÍA & ETIQUETAS"

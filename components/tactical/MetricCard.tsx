@@ -68,7 +68,7 @@ export function MetricCard({
       )}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
-        <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-fg-muted">
+        <span className="text-xs font-semibold text-fg-muted">
           {title}
         </span>
         {icon && <div className="text-fg-muted shrink-0">{icon}</div>}
@@ -77,14 +77,14 @@ export function MetricCard({
       <div className="space-y-1">
         <div
           className={cn(
-            'font-mono text-2xl md:text-3xl font-bold tracking-tight text-fg',
+            'text-2xl md:text-3xl font-bold tracking-tight text-fg',
             accentValue && accent.text,
           )}
         >
           {value}
         </div>
         {(subtext || trend) && (
-          <div className="flex items-center gap-2 text-xs font-mono">
+          <div className="flex items-center gap-2 text-xs">
             {trend && (
               <span className={`font-semibold inline-flex items-center gap-1 ${trendColor}`}>
                 {trendDirection === 'up' && <TrendingUp className="w-3 h-3" />}

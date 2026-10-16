@@ -35,12 +35,12 @@ export function PageHeader({
       )}
     >
       <div>
-        <div className={cn('flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider', kickerColor)}>
+        <div className={cn('flex items-center gap-2 text-xs font-semibold', kickerColor)}>
           {icon}
           <span>{kicker}</span>
         </div>
-        <h1 className={cn('font-mono text-2xl font-bold tracking-tight uppercase mt-1', titleColor)}>{title}</h1>
-        {description && <p className="text-xs text-fg-muted font-mono mt-1">{description}</p>}
+        <h1 className={cn('text-2xl font-bold tracking-tight mt-1', titleColor)}>{title}</h1>
+        {description && <p className="text-xs text-fg-muted mt-1">{description}</p>}
       </div>
 
       {actions && <div className={cn('flex items-center gap-2', actionsClassName)}>{actions}</div>}

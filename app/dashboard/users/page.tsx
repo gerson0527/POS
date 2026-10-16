@@ -92,7 +92,7 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-6 font-mono">
+    <div className="space-y-6">
       {/* Header Banner */}
       <PageHeader
         icon={<Users className="w-4 h-4" />}

@@ -309,7 +309,7 @@ export default function InventoryPage() {
   )
 
   return (
-    <div className="space-y-6 font-mono">
+    <div className="space-y-6">
       {/* Header Banner */}
       <PageHeader
         breakpoint="lg"

@@ -387,7 +387,7 @@ export default function DashboardPOSPage() {
     }))
 
   return (
-    <div className="h-[calc(100vh-100px)] md:h-[calc(100vh-110px)] flex flex-col justify-between overflow-hidden gap-3 font-mono">
+    <div className="h-[calc(100vh-100px)] md:h-[calc(100vh-110px)] flex flex-col justify-between overflow-hidden gap-3">
       {/* ALERTA CRÍTICA: TURNO VENCIDO DEL DÍA ANTERIOR */}
       {overdueSessionInfo?.isOverdue && (
         <div className="bg-danger-dim border border-alert text-red-soft px-4 py-2 rounded text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shrink-0 animate-pulse">
