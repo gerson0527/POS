@@ -1,0 +1,30 @@
+# v0 sandbox internal files
+__v0_runtime_loader.js
+__v0_devtools.tsx
+__v0_jsx-dev-runtime.ts
+.snowflake/
+.v0-trash/
+.vercel/
+
+# Environment variables (NUNCA commitear secretos)
+.env
+.env*.local
+!.env.example
+
+# Common ignores
+node_modules
+.next/
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build artifacts
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+packages/*/dist/
+src-tauri/target/
+
+# Neon CLI context (IDs de proyecto, no secretos)
+.neon/

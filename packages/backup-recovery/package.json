@@ -1,0 +1,14 @@
+{
+  "name": "@pos/backup-recovery",
+  "version": "1.0.0",
+  "description": "Enterprise Encrypted Automated Backup & Disaster Recovery Engine for POS Terminals",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

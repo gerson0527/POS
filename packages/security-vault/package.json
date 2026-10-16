@@ -1,0 +1,17 @@
+{
+  "name": "@pos/security-vault",
+  "version": "1.0.0",
+  "description": "Enterprise Security Vault for DIAN Certificates, Ed25519 Licensing & Hardware Fingerprinting",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "crypto-js": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
+    "typescript": "^5.0.0"
+  }
+}

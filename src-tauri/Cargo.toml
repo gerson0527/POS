@@ -1,0 +1,20 @@
+[package]
+name = "pos-retail-desktop"
+version = "3.0.0"
+description = "Enterprise POS Desktop Application Container (Tauri 2.x)"
+authors = ["POS Retail Enterprise Team"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0.0", features = ["tray-icon", "image-png"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rusqlite = { version = "0.31", features = ["bundled"] }
+tokio = { version = "1.0", features = ["full"] }
+serialport = "4.3"
+chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"
+env_logger = "0.11"

@@ -1,0 +1,28 @@
+# Docker ignore rules
+.git
+.gitignore
+.next
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+.env
+.env*.local
+Dockerfile*
+docker-compose*
+README.md
+
+# Código muerto / no necesario para el build de Next
+apps
+libs
+test
+prisma
+postman-dian
+packages/*/dist
+src-tauri
+*.tsbuildinfo
+ARQUITECTURA_*.md
+PLAN_REFACTORIZACION.md
+pnpm-lock.yaml

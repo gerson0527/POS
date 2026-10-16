@@ -1,0 +1,20 @@
+// Barrel de acciones POS (Fase 3: pos-actions.ts particionado en modulos por dominio).
+// API publica identica: los consumidores siguen importando desde '@/app/actions/pos-actions'.
+// Sin 'use server' aqui: Next lo prohíbe junto a `export *`; cada modulo de dominio lo lleva.
+export * from './products'
+export * from './categories'
+export * from './locations'
+export * from './sales'
+export * from './customers'
+export * from './inventory'
+export * from './reports'
+export * from './suppliers'
+export * from './purchase-orders'
+export * from './company'
+export * from './factus-config'
+export * from './numerations'
+export * from './users'
+export * from './tenants'
+export * from './cashier'
+export * from './invoices'
+export * from './factus-service'

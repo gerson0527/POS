@@ -1,0 +1,30 @@
+# docker-compose.override.yml
+# Se fusiona automáticamente con docker-compose.yml al ejecutar:
+#   docker-compose up --build
+# Para producción explícita usa:
+#   docker-compose -f docker-compose.yml up --build
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: pos_dian_app_dev
+    restart: unless-stopped
+    command: npm run dev
+    ports:
+      - '${APP_PORT:-3001}:3000'
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-posuser}:${POSTGRES_PASSWORD:-pospassword}@postgres:5432/${POSTGRES_DB:-posdian}
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+      - NEXT_TELEMETRY_DISABLED=1
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      postgres:
+        condition: service_healthy

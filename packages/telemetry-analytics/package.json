@@ -1,0 +1,14 @@
+{
+  "name": "@pos/telemetry-analytics",
+  "version": "1.0.0",
+  "description": "Enterprise POS Performance Telemetry, Encrypted Rotating Logger & System Diagnostics",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@pos/shared-domain",
+  "version": "1.0.0",
+  "description": "Enterprise POS Shared Domain Entities, DTOs & Interfaces",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

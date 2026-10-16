@@ -1,0 +1,48 @@
+services:
+  # Aplicación POS DIAN
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pos_dian_app
+    restart: always
+    ports:
+      - '${APP_PORT:-3001}:3000'
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-posuser}:${POSTGRES_PASSWORD:-pospassword}@postgres:5432/${POSTGRES_DB:-posdian}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pos_network
+
+  # Base de Datos PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: pos_dian_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-posuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pospassword}
+      POSTGRES_DB: ${POSTGRES_DB:-posdian}
+    expose:
+      - '5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-posuser} -d ${POSTGRES_DB:-posdian}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pos_network
+
+volumes:
+  postgres_data:
+
+networks:
+  pos_network:
+    driver: bridge

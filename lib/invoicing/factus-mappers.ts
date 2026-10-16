@@ -1,0 +1,224 @@
+// factus-mappers.ts — Mapeos puros POS ↔ Factus/DIAN (Fase 4.25, §7.1).
+// Extraído de factus.ts: funciones nominales y testeables, sin estado de clase.
+// build-bill.ts importa de aquí (rompe la dependencia invertida sobre FactusProvider).
+
+import {
+  InvoicePayload,
+  InvoicePaymentDetailPayload,
+  InvoiceResult,
+} from './types'
+import { factusPaymentCode } from '@/lib/catalogs/payment-methods'
+
+// Mapeo de tipos de documento POS a códigos DIAN
+const POS_TO_FACTUS_DOCUMENT_TYPE: Record<string, string> = {
+  CC: '13',
+  TI: '12',
+  CE: '22',
+  PAS: '41',
+  PASAPORTE: '41',
+  NIT: '31',
+  RC: '12',
+}
+
+/** Respuesta cruda de /v2/bills/validate. */
+export interface FactusRawResponse {
+  status?: string
+  message?: string
+  data?: {
+    bill?: {
+      id?: number
+      cufe?: string
+      qr?: string
+      public_url?: string
+      xml_url?: string
+      status?: string
+    }
+  }
+}
+
+/** Mapea método de pago POS → código DIAN/Factus. */
+export function mapPaymentMethod(posMethod: string): string {
+  return factusPaymentCode(posMethod)
+}
+
+/** Mapea tipo de documento POS → código DIAN. */
+export function mapDocumentType(posDocType: string): string {
+  if (!posDocType) return '13'
+  return POS_TO_FACTUS_DOCUMENT_TYPE[posDocType.toUpperCase()] || '13'
+}
+
+/** Mapea ivaRate (19,5,8,0) → (code, rate, excluded). */
+export function mapTax(rate: number | string): { code: string; rate: string; is_excluded: boolean } {
+  const r = Number(rate)
+  if (!r || r === 0) return { code: '01', rate: '0.00', is_excluded: true }
+  return { code: '01', rate: r.toFixed(2), is_excluded: false }
+}
+
+/** Normaliza cualquier número a string con 2 decimales (estándar DIAN). */
+export function toMoneyString(value: number | string | null | undefined): string {
+  const n = Number(value ?? 0)
+  if (!Number.isFinite(n)) return '0.00'
+  return n.toFixed(2)
+}
+
+/** Convierte un valor del método de pago POS → InvoicePaymentDetailPayload */
+export function toPaymentDetail(
+  posMethod: string,
+  amount: number,
+  referenceCode?: string
+): InvoicePaymentDetailPayload {
+  return {
+    payment_form: '1',
+    payment_method_code: mapPaymentMethod(posMethod),
+    reference_code: referenceCode,
+    amount: toMoneyString(amount),
+  }
+}
+
+/** Construye el payload final para /v2/bills/validate a partir del InvoicePayload genérico. */
+export function toFactusPayload(invoice: InvoicePayload) {
+  return {
+    numbering_range_id: invoice.numbering_range_id,
+    reference_code: invoice.reference_code,
+    document: invoice.document,
+    operation_type: invoice.operation_type,
+    send_email: invoice.send_email ?? false,
+    observation: invoice.observation ?? '',
+    cash_rounding_amount: toMoneyString(0),
+    payment_details: invoice.payment_details.map((p) => ({
+      payment_form: String(p.payment_form),
+      payment_method_code: String(p.payment_method_code),
+      reference_code: p.reference_code,
+      amount: toMoneyString(p.amount),
+      due_date: p.due_date,
+    })),
+    customer: {
+      ...invoice.customer,
+      identification_document_code: String(invoice.customer.identification_document_code),
+      identification: String(invoice.customer.identification),
+      municipality_code: String(invoice.customer.municipality_code),
+      legal_organization_code: String(invoice.customer.legal_organization_code),
+      tribute_code: String(invoice.customer.tribute_code),
+      dv: invoice.customer.dv ? String(invoice.customer.dv) : undefined,
+      phone: invoice.customer.phone ? String(invoice.customer.phone) : undefined,
+    },
+    items: invoice.items.map((it) => ({
+      code_reference: String(it.code_reference),
+      name: String(it.name),
+      quantity: toMoneyString(it.quantity),
+      price: toMoneyString(it.price),
+      discount_rate: it.discount_rate !== undefined ? toMoneyString(it.discount_rate) : '0.00',
+      unit_measure_code: String(it.unit_measure_code ?? '94'),
+      standard_code: String(it.standard_code ?? '999'),
+      scheme_id: it.scheme_id !== undefined ? String(it.scheme_id) : undefined,
+      taxes: (it.taxes || []).map((t) => ({
+        code: String(t.code),
+        rate: toMoneyString(t.rate),
+        is_excluded: t.is_excluded,
+      })),
+    })),
+  }
+}
+
+/** Parsea el body de respuesta (JSON o crudo) sin lanzar. */
+export function parseFactusBody(text: string): FactusRawResponse {
+  try {
+    return text ? JSON.parse(text) : {}
+  } catch {
+    // no JSON; keep as raw
+    return {}
+  }
+}
+
+/** Extrae el bill de la respuesta (algunos errores traen `data` directo). */
+export function extractBill(json: FactusRawResponse): any {
+  return (json as any)?.data?.bill ?? (json as any)?.data
+}
+
+/** Estado DIAN devuelto por Factus (bill.status o status raíz). */
+export function getFactusDianStatus(json: FactusRawResponse, bill: any): string | undefined {
+  return (bill?.status ?? (json as any)?.status) as string | undefined
+}
+
+/**
+ * Arma el mensaje de fallo de /v2/bills/validate.
+ * Factus V2 a veces devuelve `errors` como objeto {campo: [msgs]} en vez de array.
+ */
+export function buildFactusFailureMessage(status: number, json: FactusRawResponse): string {
+  let detail = ''
+  const errs = (json as any)?.errors
+  if (errs && typeof errs === 'object' && !Array.isArray(errs)) {
+    detail = Object.entries(errs)
+      .map(([field, msgs]) => {
+        const msg = Array.isArray(msgs) ? msgs.join(', ') : String(msgs)
+        return `  • ${field}: ${msg}`
+      })
+      .join('\n')
+  } else if (Array.isArray(errs)) {
+    detail = errs
+      .map((e: any) => `  • ${e?.message ?? JSON.stringify(e)}`)
+      .join('\n')
+  }
+
+  const baseMsg = (json as any)?.message || `Factus V2 respondió con status ${status}`
+  return detail ? `${baseMsg}\n\n${detail}` : baseMsg
+}
+
+/**
+ * La respuesta de /v2/bills/validate trae el CUFE pero NO siempre trae los
+ * links (QR/PDF/XML): están en el detalle GET /v2/bills/{number}.
+ */
+export async function fetchBillLinks(
+  baseUrl: string,
+  token: string,
+  bill: any,
+  current: { qrCodeUrl?: string; pdfUrl?: string; xmlUrl?: string }
+): Promise<{ qrCodeUrl?: string; pdfUrl?: string; xmlUrl?: string }> {
+  let { qrCodeUrl, pdfUrl, xmlUrl } = current
+  if (bill?.number && (!qrCodeUrl || !pdfUrl)) {
+    try {
+      const detRes = await fetch(`${baseUrl}/v2/bills/${bill.number}`, {
+        headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+      })
+      if (detRes.ok) {
+        const detJson: any = await detRes.json().catch(() => null)
+        const detail = detJson?.data?.bill ?? detJson?.data ?? detJson
+        const links = detail?.links ?? {}
+        qrCodeUrl = links.qr ?? qrCodeUrl
+        pdfUrl = links.public_url ?? pdfUrl
+        xmlUrl = links.xml ?? detail?.xml_url ?? xmlUrl
+      } else {
+        console.warn(`[FactusProvider] detalle de ${bill.number} no disponible (${detRes.status})`)
+      }
+    } catch (err: any) {
+      console.warn('[FactusProvider] no se pudo obtener el detalle (QR/PDF):', err?.message ?? err)
+    }
+  }
+  return { qrCodeUrl, pdfUrl, xmlUrl }
+}
+
+/** Construye el InvoiceResult de éxito a partir de la respuesta validada. */
+export function toInvoiceResult(params: {
+  invoice: InvoicePayload
+  json: FactusRawResponse
+  bill: any
+  dianStatus?: string
+  links: { qrCodeUrl?: string; pdfUrl?: string; xmlUrl?: string }
+  providerId: string
+}): InvoiceResult {
+  const { invoice, json, bill, dianStatus, links, providerId } = params
+  return {
+    success: true,
+    cufe: bill?.cufe,
+    qrCodeUrl: links.qrCodeUrl,
+    pdfUrl: links.pdfUrl,
+    xmlUrl: links.xmlUrl,
+    dianStatus: dianStatus ?? 'ACCEPTED',
+    billNumber: bill?.number ?? invoice.reference_code,
+    message:
+      (json as any)?.message ??
+      `Factura ${invoice.reference_code} emitida y aceptada por DIAN vía Factus V2.`,
+    providerId,
+    rawResponse: json,
+  }
+}

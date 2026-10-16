@@ -1,0 +1,16 @@
+{
+  "name": "@pos/sync-engine",
+  "version": "1.0.0",
+  "description": "Offline-First Sync Daemon, Outbox Queue Manager & Conflict Resolver",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@pos/shared-domain": "1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
