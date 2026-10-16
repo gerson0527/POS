@@ -60,6 +60,7 @@
   --amber: #d97706;
   --blue: #2563eb;
   --purple: #9333ea;
+  --pink: #db2777;
   --cyan: #0891b2;
   --red-soft: #f87171;
   --red-dim: #fef2f2;
@@ -199,6 +200,7 @@
   --amber: #f59e0b;
   --blue: #3b82f6;
   --purple: #a855f7;
+  --pink: #ec4899;
   --cyan: #00e5ff;
   --red-soft: #fca5a5;
   --red-dim: #2a1515;
@@ -336,6 +338,7 @@
   --color-amber: var(--amber);
   --color-blue: var(--blue);
   --color-purple: var(--purple);
+  --color-pink: var(--pink);
   --color-danger-dim: var(--danger-dim);
   --color-danger-line: var(--danger-line);
 

@@ -117,7 +117,7 @@ export function Pagination({
                 onClick={() => onPageChange(pageNum)}
                 className={`min-w-[28px] h-7 px-2 rounded font-mono text-xs font-bold transition-all ${
                   isActive
-                    ? 'bg-accent text-black shadow-sm'
+                    ? 'bg-accent text-white shadow-sm'
                     : 'bg-hover border border-line text-fg hover:border-accent hover:text-accent'
                 }`}
               >

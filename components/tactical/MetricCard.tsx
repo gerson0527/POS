@@ -1,5 +1,6 @@
 import React from 'react'
 import { TrendingDown, TrendingUp } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 type AccentColor =
   | 'orange'
@@ -13,15 +14,15 @@ type AccentColor =
   | 'amber'
 
 const ACCENTS: Record<AccentColor, { border: string; text: string }> = {
-  orange: { border: '#FF6A00', text: '#FF6A00' },
-  green: { border: '#D8FFDE', text: '#10B981' },
-  red: { border: '#FF3B4D', text: '#EF4444' },
-  blue: { border: '#3B82F6', text: '#3B82F6' },
-  neutral: { border: '#444444', text: '#EEEEEE' },
-  cyan: { border: '#06B6D4', text: '#06B6D4' },
-  purple: { border: '#A855F7', text: '#A855F7' },
-  pink: { border: '#EC4899', text: '#EC4899' },
-  amber: { border: '#F59E0B', text: '#F59E0B' },
+  orange: { border: 'border-l-accent', text: 'text-accent' },
+  green: { border: 'border-l-ok', text: 'text-ok' },
+  red: { border: 'border-l-danger', text: 'text-danger' },
+  blue: { border: 'border-l-blue', text: 'text-blue' },
+  neutral: { border: 'border-l-line-strong', text: 'text-fg' },
+  cyan: { border: 'border-l-cyan', text: 'text-cyan' },
+  purple: { border: 'border-l-purple', text: 'text-purple' },
+  pink: { border: 'border-l-pink', text: 'text-pink' },
+  amber: { border: 'border-l-amber', text: 'text-amber' },
 }
 
 interface MetricCardProps {
@@ -60,8 +61,11 @@ export function MetricCard({
 
   return (
     <div
-      className={`bg-panel border border-line rounded-[6px] p-4 md:p-5 flex flex-col justify-between transition-colors hover:border-line-strong border-l-2 ${className}`}
-      style={{ borderLeftColor: accent.border }}
+      className={cn(
+        'bg-panel border border-line border-l-2 rounded-[6px] p-4 md:p-5 flex flex-col justify-between transition-colors hover:border-line-strong',
+        accent.border,
+        className,
+      )}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-fg-muted">
@@ -72,8 +76,10 @@ export function MetricCard({
 
       <div className="space-y-1">
         <div
-          className="font-mono text-2xl md:text-3xl font-bold tracking-tight text-fg"
-          style={accentValue ? { color: accent.text } : undefined}
+          className={cn(
+            'font-mono text-2xl md:text-3xl font-bold tracking-tight text-fg',
+            accentValue && accent.text,
+          )}
         >
           {value}
         </div>

@@ -40,7 +40,7 @@ export function Tabs<T extends string>({ items, value, onChange, variant = 'pill
                 <span
                   className={cn(
                     'px-1.5 py-0.5 rounded text-[10px]',
-                    isActive ? 'bg-accent text-black' : 'bg-line-soft text-fg-muted',
+                    isActive ? 'bg-accent text-white' : 'bg-line-soft text-fg-muted',
                   )}
                 >
                   {tab.count}
@@ -65,11 +65,11 @@ export function Tabs<T extends string>({ items, value, onChange, variant = 'pill
             className={cn(
               'flex items-center gap-2 px-4 py-2 rounded font-mono text-xs font-bold tracking-wider transition-all cursor-pointer',
               isActive
-                ? 'bg-accent text-black border border-accent'
+                ? 'bg-accent text-white border border-accent'
                 : 'bg-surface text-fg-muted border border-line hover:text-fg hover:border-line-strong',
             )}
           >
-            {Icon && <Icon className={cn('w-3.5 h-3.5', isActive ? 'text-black' : 'text-fg-muted')} />}
+            {Icon && <Icon className={cn('w-3.5 h-3.5', isActive ? 'text-white' : 'text-fg-muted')} />}
             <span>{tab.label}</span>
           </button>
         )

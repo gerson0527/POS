@@ -27,7 +27,7 @@ export function TacticalButton({
   let variantStyles = ''
   if (variant === 'primary') {
     variantStyles =
-      'bg-accent text-black border-accent hover:bg-accent-hover hover:border-accent-hover active:bg-warn-solid'
+      'bg-accent text-white border-accent hover:bg-accent-hover hover:border-accent-hover active:bg-warn-solid'
   } else if (variant === 'secondary') {
     variantStyles =
       'bg-panel-hover text-fg border-line-strong hover:bg-line-dim hover:border-fg-low active:bg-charcoal'
