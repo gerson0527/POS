@@ -352,7 +352,7 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
           </div>
 
           <p className="text-xs text-fg leading-relaxed">
-            El sistema detectó que para el producto <span className="text-accent font-bold">"{zeroProfitWarningModal.productName}"</span>, el <span className="font-bold text-white">Precio de Venta (${zeroProfitWarningModal.unitPrice})</span> es menor o igual al <span className="font-bold text-red-soft">Costo Unitario (${zeroProfitWarningModal.cost})</span>.
+            El sistema detectó que para el producto <span className="text-accent font-bold">"{zeroProfitWarningModal.productName}"</span>, el <span className="font-bold text-fg">Precio de Venta (${zeroProfitWarningModal.unitPrice})</span> es menor o igual al <span className="font-bold text-red-soft">Costo Unitario (${zeroProfitWarningModal.cost})</span>.
           </p>
 
           <div className="bg-rose-surface border border-danger-bg rounded p-3 text-[11px] text-red-soft space-y-1">
@@ -372,7 +372,7 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
             <button
               type="button"
               onClick={() => handleCreatePO(undefined, true)}
-              className="px-4 py-2.5 bg-alert hover:bg-danger-solid text-black font-bold rounded text-xs transition-colors flex items-center justify-center gap-1"
+              className="px-4 py-2.5 bg-alert hover:bg-danger-solid text-white font-bold rounded text-xs transition-colors flex items-center justify-center gap-1"
             >
               <span>SÍ, ES CORRECTO (EMITIR ÓRDEN)</span>
             </button>

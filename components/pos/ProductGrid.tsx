@@ -73,7 +73,7 @@ export function ProductGrid({
                 <span className="font-mono text-[11px] font-bold text-success">
                   {formatCOP(Number(product.unitPrice))}
                 </span>
-                <div className="w-5 h-5 rounded bg-panel-hover border border-line-strong flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-black font-bold text-xs transition-colors">
+                <div className="w-5 h-5 rounded bg-panel-hover border border-line-strong flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white font-bold text-xs transition-colors">
                   +
                 </div>
               </div>

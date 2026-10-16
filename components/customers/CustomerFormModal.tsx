@@ -128,7 +128,7 @@ export function CustomerFormModal({
           </button>
           <button
             type="submit"
-            className="flex-1 flex items-center justify-center gap-1 text-[10px] text-accent hover:text-black hover:bg-accent font-bold uppercase py-1 rounded border border-accent transition-colors"
+            className="flex-1 flex items-center justify-center gap-1 text-[10px] text-accent hover:text-white hover:bg-accent font-bold uppercase py-1 rounded border border-accent transition-colors"
           >
             Guardar
           </button>

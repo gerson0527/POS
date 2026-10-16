@@ -356,7 +356,7 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
                         </button>
                         <button
                           onClick={() => handleDeleteNumeration(num.id)}
-                          className="p-1.5 bg-raised border border-line text-alert hover:bg-alert hover:text-black rounded transition-colors"
+                          className="p-1.5 bg-raised border border-line text-alert hover:bg-alert hover:text-white rounded transition-colors"
                           title="Eliminar"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

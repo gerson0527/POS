@@ -164,7 +164,7 @@ export default function DashboardLayout({
               className="flex items-center gap-2.5 group"
               onClick={() => setIsMobileOpen(false)}
             >
-              <div className="w-7 h-7 bg-accent flex items-center justify-center rounded-[4px] font-mono text-black font-extrabold text-sm shadow-[0_0_12px_rgba(255,106,0,0.4)]">
+              <div className="w-7 h-7 bg-accent flex items-center justify-center rounded-[4px] font-mono text-white font-extrabold text-sm shadow-[0_0_12px_var(--accent)]">
                 &gt;_
               </div>
               <div>
@@ -198,15 +198,15 @@ export default function DashboardLayout({
                   href={item.href}
                   onClick={() => setIsMobileOpen(false)}
                   className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[4px] font-mono text-xs font-bold tracking-wider transition-all duration-150 relative ${isActive
-                      ? 'bg-accent text-black shadow-md font-extrabold'
+                      ? 'bg-accent text-white shadow-md font-extrabold'
                       : 'text-fg-mid hover:bg-hover hover:text-white'
                     }`}
                 >
                   {isActive && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-black rounded-r-sm" />
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-black/30 rounded-r-sm" />
                   )}
                   <Icon
-                    className={`w-4 h-4 shrink-0 ${isActive ? 'text-black' : 'text-fg-muted'
+                    className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-fg-muted'
                       }`}
                   />
                   <span className="truncate">{item.label}</span>

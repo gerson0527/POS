@@ -50,7 +50,7 @@ export function StockErrorModal({ error, onClose, onForceAdd }: StockErrorModalP
         <button
           type="button"
           onClick={onForceAdd}
-          className="w-full sm:w-auto px-4 py-2 bg-accent hover:bg-warn-solid text-black font-mono font-bold rounded text-xs transition-colors flex items-center justify-center gap-1 shadow-lg"
+          className="w-full sm:w-auto px-4 py-2 bg-accent hover:bg-warn-solid text-white font-mono font-bold rounded text-xs transition-colors flex items-center justify-center gap-1 shadow-lg"
         >
           <span>CONTINUAR VENTA SIN STOCK</span>
           <span>&gt;</span>

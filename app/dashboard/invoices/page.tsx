@@ -274,11 +274,11 @@ export default function InvoicesPage() {
               key={tab.id}
               onClick={() => setMethodFilter(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded text-xs font-bold tracking-wider transition-all cursor-pointer ${isActive
-                  ? 'bg-accent text-black border border-accent'
+                  ? 'bg-accent text-white border border-accent'
                   : 'bg-surface text-fg-muted border border-line hover:text-fg hover:border-line-strong'
                 }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-black' : 'text-fg-muted'}`} />
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-fg-muted'}`} />
               <span>{tab.label}</span>
             </button>
           )

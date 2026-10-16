@@ -201,9 +201,9 @@ export function CreateTenantModal({ open, onClose, onSubmitted }: CreateTenantMo
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
                       isActive
-                        ? 'bg-accent text-black'
+                        ? 'bg-accent text-white'
                         : isComplete
-                        ? 'bg-ok text-black'
+                        ? 'bg-ok text-white'
                         : 'bg-line-soft text-fg-muted'
                     }`}
                   >

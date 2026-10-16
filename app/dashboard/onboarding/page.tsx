@@ -240,9 +240,9 @@ export default function OnboardingPage() {
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
                     isActive
-                      ? 'bg-accent text-black'
+                      ? 'bg-accent text-white'
                       : isComplete
-                      ? 'bg-ok text-black'
+                      ? 'bg-ok text-white'
                       : 'bg-line-soft text-fg-muted'
                   }`}
                 >
@@ -476,7 +476,7 @@ export default function OnboardingPage() {
             <button
               type="button"
               onClick={next}
-              className="flex items-center gap-2 px-5 py-2.5 bg-accent text-black font-bold uppercase text-[10px] tracking-wider rounded hover:bg-accent-hover transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white font-bold uppercase text-[10px] tracking-wider rounded hover:bg-accent-hover transition-colors"
             >
               SIGUIENTE
               <ArrowRight className="w-3.5 h-3.5" />
@@ -486,7 +486,7 @@ export default function OnboardingPage() {
               type="button"
               onClick={finish}
               disabled={saving}
-              className="flex items-center gap-2 px-5 py-2.5 bg-ok text-black font-bold uppercase text-[10px] tracking-wider rounded hover:bg-ok-strong transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2.5 bg-ok text-white font-bold uppercase text-[10px] tracking-wider rounded hover:bg-ok-strong transition-colors disabled:opacity-50"
             >
               {saving ? (
                 <>

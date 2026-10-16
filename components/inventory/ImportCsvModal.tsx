@@ -139,12 +139,12 @@ export function ImportCsvModal({ open, onClose, onImported }: ImportCsvModalProp
             type="button"
             onClick={() => setImportMode('upsert')}
             className={`p-2.5 rounded border text-left ${importMode === 'upsert'
-              ? 'bg-accent text-black border-accent'
+              ? 'bg-accent text-white border-accent'
               : 'bg-input text-fg-muted border-line hover:border-line-strong'
               }`}
           >
             <div className="text-[11px] font-bold uppercase">UPSERT</div>
-            <div className={`text-[10px] mt-0.5 ${importMode === 'upsert' ? 'text-black/80' : 'text-fg-faint'}`}>
+            <div className={`text-[10px] mt-0.5 ${importMode === 'upsert' ? 'text-white/80' : 'text-fg-faint'}`}>
               Crea nuevos y actualiza los que coincidan por SKU
             </div>
           </button>
@@ -152,12 +152,12 @@ export function ImportCsvModal({ open, onClose, onImported }: ImportCsvModalProp
             type="button"
             onClick={() => setImportMode('create')}
             className={`p-2.5 rounded border text-left ${importMode === 'create'
-              ? 'bg-accent text-black border-accent'
+              ? 'bg-accent text-white border-accent'
               : 'bg-input text-fg-muted border-line hover:border-line-strong'
               }`}
           >
             <div className="text-[11px] font-bold uppercase">SOLO CREAR</div>
-            <div className={`text-[10px] mt-0.5 ${importMode === 'create' ? 'text-black/80' : 'text-fg-faint'}`}>
+            <div className={`text-[10px] mt-0.5 ${importMode === 'create' ? 'text-white/80' : 'text-fg-faint'}`}>
               Solo agrega productos nuevos. Omite los SKUs que ya existen.
             </div>
           </button>

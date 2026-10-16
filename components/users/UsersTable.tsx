@@ -58,7 +58,7 @@ export function UsersTable({
                     <div className="font-bold text-fg flex items-center gap-2">
                       <span>{u.name}</span>
                       {u.isCurrent && (
-                        <span className="text-[10px] bg-accent text-black font-extrabold px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] bg-accent text-white font-extrabold px-1.5 py-0.5 rounded">
                           ACTUAL
                         </span>
                       )}

@@ -559,7 +559,7 @@ export default function CustomersPage() {
                   </button>
                   <button
                     onClick={() => setDeleteConfirmId(c.id)}
-                    className="p-1.5 bg-raised border border-line text-alert hover:bg-alert hover:text-black rounded transition-colors"
+                    className="p-1.5 bg-raised border border-line text-alert hover:bg-alert hover:text-white rounded transition-colors"
                     title="Eliminar Cliente"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -694,7 +694,7 @@ export default function CustomersPage() {
                       }
                     }}
                     disabled={Number(creditDetail.customer.creditBalance) === 0}
-                    className="px-3 py-2.5 bg-ok text-black font-bold uppercase text-xs rounded hover:bg-ok-strong disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                    className="px-3 py-2.5 bg-ok text-white font-bold uppercase text-xs rounded hover:bg-ok-strong disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1"
                   >
                     <Banknote className="w-3.5 h-3.5" />
                     Registrar Abono
@@ -703,8 +703,8 @@ export default function CustomersPage() {
                     onClick={() => handleToggleBlock(creditDetailId, creditDetail.customer.creditStatus)}
                     className={`px-3 py-2.5 font-bold uppercase text-xs rounded flex items-center justify-center gap-1 ${
                       creditDetail.customer.creditStatus === 'BLOQUEADO'
-                        ? 'bg-ok text-black hover:bg-ok-strong'
-                        : 'bg-warning text-black hover:bg-warn-soft'
+                        ? 'bg-ok text-white hover:bg-ok-strong'
+                        : 'bg-warning text-white hover:bg-warn-soft'
                     }`}
                   >
                     <Power className="w-3.5 h-3.5" />

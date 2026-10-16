@@ -200,7 +200,7 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
                     }}
                     className={`p-3 rounded border font-mono text-xs font-bold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-accent text-black border-accent shadow-lg scale-[1.02]'
+                        ? 'bg-accent text-white border-accent shadow-lg scale-[1.02]'
                         : 'bg-surface text-fg-muted border-line hover:border-line-strong hover:text-fg'
                     }`}
                   >
@@ -243,7 +243,7 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
                           onClick={() => setLineMethod(line.id, m.method)}
                           className={`w-9 h-9 rounded border font-mono text-[10px] font-bold transition-all cursor-pointer ${
                             line.method === m.method
-                              ? 'bg-accent text-black border-accent'
+                              ? 'bg-accent text-white border-accent'
                               : 'bg-veil text-fg-muted border-line hover:border-line-strong hover:text-fg'
                           }`}
                         >

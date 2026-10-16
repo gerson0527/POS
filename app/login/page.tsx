@@ -51,7 +51,7 @@ function LoginForm() {
       <div 
         className="absolute inset-0 opacity-15 pointer-events-none" 
         style={{
-          backgroundImage: `radial-gradient(#FF6A00 1px, transparent 1px), radial-gradient(#FF6A00 1px, #0B0B0B 1px)`,
+          backgroundImage: `radial-gradient(var(--accent) 1px, transparent 1px), radial-gradient(var(--accent) 1px, var(--bg-app) 1px)`,
           backgroundSize: '40px 40px',
           backgroundPosition: '0 0, 20px 20px'
         }}
@@ -74,7 +74,7 @@ function LoginForm() {
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-[10px] text-fg-muted">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-ok animate-pulse" />
               ONLINE
             </div>
           </div>
@@ -142,7 +142,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 bg-accent hover:bg-accent-hover disabled:bg-accent/50 text-black font-bold uppercase text-xs tracking-wider py-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-accent/20 hover:shadow-accent/40 disabled:cursor-not-allowed cursor-pointer"
+            className="w-full mt-2 bg-accent hover:bg-accent-hover disabled:bg-accent/50 text-white font-bold uppercase text-xs tracking-wider py-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-accent/20 hover:shadow-accent/40 disabled:cursor-not-allowed cursor-pointer"
           >
             {loading ? (
               <>

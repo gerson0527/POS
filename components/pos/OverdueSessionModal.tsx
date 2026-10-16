@@ -56,7 +56,7 @@ export function OverdueSessionModal({ open, info, onClose }: OverdueSessionModal
         <Link href="/dashboard/cash-closure">
           <button
             type="button"
-            className="w-full sm:w-auto px-4 py-2 bg-alert hover:bg-danger-solid text-black font-bold rounded font-mono text-xs transition-colors flex items-center justify-center gap-1"
+            className="w-full sm:w-auto px-4 py-2 bg-alert hover:bg-danger-solid text-white font-bold rounded font-mono text-xs transition-colors flex items-center justify-center gap-1"
           >
             <span>IR A CIERRE DE CAJA AHORA</span>
             <span>&gt;</span>

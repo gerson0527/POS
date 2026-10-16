@@ -67,7 +67,7 @@ export function CustomerPicker({
         </Select>
         <button
           onClick={onToggleForm}
-          className="shrink-0 p-1.5 bg-raised border border-line text-accent hover:bg-accent hover:text-black rounded transition-colors"
+          className="shrink-0 p-1.5 bg-raised border border-line text-accent hover:bg-accent hover:text-white rounded transition-colors"
           title="Nuevo cliente"
         >
           <UserPlus className="w-3.5 h-3.5" />

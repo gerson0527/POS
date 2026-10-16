@@ -133,7 +133,7 @@ export function InvoiceTable({
                       className="text-fg-muted hover:text-accent transition-colors"
                       title="Copiar consecutivo"
                     >
-                      {copiedId === ticketFormatted ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      {copiedId === ticketFormatted ? <Check className="w-3 h-3 text-ok" /> : <Copy className="w-3 h-3" />}
                     </button>
                   </div>
                   {isWithoutStock && (
@@ -264,21 +264,21 @@ export function InvoiceTable({
               <div className="flex items-center justify-center gap-1">
                 <button
                   onClick={() => onOpenDetail(inv)}
-                  className="p-1.5 bg-night-mid border border-line text-fg hover:bg-accent hover:text-black rounded transition-colors cursor-pointer"
+                  className="p-1.5 bg-night-mid border border-line text-fg hover:bg-accent hover:text-white rounded transition-colors cursor-pointer"
                   title="Ver Factura Completa"
                 >
                   <Eye className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => onOpenXml(inv)}
-                  className="p-1.5 bg-night-mid border border-line text-accent hover:bg-accent hover:text-black rounded transition-colors cursor-pointer"
+                  className="p-1.5 bg-night-mid border border-line text-accent hover:bg-accent hover:text-white rounded transition-colors cursor-pointer"
                   title="Ver XML / Auditoría DIAN"
                 >
                   <Code className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => onOpenDetail(inv)}
-                  className="p-1.5 bg-night-mid border border-line text-fg hover:bg-accent hover:text-black rounded transition-colors cursor-pointer"
+                  className="p-1.5 bg-night-mid border border-line text-fg hover:bg-accent hover:text-white rounded transition-colors cursor-pointer"
                   title="Imprimir Ticket POS"
                 >
                   <Printer className="w-3.5 h-3.5" />

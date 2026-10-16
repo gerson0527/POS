@@ -216,7 +216,7 @@ export default function ReportsPage() {
                 onClick={() => applyPreset(p.id)}
                 className={`px-3 py-1.5 rounded font-mono text-[10px] font-bold uppercase tracking-wider border transition-all ${
                   isActive
-                    ? 'bg-accent text-black border-accent shadow-sm'
+                    ? 'bg-accent text-white border-accent shadow-sm'
                     : 'bg-surface text-fg-muted border-line hover:border-accent hover:text-fg'
                 }`}
               >
@@ -255,7 +255,7 @@ export default function ReportsPage() {
           <div className="flex items-end gap-2">
             <button
               onClick={applyCustom}
-              className="flex-1 h-[34px] bg-accent hover:bg-accent-hover text-black font-bold uppercase tracking-wider rounded text-xs"
+              className="flex-1 h-[34px] bg-accent hover:bg-accent-hover text-white font-bold uppercase tracking-wider rounded text-xs"
             >
               Aplicar Rango
             </button>
@@ -327,18 +327,18 @@ export default function ReportsPage() {
                   onClick={() => setSelectedReport(report.id)}
                   className={`w-full text-left p-3.5 rounded border transition-all flex items-start gap-3 cursor-pointer ${
                     isSelected
-                      ? 'bg-accent text-black border-accent shadow-sm'
+                      ? 'bg-accent text-white border-accent shadow-sm'
                       : 'bg-surface text-fg-muted border-line-soft hover:border-line-strong hover:text-fg'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${isSelected ? 'text-black' : 'text-accent'}`} />
+                  <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${isSelected ? 'text-white' : 'text-accent'}`} />
                   <div>
                     <div className="font-mono text-xs font-bold uppercase tracking-wider">
                       {report.name}
                     </div>
                     <div
                       className={`text-[11px] mt-0.5 ${
-                        isSelected ? 'text-black/80' : 'text-fg-muted'
+                        isSelected ? 'text-white/80' : 'text-fg-muted'
                       }`}
                     >
                       {report.description}
@@ -390,7 +390,7 @@ export default function ReportsPage() {
                         tickLine={false}
                       />
                       <Tooltip
-                        contentStyle={{ backgroundColor: '#1A1A1A', borderColor: '#FF6A00', borderRadius: '6px', color: '#FFF' }}
+                        contentStyle={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--accent)', borderRadius: '6px', color: 'var(--text-primary)' }}
                         formatter={(val: any) => [formatCOP(val), 'Monto']}
                       />
                       <Bar dataKey="monto" radius={[4, 4, 0, 0]}>
@@ -573,7 +573,7 @@ export default function ReportsPage() {
                           ))}
                         </Pie>
                         <Tooltip
-                          contentStyle={{ backgroundColor: '#1A1A1A', borderColor: '#00E5FF', borderRadius: '6px', color: '#FFF' }}
+                          contentStyle={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--cyan)', borderRadius: '6px', color: 'var(--text-primary)' }}
                           formatter={(val: any) => [formatCOP(val), 'Ganancia Neta']}
                         />
                         <Legend wrapperStyle={{ fontSize: '11px', color: '#8C8C8C' }} />

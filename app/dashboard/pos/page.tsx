@@ -399,7 +399,7 @@ export default function DashboardPOSPage() {
           </div>
           <Link
             href="/dashboard/cash-closure"
-            className="bg-alert text-black font-bold px-3 py-1 rounded hover:bg-white transition-colors text-[11px] shrink-0"
+            className="bg-alert text-white font-bold px-3 py-1 rounded hover:bg-white hover:text-black transition-colors text-[11px] shrink-0"
           >
             REALIZAR CIERRE AHORA &gt;
           </Link>
