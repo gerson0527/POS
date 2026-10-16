@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
-import { ShieldCheck, Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, Terminal, KeyRound } from 'lucide-react'
+import { ShieldCheck, Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, Terminal } from 'lucide-react'
 import { Label } from '@/components/ui/Label'
 
 function LoginForm() {
@@ -157,47 +157,6 @@ function LoginForm() {
             )}
           </button>
         </form>
-
-        {/* Quick Credentials Helpers */}
-        <div className="bg-input border border-line-soft rounded-lg p-3 space-y-2 text-[11px]">
-          <div className="text-[10px] text-accent font-bold uppercase tracking-wider flex items-center gap-1.5">
-            <KeyRound className="w-3 h-3 text-accent" />
-            Credenciales de Acceso Rápido (Seed):
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('admin@posdian.com')
-                setPassword('Admin123456!')
-              }}
-              className="bg-charcoal hover:bg-line-soft border border-line-hover text-left p-2 rounded text-[10px] space-y-0.5 transition-colors cursor-pointer"
-            >
-              <div className="font-bold text-fg flex items-center justify-between">
-                <span>Admin Master</span>
-                <span className="text-[9px] bg-accent/20 text-accent px-1 rounded">SAS/Tenants</span>
-              </div>
-              <div className="text-fg-muted truncate">admin@posdian.com</div>
-              <div className="text-fg-low">Pass: Admin123456!</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('gersongio0527@gmail.com')
-                setPassword('12345678password')
-              }}
-              className="bg-charcoal hover:bg-line-soft border border-line-hover text-left p-2 rounded text-[10px] space-y-0.5 transition-colors cursor-pointer"
-            >
-              <div className="font-bold text-fg flex items-center justify-between">
-                <span>Operador POS</span>
-                <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1 rounded">Caja/Ventas</span>
-              </div>
-              <div className="text-fg-muted truncate">gersongio0527@...</div>
-              <div className="text-fg-low">Pass: 12345678password</div>
-            </button>
-          </div>
-        </div>
 
         {/* System Info Footer */}
         <div className="pt-2 border-t border-line-soft flex items-center justify-between text-[10px] text-fg-muted">
