@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'POS DIAN // TACTICAL OPS CENTER',
+  title: 'POS DIAN — Punto de Venta',
   description: 'Sistema de Punto de Venta e Integración Fiscal DIAN Colombia',
   icons: {
     icon: [

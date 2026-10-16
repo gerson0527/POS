@@ -17,25 +17,25 @@ interface ActivityLogProps {
 
 export function ActivityLog({
   logs,
-  title = 'CONSOLOG // AUDIT STREAM',
+  title = 'Actividad reciente',
   maxHeight = 'max-h-72',
 }: ActivityLogProps) {
   return (
-    <div className="bg-surface border border-line rounded-[6px] overflow-hidden font-mono">
+    <div className="bg-surface border border-line rounded-[6px] overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2 bg-raised border-b border-line">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-fg-muted">
+          <span className="text-[11px] font-semibold text-fg-muted">
             {title}
           </span>
         </div>
-        <span className="text-[10px] text-fg-faint">EVENTS: {logs.length}</span>
+        <span className="text-[10px] text-fg-faint">{logs.length} eventos</span>
       </div>
 
       <div className={`overflow-y-auto ${maxHeight} divide-y divide-ash p-2 space-y-1`}>
         {logs.length === 0 ? (
           <div className="py-6 text-center text-xs text-fg-faint">
-            [NO LOG EVENTS RECORDED]
+            Sin eventos registrados
           </div>
         ) : (
           logs.map((log) => (

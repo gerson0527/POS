@@ -46,7 +46,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen bg-app text-fg font-mono flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-app text-fg font-sans flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       {/* Dynamic background grid effect */}
       <div 
         className="absolute inset-0 opacity-15 pointer-events-none" 
@@ -70,20 +70,20 @@ function LoginForm() {
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-6 h-6 text-accent" />
               <span className="text-[11px] text-accent font-bold uppercase tracking-widest bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
-                POS DIAN TACTICAL OPS
+                POS DIAN
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-[10px] text-fg-muted">
               <span className="w-2 h-2 rounded-full bg-ok animate-pulse" />
-              ONLINE
+              En línea
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold uppercase tracking-tight text-white pt-2">
-            Iniciar Sesión
+          <h1 className="text-2xl font-bold tracking-tight text-fg pt-2">
+            Iniciar sesión
           </h1>
           <p className="text-xs text-fg-muted">
-            Ingresa tus credenciales de operador para acceder al panel de control.
+            Ingresa tus credenciales para acceder a tu panel.
           </p>
         </div>
 
@@ -108,7 +108,7 @@ function LoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="operador@empresa.com"
+                placeholder="tu@empresa.com"
                 className="w-full bg-input border border-line-soft focus:border-accent rounded-lg px-3.5 py-2.5 text-xs text-fg placeholder-fg-dim outline-none transition-colors"
               />
             </div>
@@ -158,13 +158,19 @@ function LoginForm() {
           </button>
         </form>
 
-        {/* System Info Footer */}
-        <div className="pt-2 border-t border-line-soft flex items-center justify-between text-[10px] text-fg-muted">
-          <div className="flex items-center gap-1">
-            <Terminal className="w-3 h-3 text-accent" />
-            <span>SECURE SYSTEM v2.5</span>
+        {/* Cuentas de prueba — solo entorno de desarrollo */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-surface border border-line-soft rounded-lg p-3 text-[10px] text-fg-muted space-y-1">
+            <div className="font-semibold text-fg-soft">Cuentas de prueba (solo desarrollo)</div>
+            <div>admin@posdian.com · Admin123456!</div>
+            <div>gersongio0527@gmail.com · 12345678password</div>
           </div>
-          <span>DIAN COMPLIANT POS</span>
+        )}
+
+        {/* Footer */}
+        <div className="pt-2 border-t border-line-soft flex items-center justify-center gap-1.5 text-[10px] text-fg-muted">
+          <Terminal className="w-3 h-3 text-accent" />
+          <span>Punto de venta · Facturación electrónica DIAN</span>
         </div>
       </div>
     </div>
@@ -175,7 +181,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-app text-fg font-mono flex items-center justify-center">
+        <div className="min-h-screen bg-app text-fg font-sans flex items-center justify-center">
           <Loader2 className="w-8 h-8 text-accent animate-spin" />
         </div>
       }

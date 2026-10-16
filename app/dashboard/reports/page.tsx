@@ -161,8 +161,8 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={<BarChart3 className="w-4 h-4" />}
-        kicker="BUSINESS INTELLIGENCE & PROFIT TELEMETRY"
-        title="REPORTES DE VENTAS Y GANANCIA NETA"
+        kicker="Análisis de ventas y rentabilidad"
+        title="Reportes de ventas y ganancia neta"
         description="Métricas de ingresos brutos, costos de productos y utilidad neta en tiempo real."
         actions={
           <>
@@ -627,8 +627,8 @@ export default function ReportsPage() {
                     <span className="text-success font-bold">{salesReport.totalInvoicesCount}</span>
                   </div>
                   <div className="flex justify-between font-bold border-t border-line pt-2 text-fg">
-                    <span>ESTADO DEL MOTOR FISCAL:</span>
-                    <span className="text-success font-mono">100% OPERATIVO</span>
+                    <span>Estado del motor fiscal:</span>
+                    <span className="text-success font-mono">Operativo</span>
                   </div>
                 </div>
               </div>
