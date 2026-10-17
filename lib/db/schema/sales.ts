@@ -37,27 +37,6 @@ export const cashierSession = pgTable(
   })
 )
 
-// CASH_MOVEMENT: Movimientos manuales de efectivo durante la sesión
-// (retiros, consignaciones, gastos operativos, propinas, etc.)
-export const cashMovement = pgTable(
-  'cash_movement',
-  {
-    id: text('id').primaryKey(),
-    tenantId: text('tenantId').notNull(),
-    cashierSessionId: text('cashierSessionId').notNull(),
-    type: text('type').notNull(), // IN (entrada manual), OUT (salida manual)
-    concept: text('concept').notNull(), // RETIRO, GASTO_OPERATIVO, PROPINAS, AJUSTE, DEPOSITO, etc.
-    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
-    note: text('note'),
-    createdBy: text('createdBy').notNull(),
-    createdAt: timestamp('createdAt').notNull().defaultNow(),
-  },
-  (table) => ({
-    tenantIdx: index('cash_movement_tenant_idx').on(table.tenantId),
-    sessionIdx: index('cash_movement_session_idx').on(table.cashierSessionId),
-  })
-)
-
 // SALE: Transacciones de venta
 export const sale = pgTable(
   'sale',

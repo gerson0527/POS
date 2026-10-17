@@ -57,21 +57,3 @@ export const purchaseOrder = pgTable(
     unique_po: unique('unique_po').on(table.tenantId, table.poNumber),
   })
 )
-
-// PURCHASE_ORDER_ITEM: Items de órdenes de compra
-export const purchaseOrderItem = pgTable(
-  'purchase_order_item',
-  {
-    id: text('id').primaryKey(),
-    purchaseOrderId: text('purchaseOrderId').notNull(),
-    productId: text('productId').notNull(),
-    quantity: decimal('quantity', { precision: 12, scale: 2 }).notNull(),
-    unitCost: decimal('unitCost', { precision: 12, scale: 4 }).notNull(),
-    lineTotal: decimal('lineTotal', { precision: 12, scale: 2 }).notNull(),
-    receivedQuantity: decimal('receivedQuantity', { precision: 12, scale: 2 }).notNull().default('0'),
-    createdAt: timestamp('createdAt').notNull().defaultNow(),
-  },
-  (table) => ({
-    poIdx: index('po_item_po_idx').on(table.purchaseOrderId),
-  })
-)

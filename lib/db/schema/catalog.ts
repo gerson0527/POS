@@ -2,28 +2,10 @@ import {
   pgTable,
   text,
   timestamp,
-  boolean,
   integer,
   decimal,
   index,
   unique } from 'drizzle-orm/pg-core'
-
-// CATEGORY: Categorías de productos
-export const category = pgTable(
-  'category',
-  {
-    id: text('id').primaryKey(),
-    tenantId: text('tenantId').notNull(),
-    name: text('name').notNull(),
-    description: text('description'),
-    status: text('status').notNull().default('ACTIVE'),
-    createdAt: timestamp('createdAt').notNull().defaultNow(),
-    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
-  },
-  (table) => ({
-    tenantIdx: index('category_tenant_idx').on(table.tenantId),
-  })
-)
 
 // PRODUCT: Catálogo de productos
 export const product = pgTable(
@@ -118,29 +100,5 @@ export const inventoryMovement = pgTable(
     tenantIdx: index('inventory_movement_tenant_idx').on(table.tenantId),
     productIdx: index('inventory_movement_product_idx').on(table.productId),
     typeIdx: index('inventory_movement_type_idx').on(table.movementType),
-  })
-)
-
-// STOCK_ALERT: Alertas de stock bajo
-export const stockAlert = pgTable(
-  'stock_alert',
-  {
-    id: text('id').primaryKey(),
-    tenantId: text('tenantId').notNull(),
-    locationId: text('locationId').notNull(),
-    productId: text('productId').notNull(),
-    alertType: text('alertType').notNull(),
-    triggerQuantity: decimal('triggerQuantity', { precision: 12, scale: 2 }).notNull(),
-    currentQuantity: decimal('currentQuantity', { precision: 12, scale: 2 }).notNull(),
-    acknowledged: boolean('acknowledged').notNull().default(false),
-    acknowledgedAt: timestamp('acknowledgedAt'),
-    acknowledgedBy: text('acknowledgedBy'),
-    createdAt: timestamp('createdAt').notNull().defaultNow(),
-    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
-  },
-  (table) => ({
-    tenantIdx: index('stock_alert_tenant_idx').on(table.tenantId),
-    productIdx: index('stock_alert_product_idx').on(table.productId),
-    acknowledgedIdx: index('stock_alert_acknowledged_idx').on(table.acknowledged),
   })
 )

@@ -8,6 +8,13 @@
       "when": 1792128125210,
       "tag": "0000_pale_skaar",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792272718794,
+      "tag": "0001_bored_mephistopheles",
+      "breakpoints": true
     }
   ]
 }
