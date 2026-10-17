@@ -13,14 +13,8 @@ export async function runSeed() {
 
   const tenantId = 'tenant_default'
 
-  // 0. Usuarios Administradores (Master Admin & Operador Principal)
+  // 0. Usuario Administrador
   const usersToSeed = [
-    {
-      email: 'admin@posdian.com',
-      password: 'Admin123456!',
-      name: 'Administrador Master (SOC Command)',
-      role: 'ADMIN',
-    },
     {
       email: 'gersongio0527@gmail.com',
       password: '12345678password',
@@ -167,30 +161,71 @@ export async function runSeed() {
   }
   console.log('✅ 10 Clientes registrados en el sistema')
 
-  // 5. Generación Dinámica de 100 Productos con FOR Loop
+  // 5. Categorías de productos (product_category)
+  const categoriesData = [
+    { name: 'Lácteos', color: '#3B82F6' },
+    { name: 'Café y Chocolate', color: '#A16207' },
+    { name: 'Confitería y Snacks', color: '#EF4444' },
+    { name: 'Bebidas', color: '#06B6D4' },
+    { name: 'Aseo del Hogar', color: '#22C55E' },
+    { name: 'Cuidado Personal', color: '#8B5CF6' },
+  ]
+
+  const seedSlug = (s: string) =>
+    s
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+
+  const categoryIdByName = new Map<string, string>()
+  for (const [i, c] of categoriesData.entries()) {
+    const id = `cat_seed_${String(i + 1).padStart(2, '0')}`
+    categoryIdByName.set(c.name, id)
+    const existing = await db.select().from(schema.productCategory).where(eq(schema.productCategory.id, id))
+    if (!existing.length) {
+      await db.insert(schema.productCategory).values({
+        id,
+        tenantId,
+        name: c.name,
+        slug: seedSlug(c.name),
+        description: `Categoría ${c.name}`,
+        color: c.color,
+        icon: null,
+        productCount: 0,
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    }
+  }
+  console.log(`✅ ${categoriesData.length} Categorías de productos registradas`)
+
+  // 6. Generación Dinámica de 100 Productos con FOR Loop
   console.log('⚡ Generando catálogo de 100 productos mediante FOR loop...')
 
   const productTemplates = [
-    { prefix: 'Leche Entera', unitPrice: 4800, cost: 3400, ivaRate: '0.00' },
-    { prefix: 'Queso Campesino', unitPrice: 13500, cost: 9500, ivaRate: '0.00' },
-    { prefix: 'Mantequilla con Sal', unitPrice: 8900, cost: 6200, ivaRate: '5.00' },
-    { prefix: 'Yogurt Vaso Fresa', unitPrice: 3200, cost: 2100, ivaRate: '5.00' },
-    { prefix: 'Café Molido Gourmet', unitPrice: 19500, cost: 14200, ivaRate: '5.00' },
-    { prefix: 'Chocolate en Pastilla', unitPrice: 7600, cost: 5100, ivaRate: '5.00' },
-    { prefix: 'Chocolatina Tradicional', unitPrice: 2200, cost: 1400, ivaRate: '19.00' },
-    { prefix: 'Galletas Rellenas Fresa', unitPrice: 4500, cost: 3000, ivaRate: '19.00' },
-    { prefix: 'Papas Fritas Natural', unitPrice: 3800, cost: 2500, ivaRate: '19.00' },
-    { prefix: 'Gaseosa Cola 1.5L', unitPrice: 5600, cost: 3800, ivaRate: '19.00' },
-    { prefix: 'Agua Mineral Sin Gas 600ml', unitPrice: 2000, cost: 1100, ivaRate: '19.00' },
-    { prefix: 'Jugo Néctar Durazno 1L', unitPrice: 4900, cost: 3300, ivaRate: '19.00' },
-    { prefix: 'Cerveza Lata 330ml', unitPrice: 3500, cost: 2400, ivaRate: '19.00' },
-    { prefix: 'Bebida de Malta 300ml', unitPrice: 2800, cost: 1800, ivaRate: '19.00' },
-    { prefix: 'Detergente Polvo Multiusos 1kg', unitPrice: 14800, cost: 10200, ivaRate: '19.00' },
-    { prefix: 'Jabón de Loza Líquido 500ml', unitPrice: 7900, cost: 5300, ivaRate: '19.00' },
-    { prefix: 'Suavizante Textil 1000ml', unitPrice: 11200, cost: 7800, ivaRate: '19.00' },
-    { prefix: 'Limpiador Multiusos Lavanda', unitPrice: 6500, cost: 4300, ivaRate: '19.00' },
-    { prefix: 'Shampoo Cuidado Diario 400ml', unitPrice: 18900, cost: 13200, ivaRate: '19.00' },
-    { prefix: 'Crema Dental Triple Acción 100g', unitPrice: 8500, cost: 5800, ivaRate: '19.00' },
+    { prefix: 'Leche Entera', unitPrice: 4800, cost: 3400, ivaRate: '0.00', category: 'Lácteos' },
+    { prefix: 'Queso Campesino', unitPrice: 13500, cost: 9500, ivaRate: '0.00', category: 'Lácteos' },
+    { prefix: 'Mantequilla con Sal', unitPrice: 8900, cost: 6200, ivaRate: '5.00', category: 'Lácteos' },
+    { prefix: 'Yogurt Vaso Fresa', unitPrice: 3200, cost: 2100, ivaRate: '5.00', category: 'Lácteos' },
+    { prefix: 'Café Molido Gourmet', unitPrice: 19500, cost: 14200, ivaRate: '5.00', category: 'Café y Chocolate' },
+    { prefix: 'Chocolate en Pastilla', unitPrice: 7600, cost: 5100, ivaRate: '5.00', category: 'Café y Chocolate' },
+    { prefix: 'Chocolatina Tradicional', unitPrice: 2200, cost: 1400, ivaRate: '19.00', category: 'Confitería y Snacks' },
+    { prefix: 'Galletas Rellenas Fresa', unitPrice: 4500, cost: 3000, ivaRate: '19.00', category: 'Confitería y Snacks' },
+    { prefix: 'Papas Fritas Natural', unitPrice: 3800, cost: 2500, ivaRate: '19.00', category: 'Confitería y Snacks' },
+    { prefix: 'Gaseosa Cola 1.5L', unitPrice: 5600, cost: 3800, ivaRate: '19.00', category: 'Bebidas' },
+    { prefix: 'Agua Mineral Sin Gas 600ml', unitPrice: 2000, cost: 1100, ivaRate: '19.00', category: 'Bebidas' },
+    { prefix: 'Jugo Néctar Durazno 1L', unitPrice: 4900, cost: 3300, ivaRate: '19.00', category: 'Bebidas' },
+    { prefix: 'Cerveza Lata 330ml', unitPrice: 3500, cost: 2400, ivaRate: '19.00', category: 'Bebidas' },
+    { prefix: 'Bebida de Malta 300ml', unitPrice: 2800, cost: 1800, ivaRate: '19.00', category: 'Bebidas' },
+    { prefix: 'Detergente Polvo Multiusos 1kg', unitPrice: 14800, cost: 10200, ivaRate: '19.00', category: 'Aseo del Hogar' },
+    { prefix: 'Jabón de Loza Líquido 500ml', unitPrice: 7900, cost: 5300, ivaRate: '19.00', category: 'Aseo del Hogar' },
+    { prefix: 'Suavizante Textil 1000ml', unitPrice: 11200, cost: 7800, ivaRate: '19.00', category: 'Aseo del Hogar' },
+    { prefix: 'Limpiador Multiusos Lavanda', unitPrice: 6500, cost: 4300, ivaRate: '19.00', category: 'Aseo del Hogar' },
+    { prefix: 'Shampoo Cuidado Diario 400ml', unitPrice: 18900, cost: 13200, ivaRate: '19.00', category: 'Cuidado Personal' },
+    { prefix: 'Crema Dental Triple Acción 100g', unitPrice: 8500, cost: 5800, ivaRate: '19.00', category: 'Cuidado Personal' },
   ]
 
   const brands = ['Alquería', 'Nutresa', 'Bavaria', 'P&G', 'Postobón', 'Colombina', 'Alpina', 'Unilever', 'Nacional', 'Nestlé']
@@ -219,20 +254,42 @@ export async function runSeed() {
       unitPrice: itemPrice.toFixed(2),
       cost: itemCost.toFixed(2),
       ivaRate: template.ivaRate,
+      category: template.category || 'General',
+      categoryId: categoryIdByName.get(template.category) || null,
       status: 'ACTIVE',
       createdAt: new Date(),
       updatedAt: new Date(),
     })
   }
 
-  // Bulk Insert de los 100 Productos
+  // Bulk Insert de los 100 Productos (crea o actualiza categoría)
   for (const p of productsToInsert) {
     const existing = await db.select().from(schema.product).where(eq(schema.product.id, p.id))
     if (!existing.length) {
       await db.insert(schema.product).values(p)
+    } else {
+      await db
+        .update(schema.product)
+        .set({ category: p.category, categoryId: p.categoryId, updatedAt: new Date() })
+        .where(eq(schema.product.id, p.id))
     }
   }
   console.log('✅ 100 Productos retail generados e insertados en la base de datos')
+
+  // Actualizar el conteo de productos por categoría
+  const categoryCounts = new Map<string, number>()
+  for (const p of productsToInsert) {
+    categoryCounts.set(p.category, (categoryCounts.get(p.category) || 0) + 1)
+  }
+  for (const [name, count] of categoryCounts) {
+    const catId = categoryIdByName.get(name)
+    if (catId) {
+      await db
+        .update(schema.productCategory)
+        .set({ productCount: count, updatedAt: new Date() })
+        .where(eq(schema.productCategory.id, catId))
+    }
+  }
 
   // 6. Generación de Inventario para los 100 Productos en las 3 Sucursales (300 Registros)
   let stockCount = 0
@@ -308,13 +365,13 @@ export async function runSeed() {
   console.log('   - Sucursales: 3 (Bogotá, Medellín, Cali)')
   console.log('   - Proveedores: 10 Empresas Mayoristas')
   console.log('   - Clientes: 10 Clientes Frecuentes')
+  console.log('   - Categorías: 6')
   console.log('   - Productos: 100 Ítems Catálogo Retail')
   console.log('   - Inventarios: 300 Registros de Stock')
   console.log('----------------------------------------------------')
-  console.log('🔐 CREDENCIALES DE ACCESO MASTER ADMIN:')
+  console.log('🔐 CREDENCIALES DE ACCESO:')
   console.log('   - URL Login: http://localhost:3000/login')
-  console.log('   - Admin Master: admin@posdian.com  | Password: Admin123456!')
-  console.log('   - Operador Admin: gersongio0527@gmail.com | Password: 12345678password')
+  console.log('   - Admin: gersongio0527@gmail.com | Password: 12345678password')
   console.log('   - Panel de Administración Multi-Tenant: /dashboard/users (Pestaña "Empresas / SAS")')
   console.log('----------------------------------------------------')
 }
