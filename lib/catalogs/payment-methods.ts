@@ -36,7 +36,8 @@ export const DIAN_TICKET_PAYMENTS: Record<string, { code: string; label: string 
   TRANSFERENCIA: { code: '42', label: 'Transferencia electrónica' },
   NEQUI: { code: '42', label: 'Nequi (transferencia)' },
   DAVIPLATA: { code: '42', label: 'Daviplata (transferencia)' },
-  STORE_CREDIT: { code: '99', label: 'Crédito cuenta corriente' },
+  // El crédito de cuenta corriente se informa a DIAN como efectivo (mismo criterio que Factus).
+  STORE_CREDIT: { code: '10', label: 'Efectivo' },
 }
 
 /** Vocabulario 3: etiquetas cortas para la tabla de facturas en la UI. */

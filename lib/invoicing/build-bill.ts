@@ -23,14 +23,6 @@ const DEFAULT_STANDARD_CODE = '999'
 const DEFAULT_SCHEME_ID = '0'
 const DEFAULT_NUMERATION_RANGE_ID = 0
 
-/** Fecha de vencimiento por defecto para pagos a crédito (15 días desde la venta). */
-function creditDueDate(saleCreatedAt?: Date | string | null): string | undefined {
-  const base = saleCreatedAt ? new Date(saleCreatedAt) : new Date()
-  if (Number.isNaN(base.getTime())) return undefined
-  const due = new Date(base.getTime() + 15 * 24 * 60 * 60 * 1000)
-  return due.toISOString().slice(0, 10)
-}
-
 interface BuildContext {
   tenant: {
     id: string
@@ -118,11 +110,7 @@ export function buildItems(items: any[]): InvoiceItemPayload[] {
  *  `invoiceTotal` es el total EXACTO de la factura (suma de ítems + IVA).
  *  DIAN exige que la suma de payment_details == total de factura; el POS redondea
  *  el cobro en efectivo a la centena, así que reconciliamos aquí el monto. */
-export function buildPayments(
-  payments: any[],
-  invoiceTotal: number,
-  saleCreatedAt?: Date | string | null
-): InvoicePaymentDetailPayload[] {
+export function buildPayments(payments: any[], invoiceTotal: number): InvoicePaymentDetailPayload[] {
   if (!payments || payments.length === 0) {
     return [{ payment_form: '1', payment_method_code: '10', amount: toMoneyString(invoiceTotal) }]
   }
@@ -130,22 +118,11 @@ export function buildPayments(
     const p = payments[0]
     // Un solo pago: el monto debe cuadrar con el total exacto de la factura.
     const amount = invoiceTotal > 0 ? invoiceTotal : Number(p.amount)
-    const detail = toPaymentDetail(p.method, amount, p.reference)
-    // Pago a crédito (payment_form = '2'): DIAN exige fecha de vencimiento.
-    if (detail.payment_form === '2' && !detail.due_date) {
-      detail.due_date = p.dueDate || creditDueDate(saleCreatedAt)
-    }
-    return [detail]
+    return [toPaymentDetail(p.method, amount, p.reference)]
   }
   // Multi-pago: reconciliamos la diferencia de redondeo en el primer pago en efectivo
   // (o en el primero) para que la suma cuadre con el total exacto de la factura.
-  const details = payments.map((p) => {
-    const detail = toPaymentDetail(p.method, Number(p.amount), p.reference)
-    if (detail.payment_form === '2' && !detail.due_date) {
-      detail.due_date = p.dueDate || creditDueDate(saleCreatedAt)
-    }
-    return detail
-  })
+  const details = payments.map((p) => toPaymentDetail(p.method, Number(p.amount), p.reference))
   const sumPayments = details.reduce((s, d) => s + Number(d.amount || 0), 0)
   const diff = Number((invoiceTotal - sumPayments).toFixed(2))
   if (diff !== 0 && details.length > 0) {
@@ -257,7 +234,7 @@ export async function buildInvoicePayload(input: {
     operation_type: input.operationType ?? '10',
     send_email: Boolean(sale.customerEmail),
     observation: 'Factura emitida automáticamente desde POS Retail',
-    payment_details: buildPayments(paymentsRows, exactInvoiceTotal || Number(sale.total ?? 0), sale.createdAt),
+    payment_details: buildPayments(paymentsRows, exactInvoiceTotal || Number(sale.total ?? 0)),
     customer: customer
       ? buildCustomerPayload(customer, ctx.tenant.municipalityCode || '11001', ctx.tenant.tributeCode || 'ZZ')
       : buildCustomerPayload(
