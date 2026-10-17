@@ -18,6 +18,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { getUserId, getTenantId, logAudit, publishEvent } from './_shared'
 import { emitFactusElectronicInvoice } from './factus-service'
+import { chargeCustomerCredit } from './customers'
 export async function createSale(input: CreateSaleDTO) {
   const userId = await getUserId()
   const tenantId = await getTenantId(userId)
@@ -210,6 +211,30 @@ export async function completeSale(input: CompleteSaleDTO) {
 
   if (Math.abs(totalPayment - saleTotal) > 100) {
     throw new Error(`El pago ingresado ($${totalPayment}) no coincide con el total de la venta ($${saleTotal})`)
+  }
+
+  // Pago a crédito (cuenta corriente): valida cupo y registra el cargo ANTES de
+  // completar la venta, para no dejarla cerrada si el crédito falla.
+  const creditTotal = input.payments
+    .filter((p) => String(p.method).toUpperCase() === 'STORE_CREDIT')
+    .reduce((sum, p) => sum + p.amount, 0)
+  if (creditTotal > 0) {
+    const docNumber = (sale[0].customerDocNumber || '').trim()
+    if (!docNumber) throw new Error('Para vender a crédito debe seleccionar un cliente.')
+    const cust = await db
+      .select({ id: schema.customer.id })
+      .from(schema.customer)
+      .where(
+        and(eq(schema.customer.tenantId, tenantId), eq(schema.customer.documentNumber, docNumber))
+      )
+      .limit(1)
+    if (!cust.length) throw new Error('No se encontró el cliente para el cargo a crédito.')
+    await chargeCustomerCredit({
+      customerId: cust[0].id,
+      amount: creditTotal,
+      saleId: input.saleId,
+      note: `Venta POS${sale[0].ticketNumber ? ` #${sale[0].ticketNumber}` : ''}`,
+    })
   }
 
   // Record payments

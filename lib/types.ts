@@ -41,7 +41,8 @@ export enum PaymentMethod {
   CARD = 'CARD',
   TRANSFER = 'TRANSFER',
   CHEQUE = 'CHEQUE',
-  MIXED = 'MIXED'
+  MIXED = 'MIXED',
+  STORE_CREDIT = 'STORE_CREDIT'
 }
 
 export enum PaymentStatus {

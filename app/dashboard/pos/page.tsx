@@ -458,6 +458,7 @@ export default function DashboardPOSPage() {
           saleId={saleId}
           total={totals.total}
           loading={loading}
+          customerCredit={customerCreditInfo}
           onBack={() => setStep('shopping')}
           onComplete={handleCompleteSale}
         />

@@ -67,8 +67,10 @@ export function toPaymentDetail(
   amount: number,
   referenceCode?: string
 ): InvoicePaymentDetailPayload {
+  // El crédito de cuenta corriente se declara a DIAN como forma de pago '2' (crédito).
+  const isCredit = (posMethod || '').toUpperCase().trim() === 'STORE_CREDIT'
   return {
-    payment_form: '1',
+    payment_form: isCredit ? '2' : '1',
     payment_method_code: mapPaymentMethod(posMethod),
     reference_code: referenceCode,
     amount: toMoneyString(amount),
