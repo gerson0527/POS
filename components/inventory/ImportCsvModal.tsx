@@ -126,7 +126,7 @@ export function ImportCsvModal({ open, onClose, onImported }: ImportCsvModalProp
           onChange={(e) => setImportCsv(e.target.value)}
           placeholder={'SKU,nombre,descripcion,codigo_barras,categoria,precio_venta,costo,tasa_iva,stock,estado\nSKU-001,Teclado RGB,Switches MX Red,770123450001,Tecnología,250000,150000,19,25,ACTIVE'}
           rows={8}
-          className="w-full bg-input border border-line focus:border-accent text-white p-2.5 rounded font-mono text-[11px] resize-y"
+          className="w-full bg-input border border-line focus:border-accent text-fg p-2.5 rounded font-mono text-[11px] resize-y"
         />
       </div>
 

@@ -161,7 +161,7 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
             <button
               type="button"
               onClick={onBack}
-              className="text-fg-muted hover:text-white transition-colors"
+              className="text-fg-muted hover:text-fg transition-colors"
               title="Cerrar modal"
             >
               <X className="w-4 h-4" />

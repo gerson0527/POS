@@ -461,7 +461,7 @@ export default function ReportsPage() {
                     {
                       key: 'revenue',
                       header: 'VENTAS ($)',
-                      cellClassName: 'text-white font-semibold',
+                      cellClassName: 'text-fg font-semibold',
                       render: (p: any) => formatCOP(p.revenue),
                     },
                     {

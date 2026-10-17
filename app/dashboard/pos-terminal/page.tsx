@@ -110,7 +110,7 @@ export default function POSTerminalDualPage() {
             <Zap className="w-4 h-4" />
             <span>TERMINAL POS ENTERPRISE // HÍBRIDO DUAL VIEW</span>
           </div>
-          <h1 className="text-xl font-black text-white mt-1">Caja Registradora & Facturación Electrónica DIAN</h1>
+          <h1 className="text-xl font-bold text-fg mt-1">Caja Registradora & Facturación Electrónica DIAN</h1>
         </div>
 
         <div className="flex items-center gap-3">
@@ -191,7 +191,7 @@ export default function POSTerminalDualPage() {
                   {
                     key: 'name',
                     header: 'PRODUCTO',
-                    cellClassName: 'font-bold text-white',
+                    cellClassName: 'font-semibold text-fg',
                   },
                   {
                     key: 'qty',
@@ -232,7 +232,7 @@ export default function POSTerminalDualPage() {
               <div className="bg-night p-4 border border-line-soft rounded-lg space-y-2 text-xs">
                 <div className="flex justify-between text-fg-muted">
                   <span>Subtotal Neto:</span>
-                  <span className="text-white font-bold">${subtotal.toLocaleString('es-CO')}</span>
+                  <span className="text-fg font-semibold">${subtotal.toLocaleString('es-CO')}</span>
                 </div>
                 <div className="flex justify-between text-fg-muted">
                   <span>IVA Recaudado:</span>
@@ -269,7 +269,7 @@ export default function POSTerminalDualPage() {
                 <div key={i} className="bg-night p-2.5 border border-line-soft rounded flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-ok shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-bold text-white text-[11px]">{h.subsystem}</p>
+                    <p className="font-semibold text-fg text-[11px]">{h.subsystem}</p>
                     <p className="text-[10px] text-fg-muted">{h.details}</p>
                   </div>
                 </div>

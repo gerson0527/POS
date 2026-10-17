@@ -44,7 +44,7 @@ const TABS: { id: ProductModalTab; label: string }[] = [
 ]
 
 const TEXTAREA_CLASS =
-  'w-full bg-input border border-line focus:border-accent p-2.5 rounded text-white resize-none'
+  'w-full bg-input border border-line focus:border-accent p-2.5 rounded text-fg resize-none'
 
 export function ProductFormModal({
   open,

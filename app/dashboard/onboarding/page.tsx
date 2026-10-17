@@ -205,7 +205,7 @@ export default function OnboardingPage() {
               CONFIGURACIÓN INICIAL DEL SISTEMA
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white uppercase">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-fg uppercase">
             BIENVENIDO AL POS RETAIL
           </h1>
           <p className="text-xs text-fg-soft font-sans mt-1.5">

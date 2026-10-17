@@ -358,14 +358,14 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
           <div className="bg-rose-surface border border-danger-bg rounded p-3 text-[11px] text-red-soft space-y-1">
             <p className="font-bold text-xs text-alert">• MARGEN RESULTANTE: {zeroProfitWarningModal.margin}%</p>
             <p>Esta configuración venderá el producto sin obtener margen de utilidad o incurriendo en pérdidas.</p>
-            <p className="text-white font-bold mt-1">¿Desea confirmar que este valor es correcto y emitir la orden de compra?</p>
+            <p className="text-fg font-semibold mt-1">¿Desea confirmar que este valor es correcto y emitir la orden de compra?</p>
           </div>
 
           <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2 border-t border-line-soft">
             <button
               type="button"
               onClick={() => setZeroProfitWarningModal(null)}
-              className="px-4 py-2.5 bg-night-mid-2 hover:bg-line-dim text-fg-muted hover:text-white rounded font-bold text-xs transition-colors"
+              className="px-4 py-2.5 bg-night-mid-2 hover:bg-line-dim text-fg-muted hover:text-fg rounded font-bold text-xs transition-colors"
             >
               AJUSTAR PRECIO DE VENTA
             </button>

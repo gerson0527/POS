@@ -409,7 +409,7 @@ export default function CategoriesPage() {
                   placeholder="Descripción opcional de la categoría…"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full bg-input border border-line focus:border-accent p-2.5 rounded text-white resize-none"
+                  className="w-full bg-input border border-line focus:border-accent p-2.5 rounded text-fg resize-none"
                 />
               </div>
 

@@ -35,7 +35,7 @@ export function OverdueSessionModal({ open, info, onClose }: OverdueSessionModal
       size="md"
     >
       <p className="font-mono text-xs text-fg leading-relaxed">
-        El sistema detectó que la sesión de caja <span className="text-accent font-bold">#{info.sessionId}</span> fue aperturada el <span className="font-bold text-white">{info.openedAt}</span> (hace {info.daysOverdue} día/s) y <span className="text-alert font-bold">NO FUE CERRADA AL FINALIZAR LA JORNADA</span>.
+        El sistema detectó que la sesión de caja <span className="text-accent font-bold">#{info.sessionId}</span> fue aperturada el <span className="font-bold text-fg">{info.openedAt}</span> (hace {info.daysOverdue} día/s) y <span className="text-alert font-bold">NO FUE CERRADA AL FINALIZAR LA JORNADA</span>.
       </p>
 
       <div className="bg-rose-surface border border-danger-bg rounded p-3 text-[11px] font-mono text-red-soft space-y-1.5">
@@ -49,7 +49,7 @@ export function OverdueSessionModal({ open, info, onClose }: OverdueSessionModal
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 bg-night-mid-2 hover:bg-line-dim text-fg-muted hover:text-white rounded font-mono text-xs transition-colors"
+          className="px-4 py-2 bg-night-mid-2 hover:bg-line-dim text-fg-muted hover:text-fg rounded font-mono text-xs transition-colors"
         >
           ENTENDIDO (CONTINUAR)
         </button>

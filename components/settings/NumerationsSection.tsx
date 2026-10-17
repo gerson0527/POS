@@ -184,7 +184,7 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
               <button
                 type="button"
                 onClick={() => setShowNumerationForm(false)}
-                className="text-fg-muted hover:text-white text-xs font-bold uppercase"
+                className="text-fg-muted hover:text-fg text-xs font-bold uppercase"
               >
                 [CANCELAR]
               </button>
@@ -345,7 +345,7 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
                         </button>
                         <button
                           onClick={() => handleToggleNumerationStatus(num)}
-                          className="p-1.5 bg-raised border border-line text-fg-muted hover:text-white rounded transition-colors"
+                          className="p-1.5 bg-raised border border-line text-fg-muted hover:text-fg rounded transition-colors"
                           title={num.status === 'ACTIVE' ? 'Desactivar' : 'Activar'}
                         >
                           {num.status === 'ACTIVE' ? (
