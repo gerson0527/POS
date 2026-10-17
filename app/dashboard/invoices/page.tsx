@@ -73,16 +73,23 @@ export default function InvoicesPage() {
 
   // Filtering logic
   const filteredInvoices = invoices.filter((inv) => {
-    const searchLower = searchQuery.toLowerCase()
+    const q = searchQuery.trim().toLowerCase()
     const ticketStr = inv.ticketNumber ? String(inv.ticketNumber).padStart(4, '0') : ''
-    const ticketMatch = ticketStr.includes(searchQuery) || (inv.ticketNumber && String(inv.ticketNumber).includes(searchQuery))
-    const idMatch = inv.id?.toLowerCase().includes(searchLower)
-    const customerNameMatch = inv.customerName?.toLowerCase().includes(searchLower)
-    const customerDocMatch = inv.customerDocNumber?.toLowerCase().includes(searchLower)
-    const refMatch = inv.paymentReference?.toLowerCase().includes(searchLower)
-    const cufeMatch = inv.cufe?.toLowerCase().includes(searchLower)
+    // La tabla muestra el consecutivo como FACT-#0015; la búsqueda debe
+    // reconocer ese formato visible además del número crudo (15 / 0015).
+    const ticketDisplay = ticketStr ? `FACT-#${ticketStr}` : ''
+    const qDigits = q.replace(/\D/g, '')
+    const ticketMatch =
+      (ticketDisplay !== '' && ticketDisplay.toLowerCase().includes(q)) ||
+      (qDigits !== '' && ticketStr.includes(qDigits))
+    const idMatch = inv.id?.toLowerCase().includes(q)
+    const customerNameMatch = inv.customerName?.toLowerCase().includes(q)
+    const customerDocMatch = inv.customerDocNumber?.toLowerCase().includes(q)
+    const refMatch = inv.paymentReference?.toLowerCase().includes(q)
+    const cufeMatch = inv.cufe?.toLowerCase().includes(q)
+    const fullNumberMatch = inv.fullNumber?.toLowerCase().includes(q)
 
-    const matchesSearch = !searchQuery.trim() || ticketMatch || idMatch || customerNameMatch || customerDocMatch || refMatch || cufeMatch
+    const matchesSearch = !q || ticketMatch || idMatch || customerNameMatch || customerDocMatch || refMatch || cufeMatch || fullNumberMatch
 
     // getAllInvoices devuelve labels en español ('EFECTIVO', 'T. CRÉDITO',
     // 'MIXTO (...)'); la clasificación se hace sobre payments[] (enum crudo)

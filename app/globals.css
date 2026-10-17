@@ -11,6 +11,7 @@
    ============================================================ */
 
 :root {
+  color-scheme: light;
   /* Superficies */
   --bg-app: #fafafa;
   --bg-sidebar: #ffffff;
@@ -151,6 +152,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   /* Superficies */
   --bg-app: #0b0b0b;
   --bg-sidebar: #101010;

@@ -87,7 +87,7 @@ export function InvoiceTable({
                 value={dateFrom}
                 max={dateTo || undefined}
                 onChange={(e) => onDateFromChange(e.target.value)}
-                className="bg-transparent text-fg font-mono text-xs outline-none [color-scheme:dark] cursor-pointer"
+                className="bg-transparent text-fg font-mono text-xs outline-none cursor-pointer"
               />
             </label>
             <label className="flex items-center gap-1.5 px-2.5 py-1.5 cursor-pointer">
@@ -98,7 +98,7 @@ export function InvoiceTable({
                 value={dateTo}
                 min={dateFrom || undefined}
                 onChange={(e) => onDateToChange(e.target.value)}
-                className="bg-transparent text-fg font-mono text-xs outline-none [color-scheme:dark] cursor-pointer"
+                className="bg-transparent text-fg font-mono text-xs outline-none cursor-pointer"
               />
             </label>
             {(dateFrom || dateTo) && (
