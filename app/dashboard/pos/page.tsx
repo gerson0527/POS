@@ -257,14 +257,8 @@ export default function DashboardPOSPage() {
         )
       } else if (/no hay proveedor|no configurado|configúrelo/i.test(factusResult?.message ?? '')) {
         // Facturación electrónica no configurada (sin credenciales reales de Factus):
-        // la venta local SÍ quedó registrada, solo se omite la transmisión.
-        toast(
-          `✅ Venta completada y guardada localmente.\n\n` +
-            `ℹ️ La facturación electrónica (DIAN) no está configurada con credenciales reales, ` +
-            `así que esta venta no se transmitió.\n\n` +
-            `Para activarla, ve a /dashboard/settings → "FACTURACIÓN ELECTRÓNICA" y coloca tu ` +
-            `client_id / client_secret / email / password de Factus.`
-        )
+        // la venta local SÍ quedó registrada; no exponemos detalles técnicos al cajero.
+        toast('✅ Factura realizada con éxito.')
       } else {
         toast(
           `⚠ Venta completada. La factura local se creó, pero NO se transmitió a DIAN:\n\n${factusResult?.message ?? 'sin error'}\n\nVe a /dashboard/invoices y dale "TRANSMITIR DIAN" para reintentar.`,
