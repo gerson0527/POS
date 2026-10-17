@@ -5,9 +5,7 @@ import { SectionPanel } from '@/components/tactical/SectionPanel'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { getSaleRepository, getHardwareDriver, isTauriEnvironment } from '@/lib/adapters/adapter-factory'
 import { useSyncManager } from '@/hooks/useSyncManager'
-import { useSecurityVault } from '@/hooks/useSecurityVault'
 import { useTelemetryDiagnostics } from '@/hooks/useTelemetryDiagnostics'
-import { useBackupRecovery } from '@/hooks/useBackupRecovery'
 import { useToast } from '@/components/ui/ToastProvider'
 import { DataTable } from '@/components/ui/DataTable'
 import {
@@ -15,10 +13,8 @@ import {
   Printer,
   Wifi,
   WifiOff,
-  ShieldCheck,
   Cpu,
   Activity,
-  HardDrive,
   CheckCircle2,
   Trash2,
   Zap } from 'lucide-react'
@@ -26,9 +22,7 @@ import {
 export default function POSTerminalDualPage() {
   const isTauri = isTauriEnvironment()
   const { isOnline, queueSummary, enqueueOfflineSale } = useSyncManager()
-  const { hardwareFingerprint } = useSecurityVault()
   const { metricsSummary, healthStatus, recordCheckoutLatency } = useTelemetryDiagnostics()
-  const { createEncryptedBackup } = useBackupRecovery()
   const { toast } = useToast()
 
   const [cart, setCart] = useState<any[]>([
@@ -96,11 +90,6 @@ export default function POSTerminalDualPage() {
     }
   }
 
-  function handleBackup() {
-    const pkg = createEncryptedBackup('tenant_bogota_01', JSON.stringify(cart))
-    toast(`¡RESPALDO CIFRADO AES-256 GENERADO! ID: ${pkg.backupId.substring(0, 12)}`)
-  }
-
   return (
     <div className="space-y-6 text-fg">
       {/* Header Bar */}
@@ -114,10 +103,6 @@ export default function POSTerminalDualPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <TacticalButton variant="secondary" size="sm" onClick={handleBackup}>
-            <HardDrive className="w-3.5 h-3.5 mr-1" /> CREAR BACKUP CIFRADO
-          </TacticalButton>
-
           <TacticalButton
             variant="primary"
             size="sm"
@@ -130,7 +115,7 @@ export default function POSTerminalDualPage() {
       </div>
 
       {/* STATUS BADGES BAR */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
         <div className="bg-surface border border-line-dim rounded-lg p-3">
           <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">ENTORNO DE EJECUCIÓN</p>
           <div className="flex items-center gap-1.5 mt-1 text-accent font-bold">
@@ -171,13 +156,6 @@ export default function POSTerminalDualPage() {
           </div>
         </div>
 
-        <div className="bg-surface border border-line-dim rounded-lg p-3">
-          <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">LICENCIA ED25519</p>
-          <div className="flex items-center gap-1.5 mt-1 font-bold text-ok">
-            <ShieldCheck className="w-4 h-4 text-ok shrink-0" />
-            <span className="truncate">VERIFICADA (HW OK)</span>
-          </div>
-        </div>
       </div>
 
       {/* POS MAIN GRID */}
@@ -274,15 +252,6 @@ export default function POSTerminalDualPage() {
                   </div>
                 </div>
               ))}
-            </div>
-          </SectionPanel>
-
-          <SectionPanel title="HUELLA DIGITAL DE HARDWARE" subtitle="Seguridad y Licencia de Nodo">
-            <div className="space-y-1 text-[10px] text-fg-muted">
-              <p>HARDWARE FINGERPRINT (SHA-256):</p>
-              <p className="bg-ink p-2 border border-line-faint rounded text-accent font-bold break-all">
-                {hardwareFingerprint || 'GENERANDO...'}
-              </p>
             </div>
           </SectionPanel>
         </div>
