@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { db } from '@/lib/db'
 import { fiscalDocument } from '@/lib/db/schema'
 import { validateAPIKey } from '@/lib/api/public-api'
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
 
     // Create invoice (simplified) — Fase 4.24: modelo fiscal único (fiscal_document).
     const newInvoice = {
-      id: `fdoc_${Date.now()}`,
+      id: `fdoc_${randomUUID()}`,
       tenantId: validation.tenantId,
       saleId: body.saleId,
       uniqueCode: body.cufe,
