@@ -4,9 +4,8 @@ import { db } from '@/lib/db'
 import { apiKey } from '@/lib/db/schema'
 import crypto from 'crypto'
 import { eq } from 'drizzle-orm'
-
-// Rate limiting store (in production, use Redis)
-const rateLimitStore = new Map<string, Array<number>>()
+import { checkRateLimit } from '@/lib/security/rate-limit'
+import { rateLimitedError } from '@/lib/errors'
 
 export async function validateAPIKey(
   key: string
@@ -30,30 +29,28 @@ export async function validateAPIKey(
 
   const key_record = record[0]
 
+  // Clave revocada/inactiva.
+  if (key_record.status && key_record.status !== 'ACTIVE') {
+    return { valid: false }
+  }
+
   // Check expiration
   if (key_record.expiresAt && new Date(key_record.expiresAt) < new Date()) {
     return { valid: false }
   }
 
-  // Check rate limit
-  const now = Date.now()
-  const windowMs = 60 * 60 * 1000 // 1 hour
-  const windowStart = now - windowMs
-
-  if (!rateLimitStore.has(key_record.id)) {
-    rateLimitStore.set(key_record.id, [])
+  // Rate limit persistente (H-4): contador en BD (sobrevive a serverless), no en memoria.
+  const windowMs = 60 * 60 * 1000 // 1 hora
+  const rate = await checkRateLimit(
+    `apikey:${key_record.id}`,
+    key_record.rateLimit || 1000,
+    windowMs
+  )
+  if (!rate.allowed) {
+    throw rateLimitedError(
+      `Límite de peticiones excedido (${rate.count}/${rate.limit}). Reintenta en ${rate.retryAfterSeconds}s.`
+    )
   }
-
-  const requests = rateLimitStore.get(key_record.id) || []
-  const recentRequests = requests.filter((time) => time > windowStart)
-
-  if (recentRequests.length >= (key_record.rateLimit || 1000)) {
-    return { valid: false }
-  }
-
-  // Update rate limit tracking
-  recentRequests.push(now)
-  rateLimitStore.set(key_record.id, recentRequests)
 
   // Update last used
   await db
@@ -64,6 +61,9 @@ export async function validateAPIKey(
   return {
     valid: true,
     tenantId: key_record.tenantId,
-    scopes: key_record.scopes.split(','),
+    scopes: key_record.scopes
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
   }
 }

@@ -59,10 +59,12 @@ async function seedDatabase(url: string) {
     }
 
     // 2. Auth Instance para esta base de datos
+    const archiveSecret = process.env.BETTER_AUTH_SECRET
+    if (!archiveSecret) throw new Error('BETTER_AUTH_SECRET no está definida (.env)')
     const auth = betterAuth({
       database: pool,
-      secret: process.env.BETTER_AUTH_SECRET || 'pos-dian-tactical-secret-key-2026-secure',
-      emailAndPassword: { enabled: true },
+      secret: archiveSecret,
+      emailAndPassword: { enabled: true, minPasswordLength: 12 },
     })
 
     // 3. Crear Usuarios & Membresías

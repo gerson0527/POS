@@ -15,6 +15,13 @@
       "when": 1792272718794,
       "tag": "0001_bored_mephistopheles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792274059419,
+      "tag": "0002_material_adam_warlock",
+      "breakpoints": true
     }
   ]
 }

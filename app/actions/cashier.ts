@@ -8,7 +8,7 @@ import {
 } from '@/lib/types'
 import { and, eq, desc } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { getUserId, getTenantId, logAudit } from './_shared'
+import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 import { buildSessionZReportData } from './z-report'
 export async function getCurrentCashierSessionSummary() {
   const userId = await getUserId()
@@ -35,6 +35,7 @@ export async function getCurrentCashierSessionSummary() {
 
 export async function openCashierSession(openingBalance: number, notes?: string, assignedUserId?: string) {
   const currentUserId = await getUserId()
+  await requireRole(currentUserId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(currentUserId)
   const userId = assignedUserId || currentUserId
 
@@ -77,6 +78,7 @@ export async function openCashierSession(openingBalance: number, notes?: string,
 
 export async function closeCashierSession(sessionId: string, closingBalance: number, notes?: string) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
 
   const sessions = await db

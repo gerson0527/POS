@@ -9,6 +9,7 @@ export type AppErrorCode =
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'CONFLICT'
+  | 'RATE_LIMITED'
   | 'TENANT_NOT_ASSIGNED'
   | 'TENANT_SUSPENDED'
   | 'INTERNAL'
@@ -22,6 +23,7 @@ const STATUS_BY_CODE: Record<AppErrorCode, number> = {
   TENANT_SUSPENDED: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,
+  RATE_LIMITED: 429,
   INTERNAL: 500,
 }
 
@@ -70,6 +72,10 @@ export function notFound(detail: string) {
 
 export function conflictError(detail: string) {
   return new AppError('CONFLICT', detail)
+}
+
+export function rateLimitedError(detail = 'Demasiadas peticiones. Intenta de nuevo más tarde.') {
+  return new AppError('RATE_LIMITED', detail)
 }
 
 export function internalError(detail: string) {

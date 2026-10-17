@@ -27,3 +27,14 @@ export const apiKey = pgTable(
     statusIdx: index('ak_status_idx').on(table.status),
   })
 )
+
+// RATE_LIMIT_BUCKET: contadores de rate limiting persistentes (H-4).
+// Sobrevive a reinicios de instancia serverless, a diferencia de un Map en memoria.
+export const rateLimitBucket = pgTable(
+  'rate_limit_bucket',
+  {
+    id: text('id').primaryKey(),
+    windowStart: timestamp('window_start').notNull(),
+    count: integer('count').notNull().default(1),
+  }
+)

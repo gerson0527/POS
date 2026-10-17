@@ -2,9 +2,18 @@ import { betterAuth } from 'better-auth'
 import { pool } from '@/lib/db'
 import { sendWelcomeEmail } from '@/lib/email'
 
+// Seguridad (H-1): sin secreto NO se arranca. Nunca usar un valor por defecto
+// conocido: permitiría a cualquiera forjar cookies de sesión.
+const authSecret = process.env.BETTER_AUTH_SECRET
+if (!authSecret) {
+  throw new Error(
+    'BETTER_AUTH_SECRET no está definida: el servidor no puede firmar sesiones de forma segura.'
+  )
+}
+
 export const auth = betterAuth({
   database: pool,
-  secret: process.env.BETTER_AUTH_SECRET || 'pos-dian-tactical-secret-key-2026-secure',
+  secret: authSecret,
   databaseHooks: {
     user: {
       create: {
@@ -28,6 +37,15 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
+    // Seguridad (H-6): política mínima de contraseñas.
+    minPasswordLength: 12,
+    maxPasswordLength: 128,
+  },
+  // Seguridad (H-6): límite de intentos en endpoints de autenticación (anti fuerza bruta).
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
   },
   trustedOrigins: [
     'http://localhost:3000',

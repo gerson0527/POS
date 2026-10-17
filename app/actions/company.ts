@@ -6,7 +6,7 @@ import * as schema from '@/lib/db/schema'
 import { AuditAction } from '@/lib/types'
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { getUserId, getTenantId, logAudit } from './_shared'
+import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 export async function getCompanyInfo() {
   const userId = await getUserId()
   const tenantId = await getTenantId(userId)
@@ -109,6 +109,7 @@ export async function getOnboardingStatus(): Promise<OnboardingStatus> {
 
 export async function completeTenantOnboarding(input: OnboardingCompanyData) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN'])
   const tenantId = await getTenantId(userId)
 
   // Validar que sea ADMIN
@@ -200,6 +201,7 @@ export async function updateCompanyInfo(input: {
   dianEnvironment?: string
 }) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN'])
   const tenantId = await getTenantId(userId)
 
   const tenants = await db

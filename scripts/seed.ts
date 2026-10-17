@@ -24,10 +24,12 @@ export async function runSeed() {
   ]
 
   const { betterAuth } = await import('better-auth')
+  const seedSecret = process.env.BETTER_AUTH_SECRET
+  if (!seedSecret) throw new Error('BETTER_AUTH_SECRET no está definida (.env)')
   const auth = betterAuth({
     database: pool,
-    secret: process.env.BETTER_AUTH_SECRET || 'pos-dian-tactical-secret-key-2026-secure',
-    emailAndPassword: { enabled: true },
+    secret: seedSecret,
+    emailAndPassword: { enabled: true, minPasswordLength: 12 },
   })
 
   for (const u of usersToSeed) {
@@ -42,7 +44,7 @@ export async function runSeed() {
             name: u.name,
           },
         })
-        console.log(`✅ Usuario (${u.email} / ${u.password}) registrado en la base de datos`)
+        console.log(`✅ Usuario ${u.email} registrado en la base de datos`)
       } catch (err: any) {
         console.log(`ℹ️ Usuario ${u.email} procesado:`, err?.message || err)
       }
@@ -369,9 +371,9 @@ export async function runSeed() {
   console.log('   - Productos: 100 Ítems Catálogo Retail')
   console.log('   - Inventarios: 300 Registros de Stock')
   console.log('----------------------------------------------------')
-  console.log('🔐 CREDENCIALES DE ACCESO:')
+  console.log('🔐 CUENTA DE ACCESO CREADA:')
   console.log('   - URL Login: http://localhost:3000/login')
-  console.log('   - Admin: gersongio0527@gmail.com | Password: 12345678password')
+  console.log('   - Admin: gersongio0527@gmail.com (rota la contraseña por un canal seguro)')
   console.log('   - Panel de Administración Multi-Tenant: /dashboard/users (Pestaña "Empresas / SAS")')
   console.log('----------------------------------------------------')
 }

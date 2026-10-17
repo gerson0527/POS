@@ -6,7 +6,7 @@ import * as schema from '@/lib/db/schema'
 import { AuditAction } from '@/lib/types'
 import { and, eq, asc } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { getUserId, getTenantId, logAudit } from './_shared'
+import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 import { slugify } from '@/lib/utils/slugify'
 export async function getProductCategories(includeInactive = true) {
   const userId = await getUserId()
@@ -28,6 +28,7 @@ export async function createProductCategory(input: {
   icon?: string
 }) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   const name = input.name.trim()
@@ -77,6 +78,7 @@ export async function updateProductCategory(input: {
   icon?: string
 }) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   const update: any = { updatedAt: new Date() }
@@ -109,6 +111,7 @@ export async function updateProductCategory(input: {
 
 export async function toggleProductCategoryStatus(id: string) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   const row = await db
@@ -134,6 +137,7 @@ export async function toggleProductCategoryStatus(id: string) {
 
 export async function deleteProductCategory(id: string, reassignTo?: string) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   const usage = await db
