@@ -13,6 +13,7 @@ import {
   Layers } from 'lucide-react'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { MetricCard } from '@/components/tactical/MetricCard'
+import { Pagination } from '@/components/tactical/Pagination'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/ui/ToastProvider'
 import { formatCOP } from '@/lib/utils/pos-utils'
@@ -36,6 +37,8 @@ export default function InvoicesPage() {
   const [isXmlModalOpen, setIsXmlModalOpen] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [emittingId, setEmittingId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   const handleEmitFactus = async (saleId: string) => {
     setEmittingId(saleId)
@@ -70,6 +73,11 @@ export default function InvoicesPage() {
   useEffect(() => {
     fetchInvoices()
   }, [])
+
+  // Volver a la primera página al cambiar búsqueda o filtros
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, methodFilter, dateFrom, dateTo])
 
   // Filtering logic
   const filteredInvoices = invoices.filter((inv) => {
@@ -122,6 +130,12 @@ export default function InvoicesPage() {
 
     return matchesSearch && matchesMethod && matchesDate
   })
+
+  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage) || 1
+  const paginatedInvoices = filteredInvoices.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
 
   // KPI Calculations
   const completedInvoices = invoices.filter((i) => i.status === 'COMPLETED' || i.status === 'CONFIRMED' || i.status === 'DRAFT')
@@ -295,7 +309,7 @@ export default function InvoicesPage() {
       {/* SectionPanel with Table */}
       <InvoiceTable
         loading={loading}
-        rows={filteredInvoices}
+        rows={paginatedInvoices}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         dateFrom={dateFrom}
@@ -312,6 +326,14 @@ export default function InvoicesPage() {
         onEmit={handleEmitFactus}
         onOpenDetail={handleOpenDetail}
         onOpenXml={handleOpenXml}
+      />
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={filteredInvoices.length}
+        itemsPerPage={itemsPerPage}
+        onPageChange={(page) => setCurrentPage(page)}
       />
 
       {/* MODAL 1: AUDITORÍA XML / COMPROBANTE ELECTRÓNICO DIAN FACTUS V2 */}
