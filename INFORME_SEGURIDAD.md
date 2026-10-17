@@ -40,7 +40,7 @@ Sin embargo, existen **debilidades importantes** que deben corregirse antes de c
 7. **Manejo de errores sin fuga de internals:** `toErrorResponse()` (`lib/errors.ts:85-97`) devuelve `500 Internal server error` genérico; los `AppError` mapean códigos a HTTP.
 8. **Secretos fuera del repositorio:** `.env*` está en `.gitignore` (excepto `.env.example`).
 9. **Auditoría:** existe `logAudit()` (`app/actions/_shared.ts:11`) y tabla `audit_log`.
-10. **Cabeceras de plataforma:** Vercel añade por defecto `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` y `Referrer-Policy` (verificado en respuesta HTTP de producción).
+10. **Barrera de borde + cabeceras:** `proxy.ts` protege `/dashboard`, `/pos`, `/api/v1` y `/api/reports` (redirige a `/login` sin cookie de sesión) e inyecta `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` y `Referrer-Policy`.
 
 ---
 
@@ -113,14 +113,13 @@ En Vercel cada instancia tiene su propia memoria y se recicla; un atacante puede
 
 ---
 
-### 🟡 H-5 (Media) — Ausencia de cabeceras de seguridad / CSP
+### 🟡 H-5 (Media) — CSP y Permissions-Policy ausentes *(remediado)*
 
-**Ubicación:** `next.config.mjs` no define `headers()`; no hay **Content-Security-Policy** ni `Permissions-Policy`.
+**Ubicación original:** faltaba **Content-Security-Policy** y `Permissions-Policy`. Las cabeceras `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy` y `HSTS` **ya las añade `proxy.ts`** (se observaron en respuestas HTTP reales).
 
-**Impacto**
-Sin CSP, disminuye la defensa en profundidad frente a XSS (aunque no se detectó `dangerouslySetInnerHTML` en componentes React). Vercel ya aporta HSTS, `nosniff`, `X-Frame-Options: DENY` y `Referrer-Policy`.
+**Impacto:** sin CSP, menor defensa en profundidad frente a XSS.
 
-**Recomendación:** definir CSP (con `nonce`/`strict-dynamic`), `Permissions-Policy` y `X-Permitted-Cross-Domain-Policies` en `next.config.mjs` `headers()`.
+**Remediación aplicada:** se añadió CSP + `Permissions-Policy` en `next.config.mjs` `headers()`, aplicadas a todas las rutas. *Residual:* la CSP usa `'unsafe-inline'`/`'unsafe-eval'` (requerido por Next sin `nonce`); endurecer con `nonce` + `strict-dynamic` en una iteración posterior.
 
 ---
 
@@ -149,14 +148,11 @@ Si rota `BETTER_AUTH_SECRET`, las credenciales DIAN cifradas quedan **ilegibles*
 
 ---
 
-### 🟡 H-8 (Media) — Sin middleware de protección de rutas
+### 🟡 H-8 (Media) — Protección de rutas en el borde *(corregido: ya existía)*
 
-**Evidencia:** no existe `middleware.ts`. Las páginas del dashboard son client components; solo `app/dashboard/page.tsx:173` hace `redirect('/login')` en servidor. El guard de `app/dashboard/layout.tsx` es **solo cliente** y sirve para onboarding, no como barrera de seguridad.
+**Corrección:** el sistema **sí** tiene barrera en el borde: **`proxy.ts`** (nombre de `middleware` en Next 16) protege `/dashboard`, `/pos`, `/api/v1` y `/api/reports`, redirige a `/login` si no hay cookie de sesión y responde `401` en APIs. La búsqueda inicial (solo `middleware.ts`) no lo detectó.
 
-**Impacto**
-Un usuario no autenticado puede recibir el HTML del *shell* del dashboard (sin datos, porque los server actions sí exigen sesión). Es una debilidad de **defensa en profundidad** y expone la estructura de la app.
-
-**Recomendación:** añadir `middleware.ts` que valide la cookie de sesión para `/dashboard/*` y redirija a `/login`.
+**Residual:** la verificación es "optimista" (presencia de cookie); la autorización real (sesión válida + rol/tenant) sigue en servidor, que es lo correcto. **Sin acción pendiente.**
 
 ---
 
@@ -272,3 +268,34 @@ Un usuario no autenticado puede recibir el HTML del *shell* del dashboard (sin d
 La arquitectura se apoya en componentes sólidos (Better Auth, Drizzle parametrizado, Zod, AES-GCM y aislamiento multi-tenant por sesión). Los riesgos principales **no provienen de fallos exóticos**, sino de **higiene de configuración y control de acceso**: secretos por defecto, ausencia de RBAC y cifrado en el cliente. Corregir H-1 y H-2 elimina la mayor parte del riesgo real; el resto son mejoras de endurecimiento asequibles.
 
 > Este informe debe revisarse tras cada cambio significativo de autenticación, esquema o superficie de API.
+
+---
+
+## 10. Estado de remediación (2026-10-17)
+
+Se aplicaron las correcciones de todos los hallazgos. Resumen:
+
+| ID | Estado | Cambio aplicado |
+|---|---|---|
+| H-1 | ✅ Resuelto (código) | Se eliminaron los secretos *fallback*; `lib/auth.ts` y `scripts/seed.ts` **fallan si falta** `BETTER_AUTH_SECRET`. |
+| H-2 | ✅ Resuelto | `requireRole(...)` aplicado a **40 mutaciones** en `app/actions/*`; política por rol (ADMIN / MANAGER / CASHIER). |
+| H-3 | ✅ Resuelto | Se retiró el cifrado en cliente de `pos-terminal`; hooks `useSecurityVault`/`useBackupRecovery` **eliminados**. |
+| H-4 | ✅ Resuelto | Rate limiting persistente en Postgres (`lib/security/rate-limit.ts` + tabla `rate_limit_bucket`) y respuesta **429** (`RATE_LIMITED`). |
+| H-5 | ✅ Resuelto (residual) | CSP + `Permissions-Policy` en `next.config.mjs`. Residual: CSP con `unsafe-inline` (endurecer con `nonce`). |
+| H-6 | ✅ Resuelto | `minPasswordLength: 12`, `rateLimit` en Better Auth; se dejaron de registrar credenciales en el seed. |
+| H-7 | ✅ Resuelto | `ENCRYPTION_KEY` dedicada y **obligatoria** (sin fallback a `BETTER_AUTH_SECRET`). |
+| H-8 | ✅ Corregido | Ya existía `proxy.ts`; sin acción (hallazgo era falso por búsqueda incompleta). |
+| H-9 | ✅ Resuelto | `escapeHtml()` en `lib/email.ts` y URL desde `NEXT_PUBLIC_APP_URL`. |
+| H-10 | ✅ Resuelto | Se retiraron de la UI la licencia Ed25519 y la huella de hardware simuladas. |
+| H-11 | ✅ Parcial | `scopes` con `trim`/`filter`; documentada la entropía mínima de la API key. |
+| H-12 | ✅ Resuelto | IDs de `audit_log`/`event`/API con `crypto.randomUUID()`. |
+| H-13 | ⚪ Informativo | Sin cambio de código; `trustedOrigins` revisado (solo entornos propios). |
+
+Migraciones de BD añadidas: `0001` (elimina tablas sin uso) y `0002` (crea `rate_limit_bucket`), aplicadas a Neon.
+
+### ⚠️ Acciones manuales pendientes (no aplicables desde el código)
+
+1. **Rotar** `BETTER_AUTH_SECRET` y `ENCRYPTION_KEY` en Vercel (y re-cifrar credenciales DIAN si `ENCRYPTION_KEY` cambia).
+2. **Verificar** que `ENCRYPTION_KEY` esté definida en el entorno de producción (ahora es obligatoria).
+3. **Cambiar** la contraseña del administrador sembrado (`gersongio0527@gmail.com`).
+4. Eliminar en una limpieza posterior los paquetes ya sin uso `packages/security-vault` y `packages/backup-recovery` (y sus referencias en `start-tauri.bat`).
