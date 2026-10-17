@@ -16,6 +16,7 @@ import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { StatusBadge } from '@/components/tactical/StatusBadge'
 import { Modal } from '@/components/ui/Modal'
 import { DataTable } from '@/components/ui/DataTable'
+import { Pagination } from '@/components/tactical/Pagination'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { TextArea } from '@/components/ui/TextArea'
@@ -31,11 +32,14 @@ import {
   RefreshCw,
   Eye } from 'lucide-react'
 
+const HISTORY_PAGE_SIZE = 10
+
 export default function CashierPage() {
   const [, setLoading] = useState(true)
   const { toast } = useToast()
   const [activeSessionSummary, setActiveSessionSummary] = useState<any>(null)
   const [history, setHistory] = useState<any[]>([])
+  const [historyPage, setHistoryPage] = useState(1)
   const [users, setUsers] = useState<any[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string>('')
 
@@ -147,6 +151,13 @@ export default function CashierPage() {
   const currentDiff = activeSessionSummary?.expectedCash !== undefined
     ? (parseFloat(actualCash) || 0) - activeSessionSummary.expectedCash
     : 0
+
+  const totalHistoryPages = Math.max(1, Math.ceil(history.length / HISTORY_PAGE_SIZE))
+  const safeHistoryPage = Math.min(historyPage, totalHistoryPages)
+  const paginatedHistory = history.slice(
+    (safeHistoryPage - 1) * HISTORY_PAGE_SIZE,
+    safeHistoryPage * HISTORY_PAGE_SIZE
+  )
 
   return (
     <div className="space-y-6">
@@ -372,10 +383,20 @@ export default function CashierPage() {
               ),
             },
           ]}
-          rows={history}
+          rows={paginatedHistory}
           rowKey={(h: any) => h.id}
           emptyMessage="[NO HAY HISTORIAL DE CIERRES DE CAJA REGISTRADOS]"
         />
+
+        <div className="mt-3">
+          <Pagination
+            currentPage={safeHistoryPage}
+            totalPages={totalHistoryPages}
+            totalItems={history.length}
+            itemsPerPage={HISTORY_PAGE_SIZE}
+            onPageChange={setHistoryPage}
+          />
+        </div>
       </SectionPanel>
 
       {/* MODAL: ABRIR CAJA */}
