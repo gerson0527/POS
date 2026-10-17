@@ -153,7 +153,7 @@ export default function CashierPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-line-soft pb-4">
         <div>
-          <div className="flex items-center gap-2 text-accent font-mono text-xs tracking-widest uppercase font-bold">
+          <div className="flex items-center gap-2 text-accent text-xs font-semibold">
             <span>MÓDULO DE CAJA // ARQUEOS Y CIERRES Z</span>
           </div>
         </div>
@@ -177,7 +177,7 @@ export default function CashierPage() {
 
       {/* BANNER DE ALERTA DE TURNO VENCIDO */}
       {activeSessionSummary?.hasOpenSession && activeSessionSummary?.isOverdue && (
-        <div className="bg-danger-dim border-2 border-alert rounded-lg p-4 font-mono text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-red-soft animate-pulse shadow-xl">
+        <div className="bg-danger-dim border-2 border-alert rounded-lg p-4 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-red-soft animate-pulse shadow-xl">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-6 h-6 text-alert shrink-0" />
             <div>
@@ -209,7 +209,7 @@ export default function CashierPage() {
             <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
               <div className="bg-surface border border-accent/50 rounded-lg p-3">
                 <p className="text-[9px] text-accent font-bold uppercase tracking-wider">CAJERO RESPONSABLE</p>
-                <div className="flex items-center gap-1.5 mt-1 text-white font-bold text-xs">
+                <div className="flex items-center gap-1.5 mt-1 text-fg font-semibold text-xs">
                   <UserCheck className="w-4 h-4 text-accent shrink-0" />
                   <span className="truncate">{activeSessionSummary.userName || 'Operador POS'}</span>
                 </div>
@@ -268,7 +268,7 @@ export default function CashierPage() {
               </div>
               <div>
                 <span className="text-fg-muted">Transacciones:</span>{' '}
-                <span className="font-bold text-white">{activeSessionSummary.totalSalesCount} ventas</span>
+                <span className="font-semibold text-fg">{activeSessionSummary.totalSalesCount} ventas</span>
               </div>
               <div>
                 <span className="text-fg-muted">Total Facturado:</span>{' '}
@@ -332,7 +332,7 @@ export default function CashierPage() {
             {
               key: 'closingBalance',
               header: 'EFECTIVO CONTADO',
-              cellClassName: 'font-bold text-white',
+              cellClassName: 'font-semibold text-fg',
               render: (h: any) => (h.closingBalance ? formatCOP(h.closingBalance) : '---'),
             },
             {
@@ -432,7 +432,7 @@ export default function CashierPage() {
                   placeholder="Ej: Turno mañana sucursal principal..."
                   value={openingNotes}
                   onChange={(e) => setOpeningNotes(e.target.value)}
-                  className="w-full bg-input border border-line focus:border-accent p-2.5 rounded text-white"
+                  className="w-full bg-input border border-line focus:border-accent p-2.5 rounded text-fg"
                 />
               </div>
 
@@ -466,13 +466,13 @@ export default function CashierPage() {
                 </div>
                 <div className="flex justify-between text-fg-muted">
                   <span>Base Inicial en Caja:</span>
-                  <span className="text-white font-bold">{formatCOP(activeSessionSummary?.openingBase)}</span>
+                  <span className="text-fg font-semibold">{formatCOP(activeSessionSummary?.openingBase)}</span>
                 </div>
                 <div className="flex justify-between text-fg-muted">
                   <span>Ventas en Efectivo:</span>
                   <span className="text-success font-bold">+{formatCOP(activeSessionSummary?.cashSales)}</span>
                 </div>
-                <div className="flex justify-between text-white font-bold border-t border-line-faint pt-2 text-sm">
+                <div className="flex justify-between text-fg font-semibold border-t border-line-faint pt-2 text-sm">
                   <span>Efectivo Esperado en Cajón:</span>
                   <span className="text-accent">{formatCOP(activeSessionSummary?.expectedCash)}</span>
                 </div>
@@ -487,7 +487,7 @@ export default function CashierPage() {
                     required
                     value={actualCash}
                     onChange={(e) => setActualCash(e.target.value)}
-                    className="w-full bg-input border border-line focus:border-alert p-2.5 pl-7 rounded text-white font-bold text-lg"
+                    className="w-full bg-input border border-line focus:border-alert p-2.5 pl-7 rounded text-fg font-semibold text-lg"
                   />
                 </div>
               </div>
@@ -516,7 +516,7 @@ export default function CashierPage() {
                   placeholder="Notas adicionales sobre el cierre o novedades del turno..."
                   value={closingNotes}
                   onChange={(e) => setClosingNotes(e.target.value)}
-                  className="w-full bg-input border border-line focus:border-alert p-2.5 rounded text-white"
+                  className="w-full bg-input border border-line focus:border-alert p-2.5 rounded text-fg"
                 />
               </div>
 

@@ -61,7 +61,8 @@ export function toMoneyString(value: number | string | null | undefined): string
   return n.toFixed(2)
 }
 
-/** Convierte un valor del método de pago POS → InvoicePaymentDetailPayload */
+/** Convierte un valor del método de pago POS → InvoicePaymentDetailPayload.
+ *  El crédito de cuenta corriente se informa a DIAN como efectivo (payment_form '1'). */
 export function toPaymentDetail(
   posMethod: string,
   amount: number,

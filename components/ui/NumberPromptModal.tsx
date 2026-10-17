@@ -54,7 +54,7 @@ export function NumberPromptModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={title} icon={icon} size="md">
+    <Modal open={open} onClose={onClose} title={title} icon={icon} size="md" zIndexClass="z-[60]">
       <div className="space-y-4">
         {description && <p className="font-mono text-xs text-fg-muted leading-relaxed">{description}</p>}
 

@@ -174,7 +174,7 @@ export function LocationsSection({ refreshKey = 0, onLoadingChange }: LocationsS
               <button
                 type="button"
                 onClick={() => setShowLocationForm(false)}
-                className="text-fg-muted hover:text-white text-xs font-bold uppercase"
+                className="text-fg-muted hover:text-alert text-xs font-semibold uppercase"
               >
                 [CANCELAR]
               </button>
@@ -298,7 +298,7 @@ export function LocationsSection({ refreshKey = 0, onLoadingChange }: LocationsS
                   </button>
                   <button
                     onClick={() => handleToggleLocationStatus(loc)}
-                    className="p-1.5 bg-raised border border-line text-fg-muted hover:text-white rounded transition-colors"
+                    className="p-1.5 bg-raised border border-line text-fg-muted hover:text-fg rounded transition-colors"
                     title={loc.status === 'ACTIVE' ? 'Desactivar' : 'Activar'}
                   >
                     {loc.status === 'ACTIVE' ? (
@@ -309,7 +309,7 @@ export function LocationsSection({ refreshKey = 0, onLoadingChange }: LocationsS
                   </button>
                   <button
                     onClick={() => handleDeleteLocation(loc.id)}
-                    className="p-1.5 bg-raised border border-line text-alert hover:bg-alert hover:text-black rounded transition-colors"
+                    className="p-1.5 bg-raised border border-line text-alert hover:bg-alert hover:text-white rounded transition-colors"
                     title="Eliminar"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

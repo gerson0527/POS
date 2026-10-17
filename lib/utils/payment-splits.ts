@@ -33,7 +33,10 @@ export function validatePaymentSplits(
     if (!Number.isFinite(p.amount) || p.amount <= 0) {
       return { ok: false, error: `El monto del pago #${i + 1} debe ser mayor a cero.` }
     }
-    if (p.method !== PaymentMethod.CASH && !String(p.reference ?? '').trim()) {
+    // Efectivo y crédito de cuenta corriente no requieren comprobante.
+    const needsReference =
+      p.method !== PaymentMethod.CASH && p.method !== PaymentMethod.STORE_CREDIT
+    if (needsReference && !String(p.reference ?? '').trim()) {
       return { ok: false, error: `Falta el voucher/referencia del pago #${i + 1}.` }
     }
   }

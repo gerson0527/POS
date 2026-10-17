@@ -64,7 +64,7 @@ export function StatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-mono uppercase tracking-wider rounded border ${bgColor} ${borderColor} ${
+      className={`inline-flex items-center gap-1.5 font-medium rounded border ${bgColor} ${borderColor} ${
         size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs'
       } ${className}`}
     >

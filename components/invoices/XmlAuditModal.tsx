@@ -102,7 +102,7 @@ export function XmlAuditModal({ invoice, onClose }: XmlAuditModalProps) {
               href={invoice.pdfUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 bg-accent text-black font-bold px-4 py-2 rounded text-xs hover:bg-warn-solid transition-colors"
+              className="inline-flex items-center gap-2 bg-accent text-white font-bold px-4 py-2 rounded text-xs hover:bg-warn-solid transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" /> DESCARGAR PDF OFICIAL FACTUS DIAN
             </a>

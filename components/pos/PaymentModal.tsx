@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { Banknote, CheckCircle2, CreditCard, Layers, Plus, Smartphone, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Banknote, CheckCircle2, CreditCard, Layers, Plus, Smartphone, Wallet, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { SectionPanel } from '@/components/tactical/SectionPanel'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
@@ -17,12 +17,24 @@ import {
   validatePaymentSplits,
 } from '@/lib/utils/payment-splits'
 
-const METHODS = [
+const BASE_METHODS = [
   { method: PaymentMethod.CASH, label: 'EFECTIVO', short: 'EF', icon: Banknote },
   { method: PaymentMethod.NEQUI, label: 'NEQUI', short: 'NQ', icon: Smartphone },
   { method: PaymentMethod.CREDIT_CARD, label: 'T. CRÉDITO', short: 'CC', icon: CreditCard },
   { method: PaymentMethod.DEBIT_CARD, label: 'T. DÉBITO', short: 'TD', icon: CreditCard },
 ] as const
+
+const STORE_CREDIT_METHOD = {
+  method: PaymentMethod.STORE_CREDIT,
+  label: 'CRÉDITO',
+  short: 'CR',
+  icon: Wallet,
+} as const
+
+/** Métodos sin comprobante/voucher (efectivo y crédito de cuenta corriente). */
+function methodNeedsReference(method: PaymentMethod): boolean {
+  return method !== PaymentMethod.CASH && method !== PaymentMethod.STORE_CREDIT
+}
 
 const REF_PLACEHOLDER: Record<string, string> = {
   [PaymentMethod.NEQUI]: 'Ej: M123456 / Ref Nequi',
@@ -32,7 +44,8 @@ const REF_PLACEHOLDER: Record<string, string> = {
 }
 
 function methodLabel(method: PaymentMethod): string {
-  return METHODS.find((m) => m.method === method)?.label ?? method
+  if (method === PaymentMethod.STORE_CREDIT) return 'CRÉDITO (CUENTA CORRIENTE)'
+  return BASE_METHODS.find((m) => m.method === method)?.label ?? method
 }
 
 function referencePlaceholder(method: PaymentMethod): string {
@@ -51,17 +64,34 @@ interface PaymentModalProps {
   saleId: string | null
   total: number
   loading: boolean
+  customerCredit?: { enabled: boolean; limit: number; balance: number; status: string } | null
   onBack: () => void
   onComplete: (payments: PaymentSplit[]) => void
 }
 
-export function PaymentModal({ open, saleId, total, loading, onBack, onComplete }: PaymentModalProps) {
+export function PaymentModal({ open, saleId, total, loading, customerCredit, onBack, onComplete }: PaymentModalProps) {
   const [splitMode, setSplitMode] = useState(false)
   const [singleMethod, setSingleMethod] = useState<PaymentMethod>(PaymentMethod.CASH)
   const [singleReference, setSingleReference] = useState('')
   const [lines, setLines] = useState<SplitLine[]>([])
   const [error, setError] = useState<string | null>(null)
   const nextIdRef = useRef(1)
+
+  // Cupo disponible del cliente (infinito si el crédito no tiene límite definido).
+  const availableCredit = useMemo(() => {
+    if (!customerCredit?.enabled) return 0
+    const limit = Number(customerCredit.limit || 0)
+    const balance = Number(customerCredit.balance || 0)
+    return limit > 0 ? Math.max(0, limit - balance) : Infinity
+  }, [customerCredit])
+
+  const creditAllowed =
+    !!customerCredit?.enabled && customerCredit.status !== 'BLOQUEADO' && availableCredit > 0
+
+  const methods = useMemo(
+    () => (creditAllowed ? [...BASE_METHODS, STORE_CREDIT_METHOD] : BASE_METHODS),
+    [creditAllowed]
+  )
 
   // Al abrir (o cambiar el total), reinicia al modo pago único con EFECTIVO por el total.
   useEffect(() => {
@@ -105,7 +135,7 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
   function addLine() {
     const rem = paymentRemaining(splitPayments, total)
     const used = new Set(lines.map((l) => l.method))
-    const nextMethod = METHODS.find((m) => !used.has(m.method))?.method ?? PaymentMethod.CASH
+    const nextMethod = methods.find((m) => !used.has(m.method))?.method ?? PaymentMethod.CASH
     setLines((prev) => [
       ...prev,
       {
@@ -124,7 +154,7 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
   function setLineMethod(id: string, method: PaymentMethod) {
     setLines((prev) =>
       prev.map((l) =>
-        l.id === id ? { ...l, method, reference: method === PaymentMethod.CASH ? '' : l.reference } : l
+        l.id === id ? { ...l, method, reference: methodNeedsReference(method) ? l.reference : '' } : l
       )
     )
   }
@@ -146,6 +176,21 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
       setError(result.error)
       return
     }
+    const creditTotal = payments
+      .filter((p) => p.method === PaymentMethod.STORE_CREDIT)
+      .reduce((sum, p) => sum + p.amount, 0)
+    if (creditTotal > 0) {
+      if (!creditAllowed) {
+        setError('El cliente no tiene crédito disponible.')
+        return
+      }
+      if (availableCredit !== Infinity && creditTotal > availableCredit + PAYMENT_SPLIT_TOLERANCE) {
+        setError(
+          `El monto a crédito (${formatCOP(creditTotal)}) supera el cupo disponible (${formatCOP(availableCredit)}).`
+        )
+        return
+      }
+    }
     setError(null)
     onComplete(payments)
   }
@@ -161,7 +206,7 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
             <button
               type="button"
               onClick={onBack}
-              className="text-fg-muted hover:text-white transition-colors"
+              className="text-fg-muted hover:text-fg transition-colors"
               title="Cerrar modal"
             >
               <X className="w-4 h-4" />
@@ -185,8 +230,8 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
           </Label>
 
           {!splitMode ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {METHODS.map((item) => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {methods.map((item) => {
                 const Icon = item.icon
                 const isSelected = singleMethod === item.method
                 return (
@@ -195,12 +240,12 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
                     type="button"
                     onClick={() => {
                       setSingleMethod(item.method)
-                      if (item.method === PaymentMethod.CASH) setSingleReference('')
+                      if (!methodNeedsReference(item.method)) setSingleReference('')
                       setError(null)
                     }}
                     className={`p-3 rounded border font-mono text-xs font-bold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-accent text-black border-accent shadow-lg scale-[1.02]'
+                        ? 'bg-accent text-white border-accent shadow-lg scale-[1.02]'
                         : 'bg-surface text-fg-muted border-line hover:border-line-strong hover:text-fg'
                     }`}
                   >
@@ -235,7 +280,7 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
 
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="flex gap-1">
-                      {METHODS.map((m) => (
+                      {methods.map((m) => (
                         <button
                           key={m.method}
                           type="button"
@@ -243,7 +288,7 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
                           onClick={() => setLineMethod(line.id, m.method)}
                           className={`w-9 h-9 rounded border font-mono text-[10px] font-bold transition-all cursor-pointer ${
                             line.method === m.method
-                              ? 'bg-accent text-black border-accent'
+                              ? 'bg-accent text-white border-accent'
                               : 'bg-veil text-fg-muted border-line hover:border-line-strong hover:text-fg'
                           }`}
                         >
@@ -264,7 +309,7 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
                     </div>
                   </div>
 
-                  {line.method !== PaymentMethod.CASH && (
+                  {methodNeedsReference(line.method) && (
                     <Input
                       type="text"
                       placeholder={referencePlaceholder(line.method)}
@@ -276,7 +321,7 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
 
                   <span className="block text-[10px] text-fg-muted uppercase">
                     {methodLabel(line.method)}
-                    {line.method !== PaymentMethod.CASH && !line.reference.trim() ? ' — VOUCHER REQUERIDO' : ''}
+                    {methodNeedsReference(line.method) && !line.reference.trim() ? ' — VOUCHER REQUERIDO' : ''}
                   </span>
                 </div>
               ))}
@@ -292,7 +337,7 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
           )}
 
           {/* Reference / Voucher Input (modo pago único) */}
-          {!splitMode && singleMethod !== PaymentMethod.CASH && (
+          {!splitMode && methodNeedsReference(singleMethod) && (
             <div className="bg-input p-3 rounded border border-accent/40 space-y-1.5">
               <Label className="text-accent">
                 ID DE TRANSFERENCIA / N° DE COMPROBANTE (VOUCHER) *
@@ -315,6 +360,15 @@ export function PaymentModal({ open, saleId, total, loading, onBack, onComplete 
           )}
 
           {/* Toggle pago único ↔ split */}
+          {creditAllowed && (
+            <p className="text-[10px] text-fg-muted">
+              Crédito disponible del cliente:{' '}
+              <span className="text-success font-bold">
+                {availableCredit === Infinity ? 'sin límite' : formatCOP(availableCredit)}
+              </span>
+            </p>
+          )}
+
           <button
             type="button"
             onClick={toggleSplitMode}

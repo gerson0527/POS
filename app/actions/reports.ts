@@ -125,11 +125,10 @@ export async function getTelemetryLogs() {
 
   return logs.map((log) => ({
     id: log.id,
-    timestamp: new Date(log.createdAt).toISOString().replace('T', ' ').substring(11, 19) + ' UTC',
-    action: log.action.toUpperCase(),
-    details: `${log.entity.toUpperCase()}: ${log.entityId}`,
-    user: log.userId ?? undefined,
-    status: 'online' as const
+    createdAt: log.createdAt.toISOString(),
+    action: log.action,
+    entity: log.entity,
+    entityId: log.entityId,
   }))
 }
 

@@ -28,3 +28,6 @@ src-tauri/target/
 
 # Neon CLI context (IDs de proyecto, no secretos)
 .neon/
+
+.vercel
+.env*

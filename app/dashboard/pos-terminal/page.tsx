@@ -106,11 +106,11 @@ export default function POSTerminalDualPage() {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-line-soft pb-4">
         <div>
-          <div className="flex items-center gap-2 text-accent font-mono text-xs tracking-widest uppercase font-bold">
+          <div className="flex items-center gap-2 text-accent text-xs font-semibold">
             <Zap className="w-4 h-4" />
             <span>TERMINAL POS ENTERPRISE // HÍBRIDO DUAL VIEW</span>
           </div>
-          <h1 className="text-xl font-black text-white mt-1">Caja Registradora & Facturación Electrónica DIAN</h1>
+          <h1 className="text-xl font-bold text-fg mt-1">Caja Registradora & Facturación Electrónica DIAN</h1>
         </div>
 
         <div className="flex items-center gap-3">
@@ -130,7 +130,7 @@ export default function POSTerminalDualPage() {
       </div>
 
       {/* STATUS BADGES BAR */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 font-mono text-xs">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
         <div className="bg-surface border border-line-dim rounded-lg p-3">
           <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">ENTORNO DE EJECUCIÓN</p>
           <div className="flex items-center gap-1.5 mt-1 text-accent font-bold">
@@ -191,7 +191,7 @@ export default function POSTerminalDualPage() {
                   {
                     key: 'name',
                     header: 'PRODUCTO',
-                    cellClassName: 'font-bold text-white',
+                    cellClassName: 'font-semibold text-fg',
                   },
                   {
                     key: 'qty',
@@ -229,10 +229,10 @@ export default function POSTerminalDualPage() {
               />
 
               {/* TOTALES */}
-              <div className="bg-night p-4 border border-line-soft rounded-lg space-y-2 font-mono text-xs">
+              <div className="bg-night p-4 border border-line-soft rounded-lg space-y-2 text-xs">
                 <div className="flex justify-between text-fg-muted">
                   <span>Subtotal Neto:</span>
-                  <span className="text-white font-bold">${subtotal.toLocaleString('es-CO')}</span>
+                  <span className="text-fg font-semibold">${subtotal.toLocaleString('es-CO')}</span>
                 </div>
                 <div className="flex justify-between text-fg-muted">
                   <span>IVA Recaudado:</span>
@@ -264,12 +264,12 @@ export default function POSTerminalDualPage() {
         {/* SUBSYSTEM HEALTH DIAGNOSTICS */}
         <div className="space-y-4">
           <SectionPanel title="DIAGNÓSTICO DE SALUD DEL SISTEMA" subtitle="Estado de hardware y servicios">
-            <div className="space-y-2 text-xs font-mono">
+            <div className="space-y-2 text-xs">
               {healthStatus.map((h, i) => (
                 <div key={i} className="bg-night p-2.5 border border-line-soft rounded flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-ok shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-bold text-white text-[11px]">{h.subsystem}</p>
+                    <p className="font-semibold text-fg text-[11px]">{h.subsystem}</p>
                     <p className="text-[10px] text-fg-muted">{h.details}</p>
                   </div>
                 </div>
@@ -278,7 +278,7 @@ export default function POSTerminalDualPage() {
           </SectionPanel>
 
           <SectionPanel title="HUELLA DIGITAL DE HARDWARE" subtitle="Seguridad y Licencia de Nodo">
-            <div className="space-y-1 font-mono text-[10px] text-fg-muted">
+            <div className="space-y-1 text-[10px] text-fg-muted">
               <p>HARDWARE FINGERPRINT (SHA-256):</p>
               <p className="bg-ink p-2 border border-line-faint rounded text-accent font-bold break-all">
                 {hardwareFingerprint || 'GENERANDO...'}

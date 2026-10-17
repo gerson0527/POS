@@ -35,6 +35,8 @@ export interface ModalProps {
   bare?: boolean
   actions?: ReactNode
   children?: ReactNode
+  /** Clase de z-index de la capa (para apilar sobre otros modales). */
+  zIndexClass?: string
 }
 
 export function Modal({
@@ -48,8 +50,13 @@ export function Modal({
   bare = false,
   actions,
   children,
+  zIndexClass = 'z-50',
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     if (!open) return
@@ -57,7 +64,7 @@ export function Modal({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation()
-        onClose()
+        onCloseRef.current()
         return
       }
       if (e.key !== 'Tab') return
@@ -86,9 +93,11 @@ export function Modal({
     document.addEventListener('keydown', onKeyDown, true)
     const timer = window.setTimeout(() => {
       const panel = panelRef.current
-      const target = panel?.querySelector<HTMLElement>(
-        'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button'
-      )
+      if (!panel) return
+      const target =
+        panel.querySelector<HTMLElement>(
+          'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
+        ) ?? panel.querySelector<HTMLElement>('button:not([disabled])')
       target?.focus()
     }, 30)
 
@@ -96,7 +105,7 @@ export function Modal({
       document.removeEventListener('keydown', onKeyDown, true)
       window.clearTimeout(timer)
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
@@ -109,7 +118,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print"
+      className={`fixed inset-0 bg-black/80 backdrop-blur-sm ${zIndexClass} flex items-center justify-center p-4 no-print`}
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel}
@@ -127,7 +136,7 @@ export function Modal({
                 type="button"
                 onClick={onClose}
                 aria-label="Cerrar"
-                className="text-fg-muted hover:text-white transition-colors"
+                className="text-fg-muted hover:text-fg transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>

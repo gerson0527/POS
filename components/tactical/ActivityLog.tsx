@@ -1,70 +1,91 @@
-import { StatusBadge, StatusType } from './StatusBadge'
-
 export interface LogItem {
   id: string
-  timestamp: string
+  createdAt: string
   action: string
-  user?: string
-  details?: string
-  status?: StatusType
+  entity: string
+  entityId: string
 }
 
 interface ActivityLogProps {
   logs: LogItem[]
-  title?: string
   maxHeight?: string
+}
+
+const ENTITY_LABELS: Record<string, string> = {
+  SALE: 'Venta',
+  INVOICE: 'Factura',
+  CUSTOMER: 'Cliente',
+  CASHIER_SESSION: 'Caja',
+  PRODUCT: 'Producto',
+  CATEGORY: 'Categoría',
+  USER: 'Usuario',
+  TENANT: 'Empresa',
+  LOCATION: 'Sucursal',
+  SUPPLIER: 'Proveedor',
+  INVENTORY: 'Inventario',
+}
+
+const ACTION_STYLES: Record<string, { dot: string; verb: string }> = {
+  CREATE: { dot: 'bg-ok', verb: 'registró' },
+  UPDATE: { dot: 'bg-accent', verb: 'actualizó' },
+  DELETE: { dot: 'bg-alert', verb: 'eliminó' },
+}
+
+function entityLabel(entity: string) {
+  return ENTITY_LABELS[entity] ?? entity.charAt(0) + entity.slice(1).toLowerCase()
+}
+
+function shortRef(entityId: string) {
+  const tail = entityId.includes('_') ? entityId.split('_').pop()! : entityId
+  return tail.length > 6 ? tail.slice(-6) : tail
+}
+
+function formatLogTime(iso: string) {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const opts = { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: true } as const
+  const time = d.toLocaleTimeString('es-CO', opts)
+  const day = d.toLocaleDateString('es-CO', { timeZone: 'America/Bogota', day: 'numeric', month: 'short' })
+  const today = new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota', day: 'numeric', month: 'short' })
+  return day === today ? `Hoy ${time}` : `${day} · ${time}`
 }
 
 export function ActivityLog({
   logs,
-  title = 'CONSOLOG // AUDIT STREAM',
   maxHeight = 'max-h-72',
 }: ActivityLogProps) {
   return (
-    <div className="bg-surface border border-line rounded-[6px] overflow-hidden font-mono">
-      <div className="flex items-center justify-between px-4 py-2 bg-raised border-b border-line">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-fg-muted">
-            {title}
-          </span>
+    <div className={`overflow-y-auto ${maxHeight} divide-y divide-ash`}>
+      {logs.length === 0 ? (
+        <div className="py-6 text-center text-xs text-fg-faint">
+          Sin movimientos recientes
         </div>
-        <span className="text-[10px] text-fg-faint">EVENTS: {logs.length}</span>
-      </div>
-
-      <div className={`overflow-y-auto ${maxHeight} divide-y divide-ash p-2 space-y-1`}>
-        {logs.length === 0 ? (
-          <div className="py-6 text-center text-xs text-fg-faint">
-            [NO LOG EVENTS RECORDED]
-          </div>
-        ) : (
-          logs.map((log) => (
+      ) : (
+        logs.map((log) => {
+          const style = ACTION_STYLES[log.action.toUpperCase()] ?? {
+            dot: 'bg-fg-muted',
+            verb: log.action.toLowerCase(),
+          }
+          const label = entityLabel(log.entity)
+          return (
             <div
               key={log.id}
-              className="p-2 hover:bg-charcoal rounded transition-colors text-xs flex flex-col md:flex-row md:items-center justify-between gap-2"
+              className="py-2.5 px-1 flex items-center justify-between gap-3 text-xs"
             >
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <span className="text-fg-faint text-[11px] font-semibold">
-                  [{log.timestamp}]
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.dot}`} />
+                <span className="text-fg truncate">
+                  {label} <span className="text-fg-muted">#{shortRef(log.entityId)}</span>{' '}
+                  <span className="text-fg-muted">{style.verb}</span>
                 </span>
-                <span className="text-accent font-bold">{log.action}</span>
-                {log.user && (
-                  <span className="text-fg-muted text-[11px]">@{log.user}</span>
-                )}
-                {log.details && (
-                  <span className="text-fg font-sans text-xs">{log.details}</span>
-                )}
               </div>
-
-              {log.status && (
-                <div className="shrink-0">
-                  <StatusBadge status={log.status} size="sm" />
-                </div>
-              )}
+              <span className="text-fg-faint text-[11px] shrink-0">
+                {formatLogTime(log.createdAt)}
+              </span>
             </div>
-          ))
-        )}
-      </div>
+          )
+        })
+      )}
     </div>
   )
 }

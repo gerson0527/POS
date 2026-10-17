@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 
 export default function DIANPage() {
   return (
-    <div className="space-y-6 font-mono">
+    <div className="space-y-6">
       <PageHeader
         tone="muted"
         icon={<ShieldCheck className="w-4 h-4" />}

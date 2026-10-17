@@ -13,8 +13,6 @@ import {
   ArrowUpRight,
   Wallet,
   Wallet as WalletIcon,
-  Database,
-  Cpu,
   Radio,
   AlertTriangle,
   Boxes,
@@ -258,7 +256,7 @@ export default async function DashboardPage() {
   ]
 
   return (
-    <div className="w-full space-y-6 font-mono">
+    <div className="w-full space-y-6">
       {/* HEADER */}
       <div className="relative overflow-hidden bg-gradient-to-r from-panel via-veil to-ember border border-line-hover rounded-[8px] p-5 sm:p-6 shadow-xl border-l-4 border-l-accent">
         <div className="absolute top-0 right-0 p-4 opacity-[0.07] pointer-events-none">
@@ -267,32 +265,22 @@ export default async function DashboardPage() {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge status="online" label="SOC COMMAND ONLINE" showPulse />
+              <StatusBadge status="online" label="Sistema en línea" showPulse />
               <span className="font-mono text-[10px] text-fg-muted bg-sidebar px-2 py-0.5 rounded border border-line-dim">
-                SESIÓN: {session.user.id.substring(0, 8).toUpperCase()}...
+                Sesión: {session.user.id.substring(0, 8).toUpperCase()}...
               </span>
-              <span className="font-mono text-[10px] text-success bg-ok-dim px-2 py-0.5 rounded border border-ok-line">
-                v1.0.4-TACTICAL
+              <span className="text-[10px] text-success bg-ok-dim px-2 py-0.5 rounded border border-ok-line">
+                v1.0.4
               </span>
             </div>
-            <h1 className="font-mono text-xl sm:text-2xl font-extrabold tracking-tight text-white uppercase">
-              COMMAND CENTER <span className="text-accent">//</span> PANEL OPERATIVO
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-fg">
+              Resumen del negocio
             </h1>
-            <p className="text-xs text-fg-soft font-sans">
-              <strong className="text-white">{session.user.name || session.user.email}</strong>
+            <p className="text-xs text-fg-soft">
+              <strong className="text-fg">{session.user.name || session.user.email}</strong>
               <span className="text-fg-faint"> · </span>
               <span>{session.user.email}</span>
             </p>
-          </div>
-          <div className="flex items-center gap-2 text-[10px]">
-            <div className="flex items-center gap-1.5 text-fg-muted bg-sidebar px-2.5 py-1.5 rounded border border-line-dim">
-              <Database className="w-3 h-3 text-ok" />
-              <span>POSTGRES LOCAL</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-fg-muted bg-sidebar px-2.5 py-1.5 rounded border border-line-dim">
-              <Cpu className="w-3 h-3 text-accent" />
-              <span>REDIS OFFLINE</span>
-            </div>
           </div>
         </div>
       </div>
@@ -301,7 +289,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <MetricCard
           icon={<CircleDollarSign className="w-4 h-4" />}
-          title="VENTAS HOY"
+          title="Ventas de hoy"
           value={formatCOP(stats.todayRevenue)}
           subtext={`${stats.todayCount} ventas · ticket prom. ${formatCOP(stats.avgTicket)}`}
           trend={formatTrend(stats.trendVsYesterday)}
@@ -318,14 +306,14 @@ export default async function DashboardPage() {
               <Banknote className="w-4 h-4" />
             )
           }
-          title="CAJA"
-          value={stats.openSessions > 0 ? 'ABIERTA' : 'CERRADA'}
+          title="Caja"
+          value={stats.openSessions > 0 ? 'Abierta' : 'Cerrada'}
           subtext={
             stats.openSessions > 0
               ? `Ventas: ${formatCOP(Number(stats.openSessionData?.totalSales || 0))}`
               : 'Abre una sesión para vender'
           }
-          trend={stats.openSessions > 0 ? 'OPERATIVA' : 'INACTIVA'}
+          trend={stats.openSessions > 0 ? 'Operativa' : 'Inactiva'}
           trendType={stats.openSessions > 0 ? 'positive' : 'negative'}
           trendDirection={stats.openSessions > 0 ? 'up' : 'down'}
           accentColor={stats.openSessions > 0 ? 'green' : 'neutral'}
@@ -334,14 +322,14 @@ export default async function DashboardPage() {
             stats.openSessions > 0 ? (
               <Link
                 href="/dashboard/cashier"
-                className="text-[10px] text-accent hover:underline uppercase font-bold"
+                className="text-[10px] text-accent hover:underline font-semibold"
               >
                 Ver cierre →
               </Link>
             ) : (
               <Link
                 href="/dashboard/pos"
-                className="text-[10px] text-ok hover:underline uppercase font-bold"
+                className="text-[10px] text-ok hover:underline font-semibold"
               >
                 Abrir POS →
               </Link>
@@ -350,10 +338,10 @@ export default async function DashboardPage() {
         />
         <MetricCard
           icon={<Boxes className="w-4 h-4" />}
-          title="PRODUCTOS"
+          title="Productos"
           value={stats.activeProducts.toString()}
           subtext={`${stats.lowStockCount} con stock bajo · ${stats.activeCategories} categorías`}
-          trend={stats.lowStockCount === 0 ? 'SIN ALERTAS' : `${stats.lowStockCount} BAJOS`}
+          trend={stats.lowStockCount === 0 ? 'Sin alertas' : `${stats.lowStockCount} bajos`}
           trendType={stats.lowStockCount === 0 ? 'positive' : 'negative'}
           trendDirection={stats.lowStockCount === 0 ? 'up' : 'down'}
           accentColor={stats.lowStockCount === 0 ? 'green' : 'red'}
@@ -361,7 +349,7 @@ export default async function DashboardPage() {
           action={
             <Link
               href="/dashboard/inventory"
-              className="text-[10px] text-accent hover:underline uppercase font-bold"
+              className="text-[10px] text-accent hover:underline font-semibold"
             >
               Gestionar →
             </Link>
@@ -369,14 +357,14 @@ export default async function DashboardPage() {
         />
         <MetricCard
           icon={<UserCheck className="w-4 h-4" />}
-          title="CLIENTES"
+          title="Clientes"
           value={stats.activeCustomers.toString()}
           subtext={
             stats.overdueCount > 0
               ? `${stats.overdueCount} con mora activa`
               : 'Cartera al día'
           }
-          trend={stats.overdueCount > 0 ? 'REQUIERE ATENCIÓN' : 'AL DÍA'}
+          trend={stats.overdueCount > 0 ? 'Requiere atención' : 'Al día'}
           trendType={stats.overdueCount === 0 ? 'positive' : 'negative'}
           trendDirection={stats.overdueCount === 0 ? 'up' : 'down'}
           accentColor={stats.overdueCount === 0 ? 'green' : 'red'}
@@ -384,19 +372,19 @@ export default async function DashboardPage() {
           action={
             <Link
               href="/dashboard/customers"
-              className="text-[10px] text-accent hover:underline uppercase font-bold"
+              className="text-[10px] text-accent hover:underline font-semibold"
             >
               Ver cartera →
             </Link>
           }
         />
       </div>
-      {/* MÓDULOS PRINCIPALES */}
+      {/* ACCESOS RÁPIDOS */}
       <SectionPanel
-        title="MÓDULOS DEL SISTEMA"
-        subtitle={`${modules.length} SUBSISTEMAS · ACCESO RÁPIDO A TODAS LAS ÁREAS`}
+        title="Accesos rápidos"
+        subtitle={`Módulos del sistema · acceso rápido a todas las áreas`}
         statusSlot={
-          <span className="text-[10px] text-ok bg-ok-dim border border-ok-line px-2 py-0.5 rounded font-bold uppercase flex items-center gap-1">
+          <span className="text-[10px] text-ok bg-ok-dim border border-ok-line px-2 py-0.5 rounded font-semibold flex items-center gap-1">
             <Activity className="w-3 h-3" />
             {modules.length} ACTIVOS
           </span>
@@ -428,10 +416,10 @@ export default async function DashboardPage() {
                     </div>
                     <ArrowUpRight className="w-3.5 h-3.5 text-fg-faint group-hover:text-accent transition-colors shrink-0" />
                   </div>
-                  <h3 className="font-mono text-xs font-bold text-white group-hover:text-accent transition-colors leading-tight line-clamp-1">
+                  <h3 className="text-xs font-semibold text-fg group-hover:text-accent transition-colors leading-tight line-clamp-1">
                     {mod.title}
                   </h3>
-                  <p className="font-mono text-[10px] text-fg-muted leading-snug mt-1 line-clamp-2">
+                  <p className="text-[10px] text-fg-muted leading-snug mt-1 line-clamp-2">
                     {mod.subtitle}
                   </p>
                 </div>
@@ -443,14 +431,13 @@ export default async function DashboardPage() {
 
       {/* ACTIVIDAD + ÚLTIMAS VENTAS */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Telemetría */}
+        {/* Actividad */}
         <div className="xl:col-span-2">
           <SectionPanel
-            title="TELEMETRÍA EN VIVO"
-            subtitle="AUDITORÍA DE SERVICIOS Y STREAM DE EVENTOS"
-            statusSlot={
-              <StatusBadge status="online" label="LIVE" showPulse />
-            }
+            title="Actividad reciente"
+            subtitle="Últimos movimientos registrados en el sistema"
+            className="h-full flex flex-col"
+            contentClassName="flex-1"
           >
             <ActivityLog logs={telemetryLogs.slice(0, 8)} />
           </SectionPanel>
@@ -458,14 +445,14 @@ export default async function DashboardPage() {
 
         {/* Últimas ventas */}
         <SectionPanel
-          title="ÚLTIMAS VENTAS"
-          subtitle="MOVIMIENTO EN TIEMPO REAL"
+          title="Últimas ventas"
+          subtitle="Movimientos más recientes"
           statusSlot={<Radio className="w-4 h-4 text-accent" />}
           contentClassName="space-y-2"
         >
           {stats.recentSales.length === 0 ? (
             <div className="py-8 text-center text-fg-muted text-xs">
-              [NO HAY VENTAS REGISTRADAS AÚN]
+              Aún no hay ventas registradas
             </div>
           ) : (
             stats.recentSales.map((sale) => (
@@ -474,18 +461,18 @@ export default async function DashboardPage() {
                 className="bg-surface border border-line-soft rounded p-2.5 flex items-center justify-between gap-2 hover:border-blue transition-colors"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="font-mono text-[10px] text-accent font-bold uppercase">
+                  <div className="text-[10px] text-accent font-semibold">
                     #{String(sale.ticketNumber ?? sale.id.substring(0, 6)).padStart(4, '0')}
                   </div>
-                  <div className="font-mono text-[10px] text-fg-muted truncate">
+                  <div className="text-[10px] text-fg-muted truncate">
                     {sale.customerName?.trim() || 'Consumidor Final'}
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="font-mono text-xs font-bold text-success">
+                  <div className="text-xs font-semibold text-success">
                     {formatCOP(Number(sale.total || 0))}
                   </div>
-                  <div className="font-mono text-[10px] text-fg-faint">
+                  <div className="text-[10px] text-fg-faint">
                     {new Date(sale.createdAt).toLocaleTimeString('es-CO', {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -497,7 +484,7 @@ export default async function DashboardPage() {
           )}
           <Link
             href="/dashboard/reports"
-            className="block text-center font-mono text-[10px] text-accent hover:text-accent-hover font-bold uppercase py-2 border-t border-line-soft mt-2"
+            className="block text-center text-[10px] text-accent hover:text-accent-hover font-semibold py-2 border-t border-line-soft mt-2"
           >
             Ver todos los reportes →
           </Link>
@@ -507,9 +494,9 @@ export default async function DashboardPage() {
       {/* ALERTAS Y OBSERVACIONES */}
       {(stats.lowStockCount > 0 || stats.overdueCount > 0) && (
         <div className="bg-veil border border-amber rounded-[8px] p-4 space-y-3">
-          <div className="flex items-center gap-2 text-amber font-bold text-xs uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-amber font-semibold text-xs">
             <AlertTriangle className="w-3.5 h-3.5" />
-            <span>ATENCIÓN REQUERIDA — {stats.lowStockCount + stats.overdueCount} ALERTAS</span>
+            <span>Atención requerida · {stats.lowStockCount + stats.overdueCount} alertas</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {stats.lowStockCount > 0 && (
@@ -517,15 +504,15 @@ export default async function DashboardPage() {
                 <div className="flex items-center gap-2 min-w-0">
                   <AlertTriangle className="w-4 h-4 text-amber shrink-0" />
                   <div className="min-w-0">
-                    <div className="font-mono text-[11px] font-bold text-white">
+                    <div className="text-[11px] font-semibold text-fg">
                       {stats.lowStockCount} productos con stock bajo
                     </div>
-                    <div className="font-mono text-[10px] text-fg-muted">Menos de 10 unidades</div>
+                    <div className="text-[10px] text-fg-muted">Menos de 10 unidades</div>
                   </div>
                 </div>
                 <Link
                   href="/dashboard/inventory"
-                  className="font-mono text-[10px] text-accent hover:underline uppercase font-bold shrink-0"
+                  className="text-[10px] text-accent hover:underline font-semibold shrink-0"
                 >
                   Revisar →
                 </Link>
@@ -536,15 +523,15 @@ export default async function DashboardPage() {
                 <div className="flex items-center gap-2 min-w-0">
                   <AlertTriangle className="w-4 h-4 text-alert shrink-0" />
                   <div className="min-w-0">
-                    <div className="font-mono text-[11px] font-bold text-white">
+                    <div className="text-[11px] font-semibold text-fg">
                       {stats.overdueCount} facturas vencidas (clientes)
                     </div>
-                    <div className="font-mono text-[10px] text-fg-muted">Cartera en mora</div>
+                    <div className="text-[10px] text-fg-muted">Cartera en mora</div>
                   </div>
                 </div>
                 <Link
                   href="/dashboard/customers"
-                  className="font-mono text-[10px] text-accent hover:underline uppercase font-bold shrink-0"
+                  className="text-[10px] text-accent hover:underline font-semibold shrink-0"
                 >
                   Cobrar →
                 </Link>
@@ -558,7 +545,7 @@ export default async function DashboardPage() {
       <div className="bg-veil border border-dashed border-line rounded-[8px] px-4 py-3 flex items-center gap-3 text-[10px] text-fg-muted">
         <ShieldCheck className="w-4 h-4 text-fg-faint shrink-0" />
         <div>
-          <span className="text-fg-faint uppercase tracking-wider font-bold">Módulo DIAN</span>
+          <span className="text-fg-faint font-semibold">Módulo DIAN</span>
           <span className="mx-2 text-line-strong">|</span>
           <span>
             Facturación electrónica deshabilitada temporalmente.{' '}

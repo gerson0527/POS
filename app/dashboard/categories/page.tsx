@@ -180,7 +180,7 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="space-y-6 font-mono">
+    <div className="space-y-6">
       <PageHeader
         icon={<Tags className="w-4 h-4" />}
         kicker="PRODUCT TAXONOMY // TAXONOMÍA & ETIQUETAS"
@@ -340,7 +340,7 @@ export default function CategoriesPage() {
                   </button>
                   <button
                     onClick={() => setDeleteConfirmId(c.id)}
-                    className="p-1.5 bg-raised border border-line text-alert hover:bg-alert hover:text-black rounded transition-colors"
+                    className="p-1.5 bg-raised border border-line text-alert hover:bg-alert hover:text-white rounded transition-colors"
                     title="Eliminar"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -409,7 +409,7 @@ export default function CategoriesPage() {
                   placeholder="Descripción opcional de la categoría…"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full bg-input border border-line focus:border-accent p-2.5 rounded text-white resize-none"
+                  className="w-full bg-input border border-line focus:border-accent p-2.5 rounded text-fg resize-none"
                 />
               </div>
 

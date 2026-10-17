@@ -19,10 +19,10 @@ import {
   LogOut,
   Menu,
   X,
-  Activity,
   Terminal } from 'lucide-react'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { StatusBadge } from '@/components/tactical/StatusBadge'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 export default function DashboardLayout({
   children,
@@ -30,21 +30,8 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
-  const [timeString, setTimeString] = useState<string>('')
   const router = useRouter()
   const pathname = usePathname()
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date()
-      setTimeString(
-        now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC'
-      )
-    }
-    updateTime()
-    const timer = setInterval(updateTime, 1000)
-    return () => clearInterval(timer)
-  }, [])
 
   // Guard de onboarding: si el usuario es admin y el tenant aún no completó
   // el wizard de primera vez, redirigir a /dashboard/onboarding.
@@ -84,23 +71,23 @@ export default function DashboardLayout({
   const isMasterAdmin = userEmail === 'admin@posdian.com' || userEmail.endsWith('@posdian.com')
 
   const masterNavItems = [
-    { href: '/dashboard/users', label: 'EMPRESAS / SAS', icon: Building2 },
-    { href: '/dashboard', label: 'SOC COMMAND HUB', icon: LayoutDashboard },
-    { href: '/dashboard/reports', label: 'MÉTRICAS GLOBAL', icon: BarChart3 },
-    { href: '/dashboard/settings', label: 'CONFIGURACIÓN', icon: Settings },
+    { href: '/dashboard/users', label: 'Empresas', icon: Building2 },
+    { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
+    { href: '/dashboard/reports', label: 'Reportes', icon: BarChart3 },
+    { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
   ]
 
   const standardNavItems = [
-    { href: '/dashboard', label: 'OPERATIONS HUB', icon: LayoutDashboard },
-    { href: '/dashboard/pos', label: 'POS TERMINAL', icon: ShoppingCart },
-    { href: '/dashboard/cashier', label: 'CAJAS', icon: Wallet },
-    { href: '/dashboard/invoices', label: 'FACTURAS', icon: FileText },
-    { href: '/dashboard/inventory', label: 'INVENTARIO', icon: Package },
-    { href: '/dashboard/categories', label: 'CATEGORÍAS', icon: Tags },
-    { href: '/dashboard/customers', label: 'CLIENTES', icon: UserCheck },
-    { href: '/dashboard/reports', label: 'REPORTES', icon: BarChart3 },
-    { href: '/dashboard/users', label: 'USUARIOS', icon: Users },
-    { href: '/dashboard/settings', label: 'CONFIGURACIÓN', icon: Settings },
+    { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
+    { href: '/dashboard/pos', label: 'Punto de venta', icon: ShoppingCart },
+    { href: '/dashboard/cashier', label: 'Cajas', icon: Wallet },
+    { href: '/dashboard/invoices', label: 'Facturas', icon: FileText },
+    { href: '/dashboard/inventory', label: 'Inventario', icon: Package },
+    { href: '/dashboard/categories', label: 'Categorías', icon: Tags },
+    { href: '/dashboard/customers', label: 'Clientes', icon: UserCheck },
+    { href: '/dashboard/reports', label: 'Reportes', icon: BarChart3 },
+    { href: '/dashboard/users', label: 'Usuarios', icon: Users },
+    { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
   ]
 
   const navItems = isMasterAdmin ? masterNavItems : standardNavItems
@@ -108,24 +95,24 @@ export default function DashboardLayout({
   // Breadcrumb text based on current path
   const getBreadcrumb = () => {
     if (isMasterAdmin) {
-      if (pathname === '/dashboard/users') return 'SOC COMMAND // GESTIÓN DE EMPRESAS SAS & TENANTS'
-      if (pathname === '/dashboard' || pathname === '/') return 'SOC COMMAND // MONITOR CENTRAL MULTI-TENANT'
-      if (pathname.includes('/reports')) return 'SOC COMMAND // MÉTRICAS Y ANALÍTICA GLOBAL'
-      if (pathname.includes('/settings')) return 'SOC COMMAND // CONFIGURACIÓN DEL SISTEMA MASTER'
-      return 'SOC COMMAND // MASTER CONTROL'
+      if (pathname === '/dashboard/users') return 'Empresas y sucursales'
+      if (pathname === '/dashboard' || pathname === '/') return 'Resumen general'
+      if (pathname.includes('/reports')) return 'Reportes globales'
+      if (pathname.includes('/settings')) return 'Configuración'
+      return 'Administración'
     }
 
-    if (pathname === '/dashboard' || pathname === '/') return 'SYSTEM // OPERATIONS HUB'
-    if (pathname === '/pos') return 'MODULE // POS TERMINAL'
-    if (pathname.includes('/cashier')) return 'MODULE // CASHIER CONTROL'
-    if (pathname.includes('/invoices')) return 'MODULE // INVOICE MANAGEMENT'
-    if (pathname.includes('/inventory')) return 'MODULE // INVENTORY CONTROL'
-    if (pathname.includes('/categories')) return 'MODULE // PRODUCT TAXONOMY'
-    if (pathname.includes('/customers')) return 'MODULE // CUSTOMER RELATIONS'
-    if (pathname.includes('/reports')) return 'MODULE // AUDIT & REPORTS'
-    if (pathname.includes('/settings')) return 'MODULE // SYSTEM SETTINGS'
-    if (pathname.includes('/users')) return 'MODULE // ACCESS & USERS'
-    return 'MODULE // DASHBOARD'
+    if (pathname === '/dashboard' || pathname === '/') return 'Resumen'
+    if (pathname.includes('/pos')) return 'Punto de venta'
+    if (pathname.includes('/cashier')) return 'Cajas'
+    if (pathname.includes('/invoices')) return 'Facturas'
+    if (pathname.includes('/inventory')) return 'Inventario'
+    if (pathname.includes('/categories')) return 'Categorías'
+    if (pathname.includes('/customers')) return 'Clientes'
+    if (pathname.includes('/reports')) return 'Reportes'
+    if (pathname.includes('/settings')) return 'Configuración'
+    if (pathname.includes('/users')) return 'Usuarios'
+    return 'Panel'
   }
 
   // El wizard de onboarding se renderiza SIN el sidebar del dashboard
@@ -139,18 +126,20 @@ export default function DashboardLayout({
       <div className="md:hidden flex items-center justify-between px-4 py-3 bg-sidebar border-b border-line">
         <div className="flex items-center gap-2">
           <Terminal className="w-5 h-5 text-accent" />
-          <span className="font-mono text-sm font-bold tracking-wider text-fg">
-            POS DIAN // SOC
+          <span className="text-sm font-bold text-fg">
+            POS DIAN
           </span>
         </div>
-        <button
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-          className="p-1.5 rounded bg-hover border border-line text-fg"
-        >
-          {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            onClick={() => setIsMobileOpen(!isMobileOpen)}
+            className="p-1.5 rounded bg-hover border border-line text-fg"
+          >
+            {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
-
       {/* Desktop Fixed Sidebar (approx 240px / w-60) */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-60 bg-sidebar border-r border-line flex flex-col justify-between transition-transform duration-200 ease-in-out md:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
@@ -164,22 +153,21 @@ export default function DashboardLayout({
               className="flex items-center gap-2.5 group"
               onClick={() => setIsMobileOpen(false)}
             >
-              <div className="w-7 h-7 bg-accent flex items-center justify-center rounded-[4px] font-mono text-black font-extrabold text-sm shadow-[0_0_12px_rgba(255,106,0,0.4)]">
-                &gt;_
+              <div className="w-7 h-7 bg-accent flex items-center justify-center rounded-[4px] text-white font-extrabold text-xs shadow-[0_0_12px_var(--accent)]">
+                PD
               </div>
               <div>
-                <div className="font-mono font-bold text-sm tracking-wider text-white group-hover:text-accent transition-colors">
+                <div className="font-bold text-sm text-fg group-hover:text-accent transition-colors">
                   POS DIAN
                 </div>
-                <div className="font-mono text-[10px] text-fg-muted tracking-widest uppercase">
-                  v1.0.4-TACTICAL
+                <div className="text-[10px] text-fg-muted">
+                  v1.0.4
                 </div>
               </div>
             </Link>
 
-            <div className="mt-4 pt-3 border-t border-hover flex items-center justify-between">
-              <StatusBadge status="online" label="SOC ONLINE" showPulse />
-              <Activity className="w-3.5 h-3.5 text-fg-faint" />
+            <div className="mt-4 pt-3 border-t border-hover">
+              <StatusBadge status="online" label="En línea" showPulse />
             </div>
           </div>
 
@@ -197,16 +185,16 @@ export default function DashboardLayout({
                   key={item.href}
                   href={item.href}
                   onClick={() => setIsMobileOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[4px] font-mono text-xs font-bold tracking-wider transition-all duration-150 relative ${isActive
-                      ? 'bg-accent text-black shadow-md font-extrabold'
-                      : 'text-fg-mid hover:bg-hover hover:text-white'
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[4px] text-xs font-medium transition-all duration-150 relative ${isActive
+                      ? 'bg-accent text-white shadow-md font-semibold'
+                      : 'text-fg-mid hover:bg-hover hover:text-fg'
                     }`}
                 >
                   {isActive && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-black rounded-r-sm" />
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-black/30 rounded-r-sm" />
                   )}
                   <Icon
-                    className={`w-4 h-4 shrink-0 ${isActive ? 'text-black' : 'text-fg-muted'
+                    className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-fg-muted'
                       }`}
                   />
                   <span className="truncate">{item.label}</span>
@@ -216,19 +204,8 @@ export default function DashboardLayout({
           </nav>
         </div>
 
-        {/* Footer / System Status & Logout */}
-        <div className="p-4 border-t border-line bg-input space-y-3">
-          <div className="font-mono text-[10px] text-fg-muted space-y-0.5">
-            <div className="flex justify-between">
-              <span>ENV:</span>
-              <span className="text-success">PRODUCTION</span>
-            </div>
-            <div className="flex justify-between">
-              <span>SECURITY:</span>
-              <span className="text-success">OK</span>
-            </div>
-          </div>
-
+        {/* Footer / Logout */}
+        <div className="p-4 border-t border-line bg-input">
           <TacticalButton
             variant="danger"
             size="sm"
@@ -236,7 +213,7 @@ export default function DashboardLayout({
             icon={<LogOut className="w-3.5 h-3.5" />}
             onClick={handleLogout}
           >
-            SIGNOUT
+            Cerrar sesión
           </TacticalButton>
         </div>
       </aside>
@@ -245,24 +222,13 @@ export default function DashboardLayout({
       <div className="flex-1 md:pl-60 flex flex-col min-w-0">
         {/* Top Header Bar */}
         <header className="sticky top-0 z-30 bg-sidebar/95 backdrop-blur-md border-b border-line px-4 md:px-8 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 font-mono text-xs text-fg-muted overflow-hidden">
+          <div className="flex items-center gap-2 font-sans text-xs text-fg-muted overflow-hidden">
             <Terminal className="w-3.5 h-3.5 text-accent shrink-0" />
-            <span className="hidden sm:inline text-fg-faint">SYS //</span>
-            <span className="text-fg font-bold truncate">
+            <span className="text-fg font-semibold truncate">
               {getBreadcrumb()}
             </span>
           </div>
-
-          <div className="flex items-center gap-4 shrink-0 font-mono text-xs">
-            <div className="hidden lg:flex items-center gap-2 text-fg-muted bg-panel px-3 py-1 rounded border border-line">
-              <span className="w-1.5 h-1.5 rounded-full bg-success" />
-              <span className="text-[11px]">{timeString || '11:20:00 UTC'}</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <StatusBadge status="active" label="LIVE" />
-            </div>
-          </div>
+          <ThemeToggle />
         </header>
 
         {/* Dynamic Page Container */}

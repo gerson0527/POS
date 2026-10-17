@@ -43,14 +43,14 @@ export function StockErrorModal({ error, onClose, onForceAdd }: StockErrorModalP
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 bg-night-mid-2 hover:bg-line-dim text-fg-muted hover:text-white rounded font-mono text-xs transition-colors"
+          className="px-4 py-2 bg-night-mid-2 hover:bg-line-dim text-fg-muted hover:text-fg rounded font-mono text-xs transition-colors"
         >
           CANCELAR / DENEGAR
         </button>
         <button
           type="button"
           onClick={onForceAdd}
-          className="w-full sm:w-auto px-4 py-2 bg-accent hover:bg-warn-solid text-black font-mono font-bold rounded text-xs transition-colors flex items-center justify-center gap-1 shadow-lg"
+          className="w-full sm:w-auto px-4 py-2 bg-accent hover:bg-warn-solid text-white font-mono font-bold rounded text-xs transition-colors flex items-center justify-center gap-1 shadow-lg"
         >
           <span>CONTINUAR VENTA SIN STOCK</span>
           <span>&gt;</span>

@@ -56,21 +56,21 @@ export function Pagination({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-xs py-3 px-4 bg-veil border border-line-deep rounded-[6px] ${className}`}
+      className={`flex flex-col sm:flex-row items-center justify-between gap-4 text-xs py-3 px-4 bg-veil border border-line-deep rounded-[6px] ${className}`}
     >
       {/* Items Counter Info */}
       <div className="text-fg-muted flex items-center gap-1.5">
         <span className="w-1.5 h-1.5 rounded-full bg-accent" />
         {startItem && endItem && totalItems ? (
           <span>
-            MOSTRANDO <strong className="text-fg">{startItem}</strong> -{' '}
-            <strong className="text-fg">{endItem}</strong> DE{' '}
-            <strong className="text-accent">{totalItems}</strong> REGISTROS
+            Mostrando <strong className="text-fg">{startItem}</strong> -{' '}
+            <strong className="text-fg">{endItem}</strong> de{' '}
+            <strong className="text-fg">{totalItems}</strong> registros
           </span>
         ) : (
           <span>
-            PÁGINA <strong className="text-fg">{currentPage}</strong> DE{' '}
-            <strong className="text-accent">{totalPages}</strong>
+            Página <strong className="text-fg">{currentPage}</strong> de{' '}
+            <strong className="text-fg">{totalPages}</strong>
           </span>
         )}
       </div>
@@ -115,9 +115,9 @@ export function Pagination({
               <button
                 key={pageNum}
                 onClick={() => onPageChange(pageNum)}
-                className={`min-w-[28px] h-7 px-2 rounded font-mono text-xs font-bold transition-all ${
+                className={`min-w-[28px] h-7 px-2 rounded text-xs font-medium transition-all ${
                   isActive
-                    ? 'bg-accent text-black shadow-sm'
+                    ? 'bg-accent text-white shadow-sm'
                     : 'bg-hover border border-line text-fg hover:border-accent hover:text-accent'
                 }`}
               >

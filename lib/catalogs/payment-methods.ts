@@ -20,6 +20,7 @@ export const FACTUS_PAYMENT_CODES: Record<string, string> = {
   NEQUI: '47',
   QR: '47',
   BONOS: '71',
+  STORE_CREDIT: '10',
 }
 
 /** Vocabulario 2: forma de pago con código oficial DIAN para el ticket de venta. */
@@ -35,6 +36,8 @@ export const DIAN_TICKET_PAYMENTS: Record<string, { code: string; label: string 
   TRANSFERENCIA: { code: '42', label: 'Transferencia electrónica' },
   NEQUI: { code: '42', label: 'Nequi (transferencia)' },
   DAVIPLATA: { code: '42', label: 'Daviplata (transferencia)' },
+  // El crédito de cuenta corriente se informa a DIAN como efectivo (mismo criterio que Factus).
+  STORE_CREDIT: { code: '10', label: 'Efectivo' },
 }
 
 /** Vocabulario 3: etiquetas cortas para la tabla de facturas en la UI. */
@@ -48,6 +51,7 @@ export const POS_PAYMENT_LABELS: Record<string, string> = {
   TARJETA_CREDITO: 'T. CRÉDITO',
   DEBIT_CARD: 'T. DÉBITO',
   TARJETA_DEBITO: 'T. DÉBITO',
+  STORE_CREDIT: 'CRÉDITO',
 }
 
 /** Método de pago POS → código DIAN/Factus (default '10' = efectivo). */

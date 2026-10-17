@@ -7,7 +7,7 @@ export async function sendWelcomeEmail(to: string, name: string, role: string = 
   const smtpPass = process.env.SMTP_PASSWORD
   const smtpFrom = process.env.SMTP_FROM || 'POS DIAN Colombia <notificaciones@posdian.co>'
 
-  const subject = 'bienvenido al Sistema POS DIAN // Command Center'
+  const subject = 'Bienvenido a POS DIAN'
   const html = `
     <!DOCTYPE html>
     <html>
@@ -31,8 +31,8 @@ export async function sendWelcomeEmail(to: string, name: string, role: string = 
       <body>
         <div class="container">
           <div class="header">
-            <div class="title">SISTEMA POS DIAN // BIENVENIDA</div>
-            <div class="subtitle">CONFIRMACIÓN DE CUENTA DE ACCESO Y ROL IAM</div>
+            <div class="title">Bienvenido a POS DIAN</div>
+            <div class="subtitle">Confirmación de cuenta de acceso y rol</div>
           </div>
           <div class="content">
             <p>Hola <strong style="color: #FFFFFF;">${name}</strong>,</p>
@@ -40,11 +40,11 @@ export async function sendWelcomeEmail(to: string, name: string, role: string = 
             <div class="box">
               <div class="field"><span class="label">CORREO ELECTRÓNICO:</span> <span class="value">${to}</span></div>
               <div class="field"><span class="label">ROL ASIGNADO:</span> <span class="value" style="color: #FF6A00;">${role.toUpperCase()}</span></div>
-              <div class="field"><span class="label">ESTADO DE CUENTA:</span> <span class="value" style="color: #D8FFDE;">ACTIVO EN POSTGRESQL</span></div>
+              <div class="field"><span class="label">ESTADO DE CUENTA:</span> <span class="value" style="color: #D8FFDE;">Activa</span></div>
             </div>
             <p>Puedes ingresar al sistema y comenzar a operar tu caja registradora o panel de control:</p>
             <div style="text-align: center;">
-              <a href="http://localhost:3001/sign-in" class="btn">INGRESAR AL COMMAND CENTER</a>
+              <a href="http://localhost:3001/sign-in" class="btn">Ingresar al sistema</a>
             </div>
           </div>
           <div class="footer">

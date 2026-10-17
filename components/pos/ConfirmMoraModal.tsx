@@ -71,7 +71,7 @@ export function ConfirmMoraModal({ open, customer, creditInfo, onClose, onConfir
         <button
           type="button"
           onClick={onConfirm}
-          className="flex-1 h-11 bg-alert text-black font-bold uppercase tracking-wider rounded text-xs hover:bg-danger-solid transition-colors"
+          className="flex-1 h-11 bg-alert text-white font-bold uppercase tracking-wider rounded text-xs hover:bg-danger-solid transition-colors"
         >
           Continuar de todos modos
         </button>

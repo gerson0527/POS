@@ -13,43 +13,43 @@ export function PosHeader({ step }: PosHeaderProps) {
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-panel border border-line rounded-[6px] px-5 py-3 shrink-0">
       <div>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-[11px] font-bold text-accent tracking-wider uppercase">
-            MODULE // POS TERMINAL
+          <span className="font-mono text-[11px] font-semibold text-accent tracking-wider uppercase">
+            Punto de venta
           </span>
-          <StatusBadge status="online" label="TERMINAL #01 ONLINE" />
+          <StatusBadge status="online" label="Terminal en línea" />
         </div>
-        <h1 className="font-mono text-lg font-bold text-fg tracking-tight uppercase mt-0.5">
-          TERMINAL DE PUNTO DE VENTA
+        <h1 className="font-mono text-lg font-bold text-fg tracking-tight mt-0.5">
+          Terminal de punto de venta
         </h1>
       </div>
       <div className="flex items-center gap-3">
         <Link
           href="/dashboard/cashier"
-          className="flex items-center gap-1.5 bg-warn-bg-2 hover:bg-accent text-accent hover:text-black border border-accent/40 px-3 py-1.5 rounded text-xs font-bold transition-colors"
+          className="flex items-center gap-1.5 bg-warn-bg-2 hover:bg-accent text-accent hover:text-white border border-accent/40 px-3 py-1.5 rounded text-xs font-bold transition-colors"
         >
           <Lock className="w-3.5 h-3.5" />
-          <span>ARQUEO / CIERRE DE CAJA</span>
+          <span>Cierre de caja</span>
         </Link>
 
-        <div className="hidden sm:flex items-center gap-2 font-mono text-xs">
+        <div className="hidden sm:flex items-center gap-2 font-sans text-xs">
           <div
             className={`px-3 py-1 rounded border text-[11px] ${
               step === 'shopping'
-                ? 'bg-accent text-black border-accent font-bold'
+                ? 'bg-accent text-white border-accent font-bold'
                 : 'bg-surface text-fg-muted border-line'
             }`}
           >
-            01. CARRO
+            1. Carrito
           </div>
           <span className="text-line-strong">&gt;</span>
           <div
             className={`px-3 py-1 rounded border text-[11px] ${
               step === 'payment'
-                ? 'bg-accent text-black border-accent font-bold'
+                ? 'bg-accent text-white border-accent font-bold'
                 : 'bg-surface text-fg-muted border-line'
             }`}
           >
-            02. PAGO
+            2. Pago
           </div>
         </div>
       </div>

@@ -45,19 +45,18 @@ export function TenantsTable({
               header: 'Empresa',
               render: (t: any) => (
                 <div className="flex items-center gap-3">
-                  <div
-                    className="w-9 h-9 rounded flex items-center justify-center text-black font-extrabold text-sm shrink-0"
-                    style={{
-                      backgroundColor: t.id === 'tenant_default' ? '#FF6A00' : '#3B82F6',
-                    }}
-                  >
-                    {t.name?.charAt(0).toUpperCase()}
-                  </div>
+            <div
+              className={`w-9 h-9 rounded flex items-center justify-center font-extrabold text-sm shrink-0 text-white ${
+                t.id === 'tenant_default' ? 'bg-accent' : 'bg-blue'
+              }`}
+            >
+              {t.name?.charAt(0).toUpperCase()}
+            </div>
                   <div>
                     <div className="font-bold text-fg flex items-center gap-2">
                       <span>{t.name}</span>
                       {t.id === 'tenant_default' && (
-                        <span className="text-[10px] bg-accent text-black font-extrabold px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] bg-accent text-white font-extrabold px-1.5 py-0.5 rounded">
                           PRINCIPAL
                         </span>
                       )}

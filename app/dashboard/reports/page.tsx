@@ -161,8 +161,8 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={<BarChart3 className="w-4 h-4" />}
-        kicker="BUSINESS INTELLIGENCE & PROFIT TELEMETRY"
-        title="REPORTES DE VENTAS Y GANANCIA NETA"
+        kicker="Análisis de ventas y rentabilidad"
+        title="Reportes de ventas y ganancia neta"
         description="Métricas de ingresos brutos, costos de productos y utilidad neta en tiempo real."
         actions={
           <>
@@ -191,16 +191,16 @@ export default function ReportsPage() {
       {/* Date Range Filter */}
       <div className="bg-panel border border-line rounded-[6px] p-4 space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2 text-accent font-bold text-xs uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-accent font-semibold text-xs">
             <Filter className="w-3.5 h-3.5" />
-            Filtro de Período
-            <span className="text-[10px] text-fg-muted font-normal normal-case tracking-normal ml-2">
+            Filtro de período
+            <span className="text-[10px] text-fg-muted font-normal ml-2">
               ({dateRange.start} → {dateRange.end})
             </span>
           </div>
           <div className="flex items-center gap-2">
             <CalendarDays className="w-3.5 h-3.5 text-fg-muted" />
-            <span className="text-[10px] text-fg-muted uppercase">
+            <span className="text-[10px] text-fg-muted">
               {salesReport.totalSalesCount} ventas en el período
             </span>
           </div>
@@ -214,9 +214,9 @@ export default function ReportsPage() {
               <button
                 key={p.id}
                 onClick={() => applyPreset(p.id)}
-                className={`px-3 py-1.5 rounded font-mono text-[10px] font-bold uppercase tracking-wider border transition-all ${
+                className={`px-3 py-1.5 rounded text-xs font-semibold border transition-all ${
                   isActive
-                    ? 'bg-accent text-black border-accent shadow-sm'
+                    ? 'bg-accent text-white border-accent shadow-sm'
                     : 'bg-surface text-fg-muted border-line hover:border-accent hover:text-fg'
                 }`}
               >
@@ -230,34 +230,34 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-line-soft">
           <div className="flex flex-col gap-1">
             <Label>
-              DESDE
+              Desde
             </Label>
             <Input
               type="date"
               value={dateRange.start}
               max={dateRange.end}
               onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-              className="px-2.5 py-1.5 font-mono text-xs"
+              className="px-2.5 py-1.5 text-xs"
             />
           </div>
           <div className="flex flex-col gap-1">
             <Label>
-              HASTA
+              Hasta
             </Label>
             <Input
               type="date"
               value={dateRange.end}
               min={dateRange.start}
               onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-              className="px-2.5 py-1.5 font-mono text-xs"
+              className="px-2.5 py-1.5 text-xs"
             />
           </div>
           <div className="flex items-end gap-2">
             <button
               onClick={applyCustom}
-              className="flex-1 h-[34px] bg-accent hover:bg-accent-hover text-black font-bold uppercase tracking-wider rounded text-xs"
+              className="flex-1 h-[34px] bg-accent hover:bg-accent-hover text-white font-semibold rounded text-xs"
             >
-              Aplicar Rango
+              Aplicar rango
             </button>
             <button
               onClick={() => applyPreset('thisMonth')}
@@ -327,18 +327,18 @@ export default function ReportsPage() {
                   onClick={() => setSelectedReport(report.id)}
                   className={`w-full text-left p-3.5 rounded border transition-all flex items-start gap-3 cursor-pointer ${
                     isSelected
-                      ? 'bg-accent text-black border-accent shadow-sm'
+                      ? 'bg-accent text-white border-accent shadow-sm'
                       : 'bg-surface text-fg-muted border-line-soft hover:border-line-strong hover:text-fg'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${isSelected ? 'text-black' : 'text-accent'}`} />
+                  <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${isSelected ? 'text-white' : 'text-accent'}`} />
                   <div>
-                    <div className="font-mono text-xs font-bold uppercase tracking-wider">
+                    <div className="text-xs font-semibold">
                       {report.name}
                     </div>
                     <div
                       className={`text-[11px] mt-0.5 ${
-                        isSelected ? 'text-black/80' : 'text-fg-muted'
+                        isSelected ? 'text-white/80' : 'text-fg-muted'
                       }`}
                     >
                       {report.description}
@@ -352,23 +352,23 @@ export default function ReportsPage() {
 
         {/* Report Output Preview Panel */}
         <SectionPanel
-          title={`INFORME: ${reports.find((r) => r.id === selectedReport)?.name}`}
-          subtitle="ANÁLISIS COMPARATIVO DE INGRESOS Y GANANCIAS"
+          title={`Informe: ${reports.find((r) => r.id === selectedReport)?.name}`}
+          subtitle="Análisis comparativo de ingresos y ganancias"
           className="lg:col-span-2"
           action={
-            <StatusBadge status="online" label="SISTEMA ACTIVO" />
+            <StatusBadge status="online" label="Motor activo" />
           }
         >
           {selectedReport === 'profits' && (
-            <div className="space-y-5 font-mono text-xs">
+            <div className="space-y-5 text-xs">
               {/* RECHARTS: VISUAL INTERACTIVE GRAPH */}
               <div className="bg-surface border border-line-soft rounded p-4 space-y-3">
-                <div className="flex items-center justify-between border-b border-line-soft pb-2 font-bold text-fg">
+                <div className="flex items-center justify-between border-b border-line-soft pb-2 font-semibold text-fg">
                   <span className="flex items-center gap-2 text-accent">
                     <BarChart3 className="w-4 h-4" />
-                    COMPARATIVO GRÁFICO DE RESULTADOS FINANCIEROS
+                    Comparativo gráfico de resultados financieros
                   </span>
-                  <span className="text-[10px] text-fg-muted uppercase">Valores en COP ($)</span>
+                  <span className="text-[10px] text-fg-muted">Valores en COP ($)</span>
                 </div>
 
                 <div className="h-64 w-full pt-2">
@@ -390,7 +390,7 @@ export default function ReportsPage() {
                         tickLine={false}
                       />
                       <Tooltip
-                        contentStyle={{ backgroundColor: '#1A1A1A', borderColor: '#FF6A00', borderRadius: '6px', color: '#FFF' }}
+                        contentStyle={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--accent)', borderRadius: '6px', color: 'var(--text-primary)' }}
                         formatter={(val: any) => [formatCOP(val), 'Monto']}
                       />
                       <Bar dataKey="monto" radius={[4, 4, 0, 0]}>
@@ -406,34 +406,34 @@ export default function ReportsPage() {
 
               {/* Comparative Summary Box */}
               <div className="bg-surface border border-line-soft rounded p-4 space-y-3">
-                <div className="flex justify-between items-center border-b border-line-soft pb-2 font-bold text-fg">
-                  <span>CONCEPTO FINANCIERO</span>
-                  <span>MONTO TOTAL (COP)</span>
+                <div className="flex justify-between items-center border-b border-line-soft pb-2 font-semibold text-fg">
+                  <span>Concepto financiero</span>
+                  <span>Monto total (COP)</span>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-fg">
-                    <span>Ventas Brutas Totales (Con IVA):</span>
-                    <span className="font-bold text-accent">{formatCOP(salesReport.totalRevenue)}</span>
+                    <span>Ventas brutas totales (con IVA)</span>
+                    <span className="font-semibold text-accent">{formatCOP(salesReport.totalRevenue)}</span>
                   </div>
                   <div className="flex justify-between text-fg-muted">
-                    <span>(-) Impuestos Recaudados (IVA / Impoconsumo):</span>
+                    <span>(-) Impuestos recaudados (IVA / Impoconsumo)</span>
                     <span className="text-fg-muted">-{formatCOP(salesReport.totalTaxes)}</span>
                   </div>
                   <div className="flex justify-between text-fg">
-                    <span>(=) Subtotal Ventas Netas (Sin IVA):</span>
-                    <span className="font-bold text-white">{formatCOP(salesReport.totalSubtotal)}</span>
+                    <span>(=) Subtotal ventas netas (sin IVA)</span>
+                    <span className="font-semibold text-fg">{formatCOP(salesReport.totalSubtotal)}</span>
                   </div>
                   <div className="flex justify-between text-alert">
-                    <span>(-) Costo de Mercancía Vendida (COGS):</span>
-                    <span className="font-bold text-alert">-{formatCOP(salesReport.totalCost)}</span>
+                    <span>(-) Costo de mercancía vendida (COGS)</span>
+                    <span className="font-semibold text-alert">-{formatCOP(salesReport.totalCost)}</span>
                   </div>
-                  <div className="flex justify-between font-black text-sm border-t border-line pt-2 bg-ok-dim p-2.5 rounded border border-ok-line">
-                    <span className="text-success">GANANCIA NETA TOTAL (UTILIDAD REAL):</span>
+                  <div className="flex justify-between font-semibold text-sm border-t border-line pt-2 bg-ok-dim p-2.5 rounded border border-ok-line">
+                    <span className="text-success">Ganancia neta total (utilidad real)</span>
                     <span className="text-success">{formatCOP(salesReport.netProfit)}</span>
                   </div>
-                  <div className="flex justify-between text-xs font-bold text-cyan px-2.5">
-                    <span>MARGEN DE GANANCIA BRUTO SOBRE VENTAS:</span>
+                  <div className="flex justify-between text-xs font-semibold text-cyan px-2.5">
+                    <span>Margen de ganancia bruto sobre ventas</span>
                     <span>{salesReport.profitMarginPercentage}%</span>
                   </div>
                 </div>
@@ -441,8 +441,8 @@ export default function ReportsPage() {
 
               {/* Profitable Products Breakdown */}
               <div className="bg-surface border border-line-soft rounded p-4 space-y-3">
-                <div className="font-bold text-fg border-b border-line-soft pb-2 uppercase tracking-wider">
-                  RENTABILIDAD Y MARGEN NETA POR PRODUCTO
+                <div className="font-semibold text-fg border-b border-line-soft pb-2 text-sm">
+                  Rentabilidad y margen neto por producto
                 </div>
 
                 <DataTable
@@ -461,7 +461,7 @@ export default function ReportsPage() {
                     {
                       key: 'revenue',
                       header: 'VENTAS ($)',
-                      cellClassName: 'text-white font-semibold',
+                      cellClassName: 'text-fg font-semibold',
                       render: (p: any) => formatCOP(p.revenue),
                     },
                     {
@@ -504,34 +504,34 @@ export default function ReportsPage() {
           )}
 
           {selectedReport === 'sales' && (
-            <div className="space-y-4 font-mono text-xs">
+            <div className="space-y-4 text-xs">
               <div className="bg-surface border border-line-soft rounded p-4 space-y-3">
-                <div className="flex justify-between items-center border-b border-line-soft pb-2 font-bold text-fg">
-                  <span>REPORTE REGISTRO DE VENTAS</span>
-                  <span>TOTAL RECAUDADO (COP)</span>
+                <div className="flex justify-between items-center border-b border-line-soft pb-2 font-semibold text-fg">
+                  <span>Reporte de ventas</span>
+                  <span>Total recaudado (COP)</span>
                 </div>
 
                 {salesReport.salesList.length === 0 ? (
                   <div className="py-8 text-center text-fg-muted">
-                    [NO HAY VENTAS REGISTRADAS EN EL SISTEMA]
+                    Aún no hay ventas registradas
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {salesReport.salesList.map((sale) => (
                       <div key={sale.id} className="flex justify-between items-center text-fg-muted p-2 bg-panel rounded border border-line-soft">
                         <div>
-                          <div className="text-fg font-bold">
-                            VENTA / TICKET #{sale.ticketNumber ? String(sale.ticketNumber).padStart(4, '0') : sale.id.substring(0, 8)}
+                          <div className="text-fg font-semibold">
+                            Ticket #{sale.ticketNumber ? String(sale.ticketNumber).padStart(4, '0') : sale.id.substring(0, 8)}
                           </div>
                           <div className="text-[10px] text-fg-muted">
-                            CIERRE CAJA VINCULADO: <span className="text-accent font-mono">{sale.cashierSessionId || 'N/A'}</span>
+                            Sesión de caja: <span className="text-accent font-mono">{sale.cashierSessionId || 'N/A'}</span>
                           </div>
                         </div>
-                        <span className="text-success font-bold">{formatCOP(sale.total)}</span>
+                        <span className="text-success font-semibold">{formatCOP(sale.total)}</span>
                       </div>
                     ))}
-                    <div className="flex justify-between font-bold border-t border-line pt-2 text-fg">
-                      <span>TOTAL ACUMULADO</span>
+                    <div className="flex justify-between font-semibold border-t border-line pt-2 text-fg">
+                      <span>Total acumulado</span>
                       <span className="text-accent font-mono">{formatCOP(salesReport.totalRevenue)}</span>
                     </div>
                   </div>
@@ -541,16 +541,16 @@ export default function ReportsPage() {
           )}
 
           {selectedReport === 'top-products' && (
-            <div className="space-y-4 font-mono text-xs">
+            <div className="space-y-4 text-xs">
               {/* RECHARTS: PIE / DONUT CHART */}
               {salesReport.topProfitableProducts.length > 0 && (
                 <div className="bg-surface border border-line-soft rounded p-4 space-y-3">
-                  <div className="flex items-center justify-between border-b border-line-soft pb-2 font-bold text-fg">
+                  <div className="flex items-center justify-between border-b border-line-soft pb-2 font-semibold text-fg">
                     <span className="flex items-center gap-2 text-cyan">
                       <PieChartIcon className="w-4 h-4" />
-                      DISTRIBUCIÓN DE RENTABILIDAD POR PRODUCTO TOP
+                      Distribución de rentabilidad por producto
                     </span>
-                    <span className="text-[10px] text-fg-muted uppercase">Aporte a Ganancia Neta</span>
+                    <span className="text-[10px] text-fg-muted">Aporte a ganancia neta</span>
                   </div>
 
                   <div className="h-64 w-full flex items-center justify-center">
@@ -573,7 +573,7 @@ export default function ReportsPage() {
                           ))}
                         </Pie>
                         <Tooltip
-                          contentStyle={{ backgroundColor: '#1A1A1A', borderColor: '#00E5FF', borderRadius: '6px', color: '#FFF' }}
+                          contentStyle={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--cyan)', borderRadius: '6px', color: 'var(--text-primary)' }}
                           formatter={(val: any) => [formatCOP(val), 'Ganancia Neta']}
                         />
                         <Legend wrapperStyle={{ fontSize: '11px', color: '#8C8C8C' }} />
@@ -584,13 +584,13 @@ export default function ReportsPage() {
               )}
 
               <div className="bg-surface border border-line-soft rounded p-4 space-y-3">
-                <div className="font-bold text-fg border-b border-line-soft pb-2">
-                  CATÁLOGO DE PRODUCTOS Y MARGEN DE GANANCIA ({products.length} ITEMS)
+                <div className="font-semibold text-fg border-b border-line-soft pb-2">
+                  Catálogo de productos y margen de ganancia ({products.length})
                 </div>
 
                 {products.length === 0 ? (
                   <div className="py-8 text-center text-fg-muted">
-                    [NO HAY PRODUCTOS REGISTRADOS EN EL CATÁLOGO]
+                    Aún no hay productos registrados
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -600,12 +600,12 @@ export default function ReportsPage() {
                         className="flex justify-between items-center p-3 bg-panel rounded border border-line-soft"
                       >
                         <div>
-                          <div className="text-fg font-bold">{p.name}</div>
-                          <div className="text-fg-muted text-[10px]">SKU: {p.sku || p.id.substring(0, 6)} • CAT: {p.category || 'General'}</div>
+                          <div className="text-fg font-semibold">{p.name}</div>
+                          <div className="text-fg-muted text-[10px]">SKU: {p.sku || p.id.substring(0, 6)} • Cat: {p.category || 'General'}</div>
                         </div>
                         <div className="text-right">
-                          <div className="text-success font-bold">{formatCOP(p.unitPrice)}</div>
-                          <div className="text-cyan text-[10px]">MARGEN: {p.margin || 0}%</div>
+                          <div className="text-success font-semibold">{formatCOP(p.unitPrice)}</div>
+                          <div className="text-cyan text-[10px]">Margen: {p.margin || 0}%</div>
                         </div>
                       </div>
                     ))}
@@ -616,19 +616,19 @@ export default function ReportsPage() {
           )}
 
           {selectedReport === 'audit' && (
-            <div className="space-y-4 font-mono text-xs">
+            <div className="space-y-4 text-xs">
               <div className="bg-surface border border-line-soft rounded p-4 space-y-3">
-                <div className="font-bold text-fg border-b border-line-soft pb-2">
-                  RESUMEN DE AUDITORÍA FISCAL DIAN
+                <div className="font-semibold text-fg border-b border-line-soft pb-2">
+                  Resumen de auditoría fiscal DIAN
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-fg-muted">
-                    <span>FACTURAS REGISTRADAS EN SISTEMA:</span>
-                    <span className="text-success font-bold">{salesReport.totalInvoicesCount}</span>
+                    <span>Facturas registradas en el sistema</span>
+                    <span className="text-success font-semibold">{salesReport.totalInvoicesCount}</span>
                   </div>
-                  <div className="flex justify-between font-bold border-t border-line pt-2 text-fg">
-                    <span>ESTADO DEL MOTOR FISCAL:</span>
-                    <span className="text-success font-mono">100% OPERATIVO</span>
+                  <div className="flex justify-between font-semibold border-t border-line pt-2 text-fg">
+                    <span>Estado del motor fiscal:</span>
+                    <span className="text-success">Operativo</span>
                   </div>
                 </div>
               </div>
@@ -643,7 +643,7 @@ export default function ReportsPage() {
               onClick={handleDownloadPDF}
               icon={<Download className="w-4 h-4" />}
             >
-              GENERAR Y DESCARGAR REPORTE COMPLETO PDF
+              Descargar reporte completo (PDF)
             </TacticalButton>
           </div>
         </SectionPanel>

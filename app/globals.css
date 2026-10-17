@@ -3,33 +3,273 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================
+   TOKENS DE TEMA — POS DIAN (rediseño comercial)
+   Tema CLARO por defecto; tema oscuro bajo .dark (next-themes).
+   Los nombres de utilidades (bg-panel, text-fg, border-line…)
+   se conservan; solo cambian los valores por tema.
+   ============================================================ */
+
 :root {
+  color-scheme: light;
+  /* Superficies */
+  --bg-app: #fafafa;
+  --bg-sidebar: #ffffff;
+  --bg-panel: #ffffff;
+  --bg-panel-hover: #f4f4f5;
+
+  --raised: #ffffff;
+  --hover: #f4f4f5;
+  --surface: #f4f4f5;
+  --input-bg: #ffffff;
+  --veil: #fafafa;
+
+  /* Bordes */
+  --border-subtle: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --line-dim: #e4e4e7;
+  --line-soft: #f0f0f1;
+  --line-hover: #d4d4d8;
+  --line-faint: #f0f0f1;
+  --line-deep: #d4d4d8;
+  --line-mid: #a1a1aa;
+
+  /* Texto */
+  --text-primary: #09090b;
+  --text-secondary: #52525b;
+  --text-muted: #71717a;
+  --fg-muted: #52525b;
+  --fg-soft: #3f3f46;
+  --fg-mid: #3f3f46;
+  --fg-dim: #a1a1aa;
+  --fg-low: #71717a;
+
+  /* Marca / estados semánticos */
+  --accent: #ea580c;
+  --accent-hover: #c2410c;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+
+  --alert: #dc2626;
+  --alert-dim: #fef2f2;
+  --alert-line: #fecaca;
+  --ok: #16a34a;
+  --ok-dim: #f0fdf4;
+  --ok-line: #bbf7d0;
+  --ok-strong: #15803d;
+  --amber: #d97706;
+  --blue: #2563eb;
+  --purple: #9333ea;
+  --pink: #db2777;
+  --cyan: #0891b2;
+  --red-soft: #f87171;
+  --red-dim: #fef2f2;
+  --amber-line: #fde68a;
+  --red-line: #fecaca;
+
+  /* Neutros con nombre heredado (antes solo oscuros) */
+  --night: #fafafa;
+  --night-soft: #f4f4f5;
+  --night-mid: #f4f4f5;
+  --night-mid-2: #f4f4f5;
+  --night-deep: #e4e4e7;
+  --night-low: #f4f4f5;
+  --charcoal: #f4f4f5;
+  --ink: #09090b;
+  --ink-2: #09090b;
+  --ash: #f4f4f5;
+  --ember: #fff7ed;
+  --teal-deep: #ecfeff;
+  --teal-line: #a5f3fc;
+
+  /* Badges de estado (DIAN / tablas) */
+  --success-bg: #f0fdf4;
+  --success-line: #bbf7d0;
+  --success-fg: #15803d;
+  --success-fg-mid: #16a34a;
+  --success-solid: #16a34a;
+  --danger-bg: #fef2f2;
+  --danger-solid: #dc2626;
+  --danger-mid: #b91c1c;
+  --danger-fg: #7f1d1d;
+  --danger-border: #fecaca;
+  --danger-dim: #fef2f2;
+  --danger-line: #fecaca;
+  --rose-surface: #fef2f2;
+  --rose-surface-2: #fef2f2;
+  --rose-surface-3: #fee2e2;
+  --rose-surface-4: #fef2f2;
+  --warn-bg: #fffbeb;
+  --warn-bg-2: #fffbeb;
+  --warn-bg-3: #fef3c7;
+  --warn-bg-4: #fef3c7;
+  --warn-bg-5: #fde68a;
+  --warn-bg-6: #fffbeb;
+  --warn-solid: #ea580c;
+  --warn-soft: #d97706;
+  --warn-bright: #f59e0b;
+  --info-bg: #eff6ff;
+  --info-fg: #1d4ed8;
+  --info-line: #bfdbfe;
+  --violet-bg: #f5f3ff;
+  --violet-fg: #7e22ce;
+  --violet-line: #ddd6fe;
+
+  /* Blanco puro (texto sobre acentos) */
+  --white: #ffffff;
+
+  /* Radios y motion */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --transition: 160ms ease;
+
+  /* Scrollbars */
+  --scroll-thumb: #d4d4d8;
+  --scroll-thumb-hover: #a1a1aa;
+
+  /* Fuentes (next/font inyecta --font-geist-*) */
+  --font-body: var(--font-geist-sans), system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Compatibilidad shadcn */
+  --background: #fafafa;
+  --foreground: #09090b;
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+  --primary: #ea580c;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #09090b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --destructive: #dc2626;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #ea580c;
+  --radius: 6px;
+}
+
+.dark {
+  color-scheme: dark;
+  /* Superficies */
   --bg-app: #0b0b0b;
   --bg-sidebar: #101010;
   --bg-panel: #171717;
   --bg-panel-hover: #202020;
 
+  --raised: #1b1b1b;
+  --hover: #1c1c1c;
+  --surface: #121212;
+  --input-bg: #0e0e0e;
+  --veil: #141414;
+
+  /* Bordes */
   --border-subtle: #303030;
   --border-strong: #444444;
+  --line-dim: #2a2a2a;
+  --line-soft: #262626;
+  --line-hover: #333333;
+  --line-faint: #222222;
+  --line-deep: #2b2b2b;
+  --line-mid: #3a3a3a;
 
+  /* Texto */
   --text-primary: #eeeeee;
   --text-secondary: #929292;
   --text-muted: #626262;
+  --fg-muted: #8c8c8c;
+  --fg-soft: #b0b0b0;
+  --fg-mid: #9e9e9e;
+  --fg-dim: #525252;
+  --fg-low: #666666;
 
+  /* Marca / estados semánticos */
   --accent: #ff6a00;
   --accent-hover: #ff812f;
   --danger: #ff3b4d;
   --success: #d8ffde;
   --warning: #f5a524;
 
-  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', 'Share Tech Mono', monospace;
-  --font-body: 'Inter', system-ui, sans-serif;
+  --alert: #ef4444;
+  --alert-dim: #290e11;
+  --alert-line: #541b20;
+  --ok: #10b981;
+  --ok-dim: #0e2012;
+  --ok-line: #1e3b24;
+  --ok-strong: #0e9969;
+  --amber: #f59e0b;
+  --blue: #3b82f6;
+  --purple: #a855f7;
+  --pink: #ec4899;
+  --cyan: #00e5ff;
+  --red-soft: #fca5a5;
+  --red-dim: #2a1515;
+  --amber-line: #3a2a10;
+  --red-line: #3a1010;
 
+  /* Neutros con nombre heredado */
+  --night: #111111;
+  --night-soft: #0f0f0f;
+  --night-mid: #1f1f1f;
+  --night-mid-2: #1e1e1e;
+  --night-deep: #161616;
+  --night-low: #151515;
+  --charcoal: #181818;
+  --ink: #0a0a0a;
+  --ink-2: #080808;
+  --ash: #1a1a1a;
+  --ember: #1c1610;
+  --teal-deep: #002b36;
+  --teal-line: #005f73;
+
+  /* Badges de estado (DIAN / tablas) */
+  --success-bg: #064e3b;
+  --success-line: #047857;
+  --success-fg: #6ee7b7;
+  --success-fg-mid: #34d399;
+  --success-solid: #22c55e;
+  --danger-bg: #7f1d1d;
+  --danger-solid: #dc2626;
+  --danger-mid: #d92b3c;
+  --danger-fg: #ffd8d5;
+  --danger-border: #3b1b18;
+  --danger-dim: #450a0a;
+  --danger-line: #552020;
+  --rose-surface: #241515;
+  --rose-surface-2: #241313;
+  --rose-surface-3: #321919;
+  --rose-surface-4: #200f0d;
+  --warn-bg: #2a1700;
+  --warn-bg-2: #24150e;
+  --warn-bg-3: #261a08;
+  --warn-bg-4: #543b10;
+  --warn-bg-5: #4a320f;
+  --warn-bg-6: #1c170e;
+  --warn-solid: #e05d00;
+  --warn-soft: #e0941a;
+  --warn-bright: #ff9d00;
+  --info-bg: #1e3a8a;
+  --info-fg: #93c5fd;
+  --info-line: #1e40af;
+  --violet-bg: #2e1065;
+  --violet-fg: #c084fc;
+  --violet-line: #581c87;
+
+  /* Blanco puro */
+  --white: #ffffff;
+
+  /* Radios y motion */
   --radius-sm: 4px;
   --radius-md: 6px;
   --transition: 160ms ease;
 
-  /* Compatibility mapped tokens (shadcn) */
+  /* Scrollbars */
+  --scroll-thumb: #262626;
+  --scroll-thumb-hover: #333333;
+
+  /* Compatibilidad shadcn */
   --background: #0b0b0b;
   --foreground: #eeeeee;
   --card: #171717;
@@ -49,110 +289,106 @@
   --radius: 6px;
 }
 
-/* Fase 27 (§8): tokens registrados en Tailwind v4 → utilities `bg-panel`,
-   `text-fg`, `border-line`… con los MISMOS valores del :root (migración
-   visualmente idéntica de los hex literales de los TSX). */
+/* Utilidades Tailwind v4 — mapeo 1:1 a las variables de tema */
 @theme inline {
   --color-app: var(--bg-app);
   --color-sidebar: var(--bg-sidebar);
   --color-panel: var(--bg-panel);
   --color-panel-hover: var(--bg-panel-hover);
-  --color-raised: #1b1b1b;
-  --color-hover: #1c1c1c;
-  --color-surface: #121212;
-  --color-input: #0e0e0e;
-  --color-veil: #141414;
+  --color-raised: var(--raised);
+  --color-hover: var(--hover);
+  --color-surface: var(--surface);
+  --color-input: var(--input-bg);
+  --color-veil: var(--veil);
 
   --color-line: var(--border-subtle);
   --color-line-strong: var(--border-strong);
-  --color-line-dim: #2a2a2a;
-  --color-line-soft: #262626;
+  --color-line-dim: var(--line-dim);
+  --color-line-soft: var(--line-soft);
+  --color-line-hover: var(--line-hover);
+  --color-line-faint: var(--line-faint);
+  --color-line-deep: var(--line-deep);
+  --color-line-mid: var(--line-mid);
 
   --color-fg: var(--text-primary);
-  --color-fg-muted: #8c8c8c;
+  --color-fg-muted: var(--fg-muted);
   --color-fg-faint: var(--text-muted);
+  --color-fg-soft: var(--fg-soft);
+  --color-fg-mid: var(--fg-mid);
+  --color-fg-dim: var(--fg-dim);
+  --color-fg-low: var(--fg-low);
 
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-danger: var(--danger);
-  --color-alert: #ef4444;
-  --color-alert-dim: #290e11;
-  --color-alert-line: #541b20;
+  --color-alert: var(--alert);
+  --color-alert-dim: var(--alert-dim);
+  --color-alert-line: var(--alert-line);
   --color-success: var(--success);
-  --color-ok: #10b981;
-  --color-ok-dim: #0e2012;
-  --color-ok-line: #1e3b24;
+  --color-ok: var(--ok);
+  --color-ok-dim: var(--ok-dim);
+  --color-ok-line: var(--ok-line);
+  --color-ok-strong: var(--ok-strong);
   --color-warning: var(--warning);
-  --color-cyan: #00e5ff;
-  --color-red-soft: #fca5a5;
+  --color-cyan: var(--cyan);
+  --color-red-soft: var(--red-soft);
+  --color-red-dim: var(--red-dim);
+  --color-amber-line: var(--amber-line);
+  --color-red-line: var(--red-line);
 
-  /* Cola larga: colores puntuales de UI (badges, estados, gradientes) */
-  --color-white: #ffffff;
-  --color-line-hover: #333333;
-  --color-line-faint: #222222;
-  --color-fg-soft: #b0b0b0;
-  --color-fg-mid: #9e9e9e;
-  --color-fg-dim: #525252;
-  --color-fg-low: #666666;
-  --color-ok-strong: #0e9969;
-  --color-amber: #f59e0b;
-  --color-blue: #3b82f6;
-  --color-purple: #a855f7;
-  --color-danger-dim: #450a0a;
-  --color-danger-line: #552020;
-  --color-red-dim: #2a1515;
-  --color-amber-line: #3a2a10;
-  --color-red-line: #3a1010;
-  --color-night: #111111;
-  --color-night-soft: #0f0f0f;
-  --color-charcoal: #181818;
-  --color-ink: #0a0a0a;
-  --color-ash: #1a1a1a;
-  --color-ember: #1c1610;
-  --color-teal-deep: #002b36;
-  --color-teal-line: #005f73;
+  --color-white: var(--white);
+  --color-amber: var(--amber);
+  --color-blue: var(--blue);
+  --color-purple: var(--purple);
+  --color-pink: var(--pink);
+  --color-danger-dim: var(--danger-dim);
+  --color-danger-line: var(--danger-line);
 
-  /* Badges de estado (DIAN/tablas): fondos oscuros + fg brillante por familia */
-  --color-success-bg: #064e3b;
-  --color-success-line: #047857;
-  --color-success-fg: #6ee7b7;
-  --color-success-fg-mid: #34d399;
-  --color-success-solid: #22c55e;
-  --color-danger-bg: #7f1d1d;
-  --color-danger-solid: #dc2626;
-  --color-danger-mid: #d92b3c;
-  --color-danger-fg: #ffd8d5;
-  --color-danger-border: #3b1b18;
-  --color-rose-surface: #241515;
-  --color-rose-surface-2: #241313;
-  --color-rose-surface-3: #321919;
-  --color-rose-surface-4: #200f0d;
-  --color-warn-bg: #2a1700;
-  --color-warn-bg-2: #24150e;
-  --color-warn-bg-3: #261a08;
-  --color-warn-bg-4: #543b10;
-  --color-warn-bg-5: #4a320f;
-  --color-warn-bg-6: #1c170e;
-  --color-warn-solid: #e05d00;
-  --color-warn-soft: #e0941a;
-  --color-warn-bright: #ff9d00;
-  --color-info-bg: #1e3a8a;
-  --color-info-fg: #93c5fd;
-  --color-info-line: #1e40af;
-  --color-violet-bg: #2e1065;
-  --color-violet-fg: #c084fc;
-  --color-violet-line: #581c87;
+  --color-night: var(--night);
+  --color-night-soft: var(--night-soft);
+  --color-night-mid: var(--night-mid);
+  --color-night-mid-2: var(--night-mid-2);
+  --color-night-deep: var(--night-deep);
+  --color-night-low: var(--night-low);
+  --color-charcoal: var(--charcoal);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ash: var(--ash);
+  --color-ember: var(--ember);
+  --color-teal-deep: var(--teal-deep);
+  --color-teal-line: var(--teal-line);
 
-  /* Superficies grises de la cola larga (>=2 usos o intermedios de la escala) */
-  --color-night-mid: #1f1f1f;
-  --color-night-mid-2: #1e1e1e;
-  --color-night-deep: #161616;
-  --color-night-low: #151515;
-  --color-ink-2: #080808;
-  --color-line-deep: #2b2b2b;
-  --color-line-mid: #3a3a3a;
+  --color-success-bg: var(--success-bg);
+  --color-success-line: var(--success-line);
+  --color-success-fg: var(--success-fg);
+  --color-success-fg-mid: var(--success-fg-mid);
+  --color-success-solid: var(--success-solid);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-solid: var(--danger-solid);
+  --color-danger-mid: var(--danger-mid);
+  --color-danger-fg: var(--danger-fg);
+  --color-danger-border: var(--danger-border);
+  --color-rose-surface: var(--rose-surface);
+  --color-rose-surface-2: var(--rose-surface-2);
+  --color-rose-surface-3: var(--rose-surface-3);
+  --color-rose-surface-4: var(--rose-surface-4);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-bg-2: var(--warn-bg-2);
+  --color-warn-bg-3: var(--warn-bg-3);
+  --color-warn-bg-4: var(--warn-bg-4);
+  --color-warn-bg-5: var(--warn-bg-5);
+  --color-warn-bg-6: var(--warn-bg-6);
+  --color-warn-solid: var(--warn-solid);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-bright: var(--warn-bright);
+  --color-info-bg: var(--info-bg);
+  --color-info-fg: var(--info-fg);
+  --color-info-line: var(--info-line);
+  --color-violet-bg: var(--violet-bg);
+  --color-violet-fg: var(--violet-fg);
+  --color-violet-line: var(--violet-line);
 
-  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', 'Share Tech Mono', monospace;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'Cascadia Mono', monospace;
 }
 
 body {
@@ -162,7 +398,7 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* Custom Tactical Scrollbars */
+/* Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -173,21 +409,21 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #262626;
+  background: var(--scroll-thumb);
   border-radius: 3px;
   border: 1px solid var(--bg-panel);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #333333;
+  background: var(--scroll-thumb-hover);
 }
 
-/* Tactical inputs and focus states */
+/* Inputs y focus states */
 input, select, textarea {
-  background-color: var(--color-surface, #121212);
+  background-color: var(--surface);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   border-radius: var(--radius-sm);
   transition: border-color var(--transition), box-shadow var(--transition);
 }
@@ -196,6 +432,36 @@ input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Icono del selector de fecha: reemplazo determinista (color por tema) */
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator,
+input[type='month']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity var(--transition);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 15px 15px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23525252' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E");
+}
+
+input[type='date']::-webkit-calendar-picker-indicator:hover,
+input[type='datetime-local']::-webkit-calendar-picker-indicator:hover,
+input[type='month']::-webkit-calendar-picker-indicator:hover,
+input[type='time']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.dark input[type='date']::-webkit-calendar-picker-indicator,
+.dark input[type='datetime-local']::-webkit-calendar-picker-indicator,
+.dark input[type='month']::-webkit-calendar-picker-indicator,
+.dark input[type='time']::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E");
 }
 
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {

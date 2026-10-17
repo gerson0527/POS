@@ -13,6 +13,7 @@ import {
   Layers } from 'lucide-react'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { MetricCard } from '@/components/tactical/MetricCard'
+import { Pagination } from '@/components/tactical/Pagination'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/ui/ToastProvider'
 import { formatCOP } from '@/lib/utils/pos-utils'
@@ -36,6 +37,8 @@ export default function InvoicesPage() {
   const [isXmlModalOpen, setIsXmlModalOpen] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [emittingId, setEmittingId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   const handleEmitFactus = async (saleId: string) => {
     setEmittingId(saleId)
@@ -71,18 +74,30 @@ export default function InvoicesPage() {
     fetchInvoices()
   }, [])
 
+  // Volver a la primera página al cambiar búsqueda o filtros
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, methodFilter, dateFrom, dateTo])
+
   // Filtering logic
   const filteredInvoices = invoices.filter((inv) => {
-    const searchLower = searchQuery.toLowerCase()
+    const q = searchQuery.trim().toLowerCase()
     const ticketStr = inv.ticketNumber ? String(inv.ticketNumber).padStart(4, '0') : ''
-    const ticketMatch = ticketStr.includes(searchQuery) || (inv.ticketNumber && String(inv.ticketNumber).includes(searchQuery))
-    const idMatch = inv.id?.toLowerCase().includes(searchLower)
-    const customerNameMatch = inv.customerName?.toLowerCase().includes(searchLower)
-    const customerDocMatch = inv.customerDocNumber?.toLowerCase().includes(searchLower)
-    const refMatch = inv.paymentReference?.toLowerCase().includes(searchLower)
-    const cufeMatch = inv.cufe?.toLowerCase().includes(searchLower)
+    // La tabla muestra el consecutivo como FACT-#0015; la búsqueda debe
+    // reconocer ese formato visible además del número crudo (15 / 0015).
+    const ticketDisplay = ticketStr ? `FACT-#${ticketStr}` : ''
+    const qDigits = q.replace(/\D/g, '')
+    const ticketMatch =
+      (ticketDisplay !== '' && ticketDisplay.toLowerCase().includes(q)) ||
+      (qDigits !== '' && ticketStr.includes(qDigits))
+    const idMatch = inv.id?.toLowerCase().includes(q)
+    const customerNameMatch = inv.customerName?.toLowerCase().includes(q)
+    const customerDocMatch = inv.customerDocNumber?.toLowerCase().includes(q)
+    const refMatch = inv.paymentReference?.toLowerCase().includes(q)
+    const cufeMatch = inv.cufe?.toLowerCase().includes(q)
+    const fullNumberMatch = inv.fullNumber?.toLowerCase().includes(q)
 
-    const matchesSearch = !searchQuery.trim() || ticketMatch || idMatch || customerNameMatch || customerDocMatch || refMatch || cufeMatch
+    const matchesSearch = !q || ticketMatch || idMatch || customerNameMatch || customerDocMatch || refMatch || cufeMatch || fullNumberMatch
 
     // getAllInvoices devuelve labels en español ('EFECTIVO', 'T. CRÉDITO',
     // 'MIXTO (...)'); la clasificación se hace sobre payments[] (enum crudo)
@@ -115,6 +130,12 @@ export default function InvoicesPage() {
 
     return matchesSearch && matchesMethod && matchesDate
   })
+
+  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage) || 1
+  const paginatedInvoices = filteredInvoices.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
 
   // KPI Calculations
   const completedInvoices = invoices.filter((i) => i.status === 'COMPLETED' || i.status === 'CONFIRMED' || i.status === 'DRAFT')
@@ -185,7 +206,7 @@ export default function InvoicesPage() {
   }
 
   return (
-    <div className="space-y-6 font-mono text-fg">
+    <div className="space-y-6 text-fg">
       {/* Header Banner */}
       <PageHeader
         breakpoint="lg"
@@ -274,11 +295,11 @@ export default function InvoicesPage() {
               key={tab.id}
               onClick={() => setMethodFilter(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded text-xs font-bold tracking-wider transition-all cursor-pointer ${isActive
-                  ? 'bg-accent text-black border border-accent'
+                  ? 'bg-accent text-white border border-accent'
                   : 'bg-surface text-fg-muted border border-line hover:text-fg hover:border-line-strong'
                 }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-black' : 'text-fg-muted'}`} />
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-fg-muted'}`} />
               <span>{tab.label}</span>
             </button>
           )
@@ -288,7 +309,7 @@ export default function InvoicesPage() {
       {/* SectionPanel with Table */}
       <InvoiceTable
         loading={loading}
-        rows={filteredInvoices}
+        rows={paginatedInvoices}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         dateFrom={dateFrom}
@@ -305,6 +326,14 @@ export default function InvoicesPage() {
         onEmit={handleEmitFactus}
         onOpenDetail={handleOpenDetail}
         onOpenXml={handleOpenXml}
+      />
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={filteredInvoices.length}
+        itemsPerPage={itemsPerPage}
+        onPageChange={(page) => setCurrentPage(page)}
       />
 
       {/* MODAL 1: AUDITORÍA XML / COMPROBANTE ELECTRÓNICO DIAN FACTUS V2 */}

@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Truck, AlertTriangle } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Label } from '@/components/ui/Label'
 import { useToast } from '@/components/ui/ToastProvider'
 import { createPurchaseOrder } from '@/app/actions/pos-actions'
@@ -41,6 +42,17 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
     margin: number
     productName: string
   } | null>(null)
+
+  const productOptions = useMemo(
+    () =>
+      products.map((p) => ({
+        value: p.id,
+        label: `${p.name}${p.sku ? ` (SKU: ${p.sku})` : ' (Sin SKU)'}`,
+        description: `Costo: $${p.cost || 0} · Precio Venta: $${p.unitPrice || 0}`,
+        searchText: `${p.name} ${p.sku || ''}`,
+      })),
+    [products]
+  )
 
   function handlePOSelectProduct(productId: string) {
     if (!productId) {
@@ -199,18 +211,14 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
 
           <div>
             <Label className="mb-1.5">SELECCIONAR PRODUCTO DE CATÁLOGO (OPCIONAL / AUTO-CARGAR)</Label>
-            <Select
-              className="p-3 h-11"
+            <SearchableSelect
+              className="h-11"
+              options={productOptions}
               value={poForm.productId}
-              onChange={(e) => handlePOSelectProduct(e.target.value)}
-            >
-              <option value="">-- Seleccionar Producto para actualizar existencias y precios --</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.sku ? `SKU: ${p.sku}` : 'Sin SKU'}) · Costo: ${p.cost || 0} · Precio Venta: ${p.unitPrice || 0}
-                </option>
-              ))}
-            </Select>
+              onChange={handlePOSelectProduct}
+              placeholder="-- Seleccionar Producto para actualizar existencias y precios --"
+              emptyLabel="-- Ninguno (no actualizar catálogo) --"
+            />
           </div>
 
           {/* CAMPOS DE COSTO, PRECIO UNITARIO Y MARGEN CON ALINEACIÓN PERFECTA */}
@@ -352,27 +360,27 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
           </div>
 
           <p className="text-xs text-fg leading-relaxed">
-            El sistema detectó que para el producto <span className="text-accent font-bold">"{zeroProfitWarningModal.productName}"</span>, el <span className="font-bold text-white">Precio de Venta (${zeroProfitWarningModal.unitPrice})</span> es menor o igual al <span className="font-bold text-red-soft">Costo Unitario (${zeroProfitWarningModal.cost})</span>.
+            El sistema detectó que para el producto <span className="text-accent font-bold">"{zeroProfitWarningModal.productName}"</span>, el <span className="font-bold text-fg">Precio de Venta (${zeroProfitWarningModal.unitPrice})</span> es menor o igual al <span className="font-bold text-red-soft">Costo Unitario (${zeroProfitWarningModal.cost})</span>.
           </p>
 
           <div className="bg-rose-surface border border-danger-bg rounded p-3 text-[11px] text-red-soft space-y-1">
             <p className="font-bold text-xs text-alert">• MARGEN RESULTANTE: {zeroProfitWarningModal.margin}%</p>
             <p>Esta configuración venderá el producto sin obtener margen de utilidad o incurriendo en pérdidas.</p>
-            <p className="text-white font-bold mt-1">¿Desea confirmar que este valor es correcto y emitir la orden de compra?</p>
+            <p className="text-fg font-semibold mt-1">¿Desea confirmar que este valor es correcto y emitir la orden de compra?</p>
           </div>
 
           <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2 border-t border-line-soft">
             <button
               type="button"
               onClick={() => setZeroProfitWarningModal(null)}
-              className="px-4 py-2.5 bg-night-mid-2 hover:bg-line-dim text-fg-muted hover:text-white rounded font-bold text-xs transition-colors"
+              className="px-4 py-2.5 bg-night-mid-2 hover:bg-line-dim text-fg-muted hover:text-fg rounded font-bold text-xs transition-colors"
             >
               AJUSTAR PRECIO DE VENTA
             </button>
             <button
               type="button"
               onClick={() => handleCreatePO(undefined, true)}
-              className="px-4 py-2.5 bg-alert hover:bg-danger-solid text-black font-bold rounded text-xs transition-colors flex items-center justify-center gap-1"
+              className="px-4 py-2.5 bg-alert hover:bg-danger-solid text-white font-bold rounded text-xs transition-colors flex items-center justify-center gap-1"
             >
               <span>SÍ, ES CORRECTO (EMITIR ÓRDEN)</span>
             </button>

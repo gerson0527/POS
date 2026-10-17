@@ -128,7 +128,7 @@ export function CustomerFormModal({
           </button>
           <button
             type="submit"
-            className="flex-1 flex items-center justify-center gap-1 text-[10px] text-accent hover:text-black hover:bg-accent font-bold uppercase py-1 rounded border border-accent transition-colors"
+            className="flex-1 flex items-center justify-center gap-1 text-[10px] text-accent hover:text-white hover:bg-accent font-bold uppercase py-1 rounded border border-accent transition-colors"
           >
             Guardar
           </button>
@@ -289,7 +289,7 @@ export function CustomerFormModal({
             rows={2}
             value={form.notes ?? ''}
             onChange={(e) => onChange({ ...form, notes: e.target.value })}
-            className="w-full bg-input border border-line focus:border-accent p-2.5 rounded text-white resize-none"
+            className="w-full bg-input border border-line focus:border-accent p-2.5 rounded text-fg resize-none"
           />
         </div>
 

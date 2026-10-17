@@ -118,22 +118,11 @@ export function buildPayments(payments: any[], invoiceTotal: number): InvoicePay
     const p = payments[0]
     // Un solo pago: el monto debe cuadrar con el total exacto de la factura.
     const amount = invoiceTotal > 0 ? invoiceTotal : Number(p.amount)
-    const detail = toPaymentDetail(p.method, amount, p.reference)
-    // Si el pago es a crédito (payment_form = '2'), agregamos due_date por defecto
-    if (detail.payment_form === '2' && !detail.due_date && p.dueDate) {
-      detail.due_date = p.dueDate
-    }
-    return [detail]
+    return [toPaymentDetail(p.method, amount, p.reference)]
   }
   // Multi-pago: reconciliamos la diferencia de redondeo en el primer pago en efectivo
   // (o en el primero) para que la suma cuadre con el total exacto de la factura.
-  const details = payments.map((p) => {
-    const detail = toPaymentDetail(p.method, Number(p.amount), p.reference)
-    if (detail.payment_form === '2' && !detail.due_date && p.dueDate) {
-      detail.due_date = p.dueDate
-    }
-    return detail
-  })
+  const details = payments.map((p) => toPaymentDetail(p.method, Number(p.amount), p.reference))
   const sumPayments = details.reduce((s, d) => s + Number(d.amount || 0), 0)
   const diff = Number((invoiceTotal - sumPayments).toFixed(2))
   if (diff !== 0 && details.length > 0) {
