@@ -22,6 +22,7 @@ import {
   Terminal } from 'lucide-react'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { StatusBadge } from '@/components/tactical/StatusBadge'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 export default function DashboardLayout({
   children,
@@ -129,14 +130,16 @@ export default function DashboardLayout({
             POS DIAN
           </span>
         </div>
-        <button
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-          className="p-1.5 rounded bg-hover border border-line text-fg"
-        >
-          {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            onClick={() => setIsMobileOpen(!isMobileOpen)}
+            className="p-1.5 rounded bg-hover border border-line text-fg"
+          >
+            {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
-
       {/* Desktop Fixed Sidebar (approx 240px / w-60) */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-60 bg-sidebar border-r border-line flex flex-col justify-between transition-transform duration-200 ease-in-out md:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
@@ -225,6 +228,7 @@ export default function DashboardLayout({
               {getBreadcrumb()}
             </span>
           </div>
+          <ThemeToggle />
         </header>
 
         {/* Dynamic Page Container */}
