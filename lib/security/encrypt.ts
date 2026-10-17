@@ -5,7 +5,7 @@
 //
 // Diseño:
 //   - Algoritmo: AES-256-GCM (cifrado autenticado; detecta manipulación del ciphertext).
-//   - Clave: derivada con SHA-256 desde ENCRYPTION_KEY (o BETTER_AUTH_SECRET como fallback).
+//   - Clave: derivada con SHA-256 desde ENCRYPTION_KEY (variable dedicada y obligatoria).
 //   - Formato almacenado: `v1:<iv b64url>:<tag b64url>:<ciphertext b64url>`
 //     El prefijo `v1:` permite detectar de forma robusta si un valor ya está cifrado
 //     (a diferencia de un simple `hex:hex`, que podría colisionar con texto plano).
@@ -20,16 +20,21 @@ const VERSION_PREFIX = 'v1'
 const IV_BYTES = 12 // longitud recomendada para GCM
 const TAG_BYTES = 16
 
-// Fallback documentado (mismo patrón que lib/auth.ts). En producción se debe
-// definir ENCRYPTION_KEY en el entorno; sin ella, rotarla dejaría los valores ilegibles.
-const FALLBACK_KEY_MATERIAL = 'pos-dian-credentials-encryption-key-2026'
+// Seguridad (H-1/H-7): clave DEDICADA y obligatoria. NO se deriva de
+// BETTER_AUTH_SECRET (acoplar el dominio de sesión y el de datos) ni se usa un
+// valor por defecto conocido. Definir ENCRYPTION_KEY en el entorno; rotarla sin
+// plan de re-cifrado dejaría ilegibles los valores almacenados.
 
 let cachedKey: Buffer | null = null
 
 function getKey(): Buffer {
   if (cachedKey) return cachedKey
-  const material =
-    process.env.ENCRYPTION_KEY || process.env.BETTER_AUTH_SECRET || FALLBACK_KEY_MATERIAL
+  const material = process.env.ENCRYPTION_KEY
+  if (!material) {
+    throw new Error(
+      'ENCRYPTION_KEY no está definida: no se puede cifrar/descifrar secretos sin una clave dedicada.'
+    )
+  }
   cachedKey = crypto.createHash('sha256').update(material, 'utf8').digest()
   return cachedKey
 }

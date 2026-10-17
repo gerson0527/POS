@@ -7,7 +7,7 @@ import { AuditAction } from '@/lib/types'
 import { and, eq, desc, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { sendWelcomeEmail } from '@/lib/email'
-import { getUserId, getTenantId, logAudit } from './_shared'
+import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 export async function createTenantWithAdmin(input: {
   // Datos del usuario admin
   adminName: string
@@ -31,6 +31,7 @@ export async function createTenantWithAdmin(input: {
   companyWebsite?: string
 }) {
   const currentUserId = await getUserId()
+  await requireRole(currentUserId, ['ADMIN'])
   const currentTenantId = await getTenantId(currentUserId)
 
   // 1. Validar que el email no exista ya

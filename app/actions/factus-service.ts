@@ -5,9 +5,13 @@
 // Fase 4.25 (§5.2): la lógica de dominio de emisión vive en
 // lib/invoicing/emit-invoice.ts; este action solo delega y preserva el
 // contrato de retorno ({success, message}).
-import { getTenantId } from './_shared'
+import { getTenantId, getUserId, requireRole } from './_shared'
+import type { TenantRole } from '@/lib/auth/session-context'
+
 export async function emitFactusElectronicInvoice(saleId: string) {
   try {
+    const userId = await getUserId()
+    await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
     const { emitSaleElectronicInvoice } = await import('@/lib/invoicing/emit-invoice')
     return await emitSaleElectronicInvoice(saleId)
   } catch (err: any) {
@@ -21,12 +25,10 @@ export async function emitFactusElectronicInvoice(saleId: string) {
 /** Helpers expuestos a la UI de configuración (configuración de credenciales, prueba, listado de rangos) */
 // Todos operan sobre el tenant del usuario autenticado para evitar pasar IDs del cliente.
 
-async function getCurrentTenantIdSafe(): Promise<string> {
-  const { auth } = await import('@/lib/auth')
-  const { headers } = await import('next/headers')
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) throw new Error('UNAUTHORIZED')
-  return await getTenantId(session.user.id)
+async function getCurrentTenantIdSafe(roles: TenantRole[] = ['ADMIN', 'MANAGER']): Promise<string> {
+  const userId = await getUserId()
+  await requireRole(userId, roles)
+  return await getTenantId(userId)
 }
 
 export async function getFactusConfigForCurrentTenant() {

@@ -12,9 +12,10 @@ import {
   describeFactusUpdate,
   type FactusConfigInput,
 } from '@/lib/invoicing/tenant-credentials'
-import { getUserId, getTenantId, logAudit } from './_shared'
+import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 export async function updateTenantFactusConfig(input: FactusConfigInput) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN'])
   const tenantId = await getTenantId(userId)
 
   // Cifrado de campos sensibles + redacción para logs/auditoría: fuente única en

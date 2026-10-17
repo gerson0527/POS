@@ -6,7 +6,7 @@ import * as schema from '@/lib/db/schema'
 import { AuditAction } from '@/lib/types'
 import { and, eq, desc } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { getUserId, getTenantId, logAudit } from './_shared'
+import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 export async function getSuppliersList() {
   const userId = await getUserId()
   const tenantId = await getTenantId(userId)
@@ -20,6 +20,7 @@ export async function getSuppliersList() {
 
 export async function createSupplier(input: { name: string; nit?: string; email?: string; phone?: string; address?: string }) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   const cleanNit = input.nit && input.nit.trim() ? input.nit.trim() : null
@@ -56,6 +57,7 @@ export async function createSupplier(input: { name: string; nit?: string; email?
 
 export async function deleteSupplier(id: string) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   await db

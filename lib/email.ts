@@ -1,5 +1,17 @@
 import nodemailer from 'nodemailer'
 
+// Seguridad (H-9): escapar valores interpolados en el HTML del correo.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
 export async function sendWelcomeEmail(to: string, name: string, role: string = 'OPERADOR') {
   const smtpHost = process.env.SMTP_HOST
   const smtpPort = parseInt(process.env.SMTP_PORT || '587')
@@ -35,16 +47,16 @@ export async function sendWelcomeEmail(to: string, name: string, role: string = 
             <div class="subtitle">Confirmación de cuenta de acceso y rol</div>
           </div>
           <div class="content">
-            <p>Hola <strong style="color: #FFFFFF;">${name}</strong>,</p>
+            <p>Hola <strong style="color: #FFFFFF;">${escapeHtml(name)}</strong>,</p>
             <p>Tu cuenta ha sido creada exitosamente en la plataforma de Facturación Electrónica POS DIAN Colombia.</p>
             <div class="box">
-              <div class="field"><span class="label">CORREO ELECTRÓNICO:</span> <span class="value">${to}</span></div>
-              <div class="field"><span class="label">ROL ASIGNADO:</span> <span class="value" style="color: #FF6A00;">${role.toUpperCase()}</span></div>
+              <div class="field"><span class="label">CORREO ELECTRÓNICO:</span> <span class="value">${escapeHtml(to)}</span></div>
+              <div class="field"><span class="label">ROL ASIGNADO:</span> <span class="value" style="color: #FF6A00;">${escapeHtml(role.toUpperCase())}</span></div>
               <div class="field"><span class="label">ESTADO DE CUENTA:</span> <span class="value" style="color: #D8FFDE;">Activa</span></div>
             </div>
             <p>Puedes ingresar al sistema y comenzar a operar tu caja registradora o panel de control:</p>
             <div style="text-align: center;">
-              <a href="http://localhost:3001/sign-in" class="btn">Ingresar al sistema</a>
+              <a href="${appUrl}/login" class="btn">Ingresar al sistema</a>
             </div>
           </div>
           <div class="footer">

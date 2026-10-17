@@ -16,11 +16,12 @@ import { calculateSaleTotals, formatInvoiceNumber, getNextInvoiceNumber, roundTo
 import { generateCUFE } from '@/lib/fiscal/cufe'
 import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { getUserId, getTenantId, logAudit, publishEvent } from './_shared'
+import { getUserId, getTenantId, logAudit, publishEvent, requireRole } from './_shared'
 import { emitFactusElectronicInvoice } from './factus-service'
 import { chargeCustomerCredit } from './customers'
 export async function createSale(input: CreateSaleDTO) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
 
   // Get active cashier session for tenant
@@ -194,6 +195,7 @@ export async function getSale(saleId: string) {
 // PAYMENT & COMPLETION
 export async function completeSale(input: CompleteSaleDTO) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
 
   const sale = await db
@@ -298,6 +300,7 @@ export async function completeSale(input: CompleteSaleDTO) {
 // INVOICE GENERATION
 export async function generateInvoice(input: GenerateInvoiceDTO) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
 
   const sale = await db

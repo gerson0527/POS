@@ -10,7 +10,7 @@ import {
 } from '@/lib/types'
 import { and, eq, asc, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { getUserId, getTenantId, logAudit, publishEvent } from './_shared'
+import { getUserId, getTenantId, logAudit, publishEvent, requireRole } from './_shared'
 function escapeCsv(value: unknown): string {
   if (value === null || value === undefined) return ''
   const s = String(value)
@@ -122,6 +122,7 @@ export async function importProductsFromCSV(input: {
   mode: 'create' | 'upsert'
 }): Promise<{ inserted: number; updated: number; errors: string[] }> {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   const errors: string[] = []
@@ -267,6 +268,7 @@ export async function getImportTemplateCSV(): Promise<string> {
 // PRODUCT ACTIONS
 export async function createProduct(input: CreateProductDTO & { initialStock?: number }) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   const cleanSku = input.sku ? input.sku.trim() : `SKU-${Date.now().toString().slice(-6)}`
@@ -380,6 +382,7 @@ export async function updateProduct(
   input: Partial<CreateProductDTO> & { status?: string }
 ) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   const updateData: any = { updatedAt: new Date() }
@@ -410,6 +413,7 @@ export async function updateProduct(
 
 export async function toggleProductStatus(id: string, newStatus: string) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   await db
@@ -425,6 +429,7 @@ export async function toggleProductStatus(id: string, newStatus: string) {
 
 export async function deleteProduct(id: string) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   await db

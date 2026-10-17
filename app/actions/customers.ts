@@ -6,7 +6,7 @@ import * as schema from '@/lib/db/schema'
 import { AuditAction } from '@/lib/types'
 import { and, eq, desc, asc, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { getUserId, getTenantId, logAudit } from './_shared'
+import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 export async function getCustomers(includeInactive = true) {
   const userId = await getUserId()
   const tenantId = await getTenantId(userId)
@@ -39,6 +39,7 @@ export async function createCustomer(input: {
   notes?: string
 }) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
 
   const docNumber = input.documentNumber.trim()
@@ -101,6 +102,7 @@ export async function updateCustomer(
   }
 ) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
 
   const updateData: any = { updatedAt: new Date() }
@@ -130,6 +132,7 @@ export async function updateCustomer(
 
 export async function toggleCustomerStatus(id: string) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
 
   const row = await db
@@ -155,6 +158,7 @@ export async function toggleCustomerStatus(id: string) {
 
 export async function deleteCustomer(id: string) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   const used = await db
@@ -182,6 +186,7 @@ export async function deleteCustomer(id: string) {
 // CUSTOMER CREDIT (MORA / CRÉDITO)
 export async function setCustomerCreditLimit(customerId: string, limit: number) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   await db
@@ -201,6 +206,7 @@ export async function setCustomerCreditLimit(customerId: string, limit: number) 
 
 export async function toggleCustomerCredit(customerId: string) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   const row = await db
@@ -231,6 +237,7 @@ export async function chargeCustomerCredit(input: {
   dueDate?: string
 }) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
 
   const cust = await db
@@ -291,6 +298,7 @@ export async function payCustomerCredit(input: {
   note?: string
 }) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
 
   const cust = await db
@@ -409,6 +417,7 @@ export async function getCustomerCreditDetail(customerId: string) {
 
 export async function setCustomerCreditStatus(customerId: string, status: 'AL_DIA' | 'BLOQUEADO') {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   await db

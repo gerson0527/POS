@@ -9,9 +9,10 @@ import {
 } from '@/lib/types'
 import { and, eq, asc } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { getUserId, getTenantId, logAudit } from './_shared'
+import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 export async function createLocation(input: CreateLocationDTO) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   const id = `loc_${Date.now()}`
@@ -48,6 +49,7 @@ export async function updateLocation(
   input: { name?: string; code?: string; address?: string; phone?: string; status?: string }
 ) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   await db
@@ -69,6 +71,7 @@ export async function updateLocation(
 
 export async function deleteLocation(id: string) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   await db

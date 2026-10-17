@@ -2,10 +2,14 @@
 // NO forman parte de la API pública: no se re-exportan desde el barrel pos-actions.
 import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
+import { randomUUID } from 'node:crypto'
 
 // Sesión/tenant: la implementación vive en lib/auth/session-context (Fase 3.19);
 // se re-exportan los nombres históricos para no tocar los 17 módulos consumidores.
 export { requireUser as getUserId, requireTenantId as getTenantId } from '@/lib/auth/session-context'
+// Seguridad (H-2): guardia de rol para mutaciones. Lanza FORBIDDEN si el rol
+// del usuario no está entre los permitidos.
+export { requireRole } from '@/lib/auth/session-context'
 
 // AUDIT & EVENTS
 export async function logAudit(
@@ -17,7 +21,7 @@ export async function logAudit(
   changes: unknown
 ) {
   await db.insert(schema.auditLog).values({
-    id: `audit_${Date.now()}`,
+    id: `audit_${randomUUID()}`,
     tenantId,
     userId,
     action,
@@ -35,7 +39,7 @@ export async function publishEvent(
   payload: unknown
 ) {
   await db.insert(schema.event).values({
-    id: `evt_${Date.now()}`,
+    id: `evt_${randomUUID()}`,
     tenantId,
     eventType,
     aggregateType,

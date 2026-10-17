@@ -6,7 +6,7 @@ import * as schema from '@/lib/db/schema'
 import { AuditAction } from '@/lib/types'
 import { and, eq, desc } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { getUserId, getTenantId, logAudit } from './_shared'
+import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 export async function getNumerations() {
   const userId = await getUserId()
   const tenantId = await getTenantId(userId)
@@ -27,6 +27,7 @@ export async function createNumeration(input: {
   documentType: string
 }) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   const id = `num_${Date.now()}`
@@ -61,6 +62,7 @@ export async function updateNumeration(
   }
 ) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   await db
@@ -83,6 +85,7 @@ export async function updateNumeration(
 
 export async function deleteNumeration(id: string) {
   const userId = await getUserId()
+  await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
 
   await db

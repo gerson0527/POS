@@ -7,7 +7,7 @@ import { AuditAction } from '@/lib/types'
 import { eq, desc } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { sendWelcomeEmail } from '@/lib/email'
-import { getUserId, getTenantId, logAudit } from './_shared'
+import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 export async function getUsersList() {
   const currentUserId = await getUserId()
   await getTenantId(currentUserId)
@@ -41,6 +41,7 @@ export async function createUserAction(input: {
   role?: string
 }) {
   const currentUserId = await getUserId()
+  await requireRole(currentUserId, ['ADMIN'])
   const tenantId = await getTenantId(currentUserId)
 
   const existing = await db
