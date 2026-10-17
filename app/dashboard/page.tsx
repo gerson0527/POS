@@ -436,6 +436,8 @@ export default async function DashboardPage() {
           <SectionPanel
             title="Actividad reciente"
             subtitle="Últimos movimientos registrados en el sistema"
+            className="h-full flex flex-col"
+            contentClassName="flex-1"
           >
             <ActivityLog logs={telemetryLogs.slice(0, 8)} />
           </SectionPanel>
