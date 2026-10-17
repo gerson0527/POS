@@ -50,6 +50,10 @@ export function Modal({
   children,
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     if (!open) return
@@ -57,7 +61,7 @@ export function Modal({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation()
-        onClose()
+        onCloseRef.current()
         return
       }
       if (e.key !== 'Tab') return
@@ -86,9 +90,11 @@ export function Modal({
     document.addEventListener('keydown', onKeyDown, true)
     const timer = window.setTimeout(() => {
       const panel = panelRef.current
-      const target = panel?.querySelector<HTMLElement>(
-        'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button'
-      )
+      if (!panel) return
+      const target =
+        panel.querySelector<HTMLElement>(
+          'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
+        ) ?? panel.querySelector<HTMLElement>('button:not([disabled])')
       target?.focus()
     }, 30)
 
@@ -96,7 +102,7 @@ export function Modal({
       document.removeEventListener('keydown', onKeyDown, true)
       window.clearTimeout(timer)
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
