@@ -206,7 +206,8 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
               ? 'FACTURA ELECTRÓNICA DE VENTA — DOCUMENTO CON VALOR FISCAL'
               : 'COMPROBANTE DE VENTA — DOCUMENTO INTERNO'}
           </p>
-          <p>GRACIAS POR SU COMPRA • CONSERVE ESTE TICKET PARA GARANTÍAS</p>
+          <p className="font-bold text-black">¡MUCHAS GRACIAS POR SU COMPRA!</p>
+          <p>Conserve este comprobante para garantías.</p>
 
           {isElectronicSent && (
             <div className="flex justify-center gap-4 text-[10px] font-bold text-black pt-1 border-t border-dotted border-gray-400 mt-1">
@@ -270,15 +271,9 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
             </p>
           )}
 
-          {isElectronicSent ? (
+          {isElectronicSent && (
             <p className="text-[8px] text-gray-500 pt-1 leading-tight">
-              Software de facturación: FACTUS V2 (proveedor tecnológico DIAN).
-              <br />
-              Documento generado electrónicamente; firma, CUFE y QR verificables en el consultor de la DIAN.
-            </p>
-          ) : (
-            <p className="text-[8px] text-gray-500 pt-1 leading-tight">
-              Venta registrada en el sistema POS. Este comprobante es de control interno.
+              Documento electrónico verificable en el consultor de la DIAN.
             </p>
           )}
         </div>
