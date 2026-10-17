@@ -6,14 +6,12 @@ import {
   UserPlus,
   RefreshCw,
   Building2,
-  Plus,
 } from 'lucide-react'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { Tabs } from '@/components/ui/Tabs'
 import { CreateUserModal } from '@/components/users/CreateUserModal'
-import { CreateTenantModal } from '@/components/users/CreateTenantModal'
 import { TenantsTable } from '@/components/users/TenantsTable'
 import { UsersTable } from '@/components/users/UsersTable'
 import {
@@ -34,9 +32,6 @@ export default function UsersPage() {
 
   // Modal "Crear operador" (dentro del tenant actual)
   const [isUserModalOpen, setIsUserModalOpen] = useState(false)
-
-  // Modal "Nueva Empresa + Admin" (crea tenant independiente)
-  const [isTenantModalOpen, setIsTenantModalOpen] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -98,7 +93,7 @@ export default function UsersPage() {
         icon={<Users className="w-4 h-4" />}
         kicker="IDENTITY & ACCESS MANAGEMENT (IAM) // TENANT REGISTRY"
         title="CONTROL DE USUARIOS, ROLES Y EMPRESAS"
-        description="Crea cada empresa (SAS) con su propio administrador y base de datos aislada. Los usuarios se asignan a su empresa."
+        description="Administra las empresas (SAS) registradas y los usuarios asignados a cada una."
         actions={
           <>
             <TacticalButton
@@ -110,7 +105,7 @@ export default function UsersPage() {
             >
               RECARGAR
             </TacticalButton>
-            {activeTab === 'users' ? (
+            {activeTab === 'users' && (
               <TacticalButton
                 variant="primary"
                 size="sm"
@@ -118,15 +113,6 @@ export default function UsersPage() {
                 icon={<UserPlus className="w-3.5 h-3.5" />}
               >
                 NUEVO OPERADOR
-              </TacticalButton>
-            ) : (
-              <TacticalButton
-                variant="primary"
-                size="sm"
-                onClick={() => setIsTenantModalOpen(true)}
-                icon={<Plus className="w-3.5 h-3.5" />}
-              >
-                NUEVA EMPRESA
               </TacticalButton>
             )}
           </>
@@ -198,14 +184,6 @@ export default function UsersPage() {
         />
       )}
 
-      {/* MODAL: NUEVA EMPRESA + ADMIN (crea tenant independiente) */}
-      {isTenantModalOpen && (
-        <CreateTenantModal
-          open={isTenantModalOpen}
-          onClose={() => setIsTenantModalOpen(false)}
-          onSubmitted={loadData}
-        />
-      )}
     </div>
   )
 }
