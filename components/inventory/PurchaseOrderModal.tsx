@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Truck, AlertTriangle } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Label } from '@/components/ui/Label'
 import { useToast } from '@/components/ui/ToastProvider'
 import { createPurchaseOrder } from '@/app/actions/pos-actions'
@@ -41,6 +42,17 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
     margin: number
     productName: string
   } | null>(null)
+
+  const productOptions = useMemo(
+    () =>
+      products.map((p) => ({
+        value: p.id,
+        label: `${p.name}${p.sku ? ` (SKU: ${p.sku})` : ' (Sin SKU)'}`,
+        description: `Costo: $${p.cost || 0} · Precio Venta: $${p.unitPrice || 0}`,
+        searchText: `${p.name} ${p.sku || ''}`,
+      })),
+    [products]
+  )
 
   function handlePOSelectProduct(productId: string) {
     if (!productId) {
@@ -199,18 +211,14 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
 
           <div>
             <Label className="mb-1.5">SELECCIONAR PRODUCTO DE CATÁLOGO (OPCIONAL / AUTO-CARGAR)</Label>
-            <Select
-              className="p-3 h-11"
+            <SearchableSelect
+              className="h-11"
+              options={productOptions}
               value={poForm.productId}
-              onChange={(e) => handlePOSelectProduct(e.target.value)}
-            >
-              <option value="">-- Seleccionar Producto para actualizar existencias y precios --</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.sku ? `SKU: ${p.sku}` : 'Sin SKU'}) · Costo: ${p.cost || 0} · Precio Venta: ${p.unitPrice || 0}
-                </option>
-              ))}
-            </Select>
+              onChange={handlePOSelectProduct}
+              placeholder="-- Seleccionar Producto para actualizar existencias y precios --"
+              emptyLabel="-- Ninguno (no actualizar catálogo) --"
+            />
           </div>
 
           {/* CAMPOS DE COSTO, PRECIO UNITARIO Y MARGEN CON ALINEACIÓN PERFECTA */}
