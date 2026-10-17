@@ -14,6 +14,10 @@ interface InvoiceTicketModalProps {
 }
 
 export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps) {
+  // Solo es una factura electrónica real si DIAN ya la aceptó (CUFE presente).
+  // Un fiscal_document en PENDING_GENERATION es un documento interno, no fiscal.
+  const isElectronicSent = Boolean(invoice.isElectronicSent || invoice.cufe)
+
   return (
     <Modal
       open
@@ -44,24 +48,30 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
             </p>
           )}
           <p className="text-[9px] text-gray-600 uppercase">
-            Facturación electrónica DIAN • Proveedor tecnológico FACTUS V2
-            {invoice.dianEnvironment === 'production'
-              ? ' • AMBIENTE: PRODUCCIÓN'
-              : ' • AMBIENTE: SANDBOX (HABILITACIÓN)'}
+            {isElectronicSent
+              ? `Facturación electrónica DIAN • Proveedor tecnológico FACTUS V2${
+                  invoice.dianEnvironment === 'production'
+                    ? ' • AMBIENTE: PRODUCCIÓN'
+                    : ' • AMBIENTE: SANDBOX (HABILITACIÓN)'
+                }`
+              : 'Comprobante de venta POS'}
           </p>
           <div className="mt-2 inline-block border-2 border-black px-4 py-1">
             <p className="font-black text-[12px] uppercase">
-              {invoice.fullNumber
+              {isElectronicSent
                 ? `FACTURA DE VENTA ELECTRÓNICA N° ${invoice.fullNumber}`
-                : `TICKET DE CAJA N° FACT-#${String(invoice.ticketNumber || 0).padStart(4, '0')}`}
+                : `FACTURA DE VENTA N° ${
+                    invoice.fullNumber ||
+                    `FACT-#${String(invoice.ticketNumber || 0).padStart(4, '0')}`
+                  }`}
             </p>
           </div>
-          {!invoice.fullNumber && (
+          {!isElectronicSent && (
             <p className="text-[8px] text-gray-500">
-              Documento interno de caja — no constituye factura electrónica ante la DIAN
+              Documento interno de venta — no constituye factura electrónica ante la DIAN
             </p>
           )}
-          {invoice.fullNumber && invoice.ticketNumber && (
+          {isElectronicSent && invoice.fullNumber && invoice.ticketNumber && (
             <p className="text-[9px] text-gray-600 pt-1">
               TICKET INTERNO N° {String(invoice.ticketNumber).padStart(4, '0')}
             </p>
@@ -159,7 +169,7 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
         {/* MEDIO DE PAGO Y AUDITORÍA DE PAGOS MÚLTIPLES */}
         <div className="border-t-2 border-black pt-2 text-[10px] space-y-1">
           <p className="font-bold uppercase text-center text-[9px] border-b border-black pb-0.5 mb-1">
-            FORMAS DE PAGO (CATÁLOGO DIAN)
+            {isElectronicSent ? 'FORMAS DE PAGO (CATÁLOGO DIAN)' : 'FORMAS DE PAGO'}
           </p>
           {invoice.payments && invoice.payments.length > 0 ? (
             invoice.payments.map((p: any) => {
@@ -192,13 +202,13 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
         {/* PIE DEL COMPROBANTE / TRAZABILIDAD DIAN */}
         <div className="text-center text-[9px] text-gray-600 pt-3 border-t-2 border-black space-y-1">
           <p className="font-black uppercase text-black text-[10px]">
-            {invoice.fullNumber
+            {isElectronicSent
               ? 'FACTURA ELECTRÓNICA DE VENTA — DOCUMENTO CON VALOR FISCAL'
-              : 'DOCUMENTO EQUIVALENTE POS - SISTEMA ELECTRÓNICO DIAN'}
+              : 'COMPROBANTE DE VENTA — DOCUMENTO INTERNO'}
           </p>
           <p>GRACIAS POR SU COMPRA • CONSERVE ESTE TICKET PARA GARANTÍAS</p>
 
-          {invoice.fullNumber && (
+          {isElectronicSent && (
             <div className="flex justify-center gap-4 text-[10px] font-bold text-black pt-1 border-t border-dotted border-gray-400 mt-1">
               <span>FOLIO: {invoice.fullNumber}</span>
               <span>
@@ -207,18 +217,20 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
                   ? 'ACEPTADA'
                   : invoice.fiscalDocument?.status === 'REJECTED'
                     ? 'RECHAZADA'
-                    : invoice.fiscalDocument?.status || 'TRANSMITIDA'}
+                    : invoice.fiscalDocument?.status === 'CONTINGENCY_ISSUED'
+                      ? 'CONTINGENCIA'
+                      : 'TRANSMITIDA'}
               </span>
             </div>
           )}
 
-          {invoice.qrUrl && (
+          {isElectronicSent && invoice.qrUrl && (
             <div className="mx-auto my-2 w-28 h-28 flex items-center justify-center border border-gray-400 p-1.5 bg-white">
               <QRCodeSVG value={invoice.qrUrl} size={96} level="M" />
             </div>
           )}
 
-          {cufeLines(invoice.cufe || invoice.fiscalDocument?.uniqueCode).length > 0 && (
+          {isElectronicSent && cufeLines(invoice.cufe || invoice.fiscalDocument?.uniqueCode).length > 0 && (
             <div className="text-black pt-1">
               <p className="font-bold text-[9px] mb-0.5">CUFE — CÓDIGO ÚNICO DE FACTURA ELECTRÓNICA</p>
               <p className="font-mono text-[8.5px] leading-[1.4] whitespace-pre-line">
@@ -227,13 +239,13 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
             </div>
           )}
 
-          {invoice.qrUrl && (
+          {isElectronicSent && invoice.qrUrl && (
             <p className="text-[8px] break-all text-gray-500 pt-1">
               Consulte/valide este documento en: {invoice.qrUrl}
             </p>
           )}
 
-          {(invoice.pdfUrl || invoice.xmlUrl) && (
+          {isElectronicSent && (invoice.pdfUrl || invoice.xmlUrl) && (
             <p className="no-print flex justify-center gap-4 pt-2">
               {invoice.pdfUrl && (
                 <a
@@ -258,11 +270,17 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
             </p>
           )}
 
-          <p className="text-[8px] text-gray-500 pt-1 leading-tight">
-            Software de facturación: FACTUS V2 (proveedor tecnológico DIAN).
-            <br />
-            Documento generado electrónicamente; firma, CUFE y QR verificables en el consultor de la DIAN.
-          </p>
+          {isElectronicSent ? (
+            <p className="text-[8px] text-gray-500 pt-1 leading-tight">
+              Software de facturación: FACTUS V2 (proveedor tecnológico DIAN).
+              <br />
+              Documento generado electrónicamente; firma, CUFE y QR verificables en el consultor de la DIAN.
+            </p>
+          ) : (
+            <p className="text-[8px] text-gray-500 pt-1 leading-tight">
+              Venta registrada en el sistema POS. Este comprobante es de control interno.
+            </p>
+          )}
         </div>
       </div>
 

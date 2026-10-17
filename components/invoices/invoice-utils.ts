@@ -20,6 +20,6 @@ export function invoiceFlags(inv: any) {
     : 0
   const isMixedPayment = inv.paymentMethod?.includes('MIXTO') || (inv.payments && inv.payments.length > 1)
   const isWithoutStock = inv.notes?.includes('SIN STOCK') || inv.notes?.includes('WITHOUT_STOCK')
-  const isSent = inv.isElectronicSent || inv.fiscalDocument
+  const isSent = !!inv.isElectronicSent
   return { ticketFormatted, totalItemsCount, isMixedPayment, isWithoutStock, isSent }
 }

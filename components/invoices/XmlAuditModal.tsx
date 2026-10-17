@@ -31,7 +31,7 @@ export function XmlAuditModal({ invoice, onClose }: XmlAuditModalProps) {
           <div className="flex justify-between items-center text-[11px]">
             <span className="text-fg-muted">ESTADO TRANSMISIÓN DIAN:</span>
             <span className="font-bold text-ok uppercase">
-              {invoice.isElectronicSent || invoice.fiscalDocument ? '✓ FACTURA TRANSMITIDA Y ACEPTADA' : 'PENDIENTE DE TRANSMISIÓN'}
+              {invoice.isElectronicSent ? '✓ FACTURA TRANSMITIDA Y ACEPTADA' : 'PENDIENTE DE TRANSMISIÓN'}
             </span>
           </div>
           <div className="flex justify-between items-center text-[11px]">
