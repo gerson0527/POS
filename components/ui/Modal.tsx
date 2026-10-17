@@ -35,6 +35,8 @@ export interface ModalProps {
   bare?: boolean
   actions?: ReactNode
   children?: ReactNode
+  /** Clase de z-index de la capa (para apilar sobre otros modales). */
+  zIndexClass?: string
 }
 
 export function Modal({
@@ -48,6 +50,7 @@ export function Modal({
   bare = false,
   actions,
   children,
+  zIndexClass = 'z-50',
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
@@ -115,7 +118,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print"
+      className={`fixed inset-0 bg-black/80 backdrop-blur-sm ${zIndexClass} flex items-center justify-center p-4 no-print`}
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel}
