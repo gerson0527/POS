@@ -177,6 +177,8 @@ export default function DashboardPOSPage() {
       if (response.success) {
         setSaleId(response.saleId)
         setStep('payment')
+      } else {
+        toast(`Error al crear venta: ${response.message}`, 'error')
       }
     } catch (error: any) {
       console.error('Error creating sale:', error)
@@ -184,7 +186,11 @@ export default function DashboardPOSPage() {
         redirectToLogin()
         return
       }
-      toast(`Error al crear venta: ${error.message || 'Intente de nuevo'}`, 'error')
+      const message =
+        error?.message && !/Server Components render|omitted in production/i.test(error.message)
+          ? error.message
+          : 'No se pudo crear la venta. Verifica que la caja esté abierta e intenta de nuevo.'
+      toast(`Error al crear venta: ${message}`, 'error')
     } finally {
       setLoading(false)
     }
@@ -237,11 +243,16 @@ export default function DashboardPOSPage() {
 
     setLoading(true)
     try {
-      await completeSale({
+      const completion = await completeSale({
         saleId,
         payments,
         discountPercentage: discount,
       })
+
+      if (!completion.success) {
+        toast(`Error al completar la venta: ${completion.message}`, 'error')
+        return
+      }
 
       // 1) Generate local invoice / internal sales ticket (with proper enum)
       try {

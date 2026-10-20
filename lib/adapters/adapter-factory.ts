@@ -15,9 +15,10 @@ export class WebSaleRepository implements ISaleRepository {
       })),
       notes: dto.paymentReference ? `Ref: ${dto.paymentReference}` : undefined,
     })
+    if (!res.success) throw new Error(res.message)
     return {
-      id: res.saleId || `sale_${Date.now()}`,
-      ticketNumber: res.ticketNumber || 0,
+      id: res.saleId,
+      ticketNumber: res.ticketNumber,
       createdAt: new Date(),
     }
   }

@@ -393,6 +393,20 @@ describeDb('cash, credit and sales integration', () => {
     expect(movements).toHaveLength(0)
   })
 
+  it('returns a clear business message when trying to sell without an open cash session', async () => {
+    const fixture = await createFixture('CASHIER')
+
+    const result = await salesActions.createSale({
+      locationId: fixture.locationId,
+      items: [{ productId: fixture.productId, quantity: 1 }],
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.message).toContain('No hay una caja abierta')
+    }
+  })
+
   it('creates sales with the current user session and never reuses another cashier session', async () => {
     const fixture = await createFixture('CASHIER')
     await cashierActions.openCashierSession(0)
@@ -401,6 +415,7 @@ describeDb('cash, credit and sales integration', () => {
       locationId: fixture.locationId,
       items: [{ productId: fixture.productId, quantity: 1 }],
     })
+    if (!saleA.success) throw new Error(saleA.message)
     const saleARow = await getSale(saleA.saleId)
     const sessionA = await getSession(saleARow.cashierSessionId)
     expect(sessionA.userId).toBe(fixture.userId)
@@ -412,6 +427,7 @@ describeDb('cash, credit and sales integration', () => {
       locationId: fixture.locationId,
       items: [{ productId: fixture.productId, quantity: 1 }],
     })
+    if (!saleB.success) throw new Error(saleB.message)
     const saleBRow = await getSale(saleB.saleId)
     const sessionB = await getSession(saleBRow.cashierSessionId)
 
@@ -426,6 +442,7 @@ describeDb('cash, credit and sales integration', () => {
       locationId: fixture.locationId,
       items: [{ productId: fixture.productId, quantity: 1 }],
     })
+    if (!sale.success) throw new Error(sale.message)
 
     const completed = await salesActions.completeSale({
       saleId: sale.saleId,
@@ -455,10 +472,12 @@ describeDb('cash, credit and sales integration', () => {
       locationId: fixture.locationId,
       items: [{ productId: fixture.productId, quantity: 1 }],
     })
+    if (!saleA.success) throw new Error(saleA.message)
     const saleB = await salesActions.createSale({
       locationId: fixture.locationId,
       items: [{ productId: fixture.productId, quantity: 1 }],
     })
+    if (!saleB.success) throw new Error(saleB.message)
 
     const results = await Promise.allSettled([
       salesActions.completeSale({

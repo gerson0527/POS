@@ -27,7 +27,16 @@ import {
   toBusinessDateString,
 } from './_shared'
 import { enqueueFiscalEmission, retryFiscalEmission } from '@/lib/fiscal/outbox'
+import { safeAction } from './_result'
+
 export async function createSale(input: CreateSaleDTO) {
+  return safeAction(
+    () => createSaleInternal(input),
+    'No se pudo crear la venta. Verifica que la caja esté abierta e intenta de nuevo.'
+  )
+}
+
+async function createSaleInternal(input: CreateSaleDTO) {
   const userId = await getUserId()
   await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
@@ -198,7 +207,7 @@ export async function createSale(input: CreateSaleDTO) {
   await publishEvent(tenantId, EventType.SALE_CREATED, 'sale', saleId, input)
 
   revalidatePath('/pos')
-  return { ...result, success: true }
+  return { ...result, success: true as const }
 }
 
 export async function getSale(saleId: string) {
@@ -220,6 +229,13 @@ export async function getSale(saleId: string) {
 
 // PAYMENT & COMPLETION
 export async function completeSale(input: CompleteSaleDTO) {
+  return safeAction(
+    () => completeSaleInternal(input),
+    'No se pudo completar la venta. Verifica el turno de caja e intenta de nuevo.'
+  )
+}
+
+async function completeSaleInternal(input: CompleteSaleDTO) {
   const userId = await getUserId()
   const membership = await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
@@ -498,7 +514,7 @@ export async function completeSale(input: CompleteSaleDTO) {
 
   revalidatePath('/pos')
   return {
-    success: true,
+    success: true as const,
     saleId: input.saleId,
     ticketNumber: completed.ticketNumber,
     total: completed.total,
