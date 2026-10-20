@@ -4,8 +4,14 @@ dotenv.config()
 import { Pool } from 'pg'
 import { runMigrations } from '../lib/db/migrate'
 
+const vercelEnv = process.env.VERCEL_ENV
+if (vercelEnv && vercelEnv !== 'production') {
+  console.log(`[db] Entorno Vercel "${vercelEnv}": migraciones omitidas.`)
+  process.exit(0)
+}
+
 async function main() {
-  const url = process.env.DATABASE_URL
+  const url = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL
   if (!url) throw new Error('DATABASE_URL no está definida (.env / .env.local)')
 
   const pool = new Pool({ connectionString: url })

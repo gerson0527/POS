@@ -14,7 +14,8 @@
     "test:integration": "vitest run test/integration",
     "db:seed": "npx dotenv -e .env -- npx tsx scripts/seed.ts",
     "db:generate": "npx dotenv -e .env -- drizzle-kit generate",
-    "db:migrate": "npx dotenv -e .env -- npx tsx scripts/db-migrate.ts",
+      "db:migrate": "npx dotenv -e .env -- npx tsx scripts/db-migrate.ts",
+      "db:migrate:deploy": "tsx scripts/db-migrate.ts",
     "db:push": "npx dotenv -e .env -- drizzle-kit push",
     "db:studio": "npx dotenv -e .env -- drizzle-kit studio"
   },
