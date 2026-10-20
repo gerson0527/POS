@@ -406,7 +406,7 @@ export default function DashboardPOSPage() {
     .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
     .map((p) => ({
       ...p,
-      quantity: Math.max(0, Number(p.quantity || 0) - (cartQtyByProductId[p.id] || 0)),
+      quantity: Number(p.quantity || 0) - (cartQtyByProductId[p.id] || 0),
     }))
 
   return (

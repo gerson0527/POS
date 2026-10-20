@@ -41,7 +41,7 @@ export function ProductGrid({
       />
 
       {/* Products Grid (Paginated) */}
-      <div className="flex-1 min-h-0 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 align-content-start overflow-y-auto pr-1">
+      <div className="flex-1 min-h-0 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 content-start auto-rows-max overflow-y-auto pr-1">
         {filteredCount === 0 ? (
           <div className="col-span-full bg-panel border border-line rounded p-8 text-center font-mono text-xs text-fg-muted">
             [NO SE ENCONTRARON PRODUCTOS REGISTRADOS QUE COINCIDAN CON LA BÚSQUEDA]
