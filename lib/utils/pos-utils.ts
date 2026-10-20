@@ -54,19 +54,23 @@ export function calculateSaleTotals(
   total: number
   discountAmount: number
 } {
+  const safeDiscount = Math.min(100, Math.max(0, Number(discountPercentage) || 0))
+  const discountFactor = 1 - safeDiscount / 100
   let subtotal = 0
   let taxAmount = 0
 
   for (const item of items) {
     const lineSubtotal = item.quantity * item.unitPrice
-    const lineTax = lineSubtotal * (item.ivaRate / 100)
+    // El descuento reduce la base gravable; el IVA se calcula sobre el valor
+    // descontado para que el total del POS coincida con el de la factura DIAN.
+    const lineTax = lineSubtotal * discountFactor * (item.ivaRate / 100)
 
     subtotal += lineSubtotal
     taxAmount += lineTax
   }
 
-  const discountAmount = subtotal * (discountPercentage / 100)
-  const rawTotal = subtotal + taxAmount - discountAmount
+  const discountAmount = subtotal * (safeDiscount / 100)
+  const rawTotal = subtotal - discountAmount + taxAmount
   const roundedTotal = roundToNearest100(rawTotal)
 
   return {

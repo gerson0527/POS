@@ -8,6 +8,8 @@ import {
   getCashierSessionsHistory,
   getCashierSessionDetails,
   getUsersList,
+  getAllLocations,
+  registerCashMovement,
 } from '@/app/actions/pos-actions'
 import { isSessionError, redirectToLogin } from '@/lib/hooks/use-protected-query'
 import { formatCOP } from '@/lib/utils/pos-utils'
@@ -30,7 +32,8 @@ import {
   FileText,
   UserCheck,
   RefreshCw,
-  Eye } from 'lucide-react'
+  Eye,
+  ArrowDownUp } from 'lucide-react'
 
 const HISTORY_PAGE_SIZE = 10
 
@@ -41,12 +44,25 @@ export default function CashierPage() {
   const [history, setHistory] = useState<any[]>([])
   const [historyPage, setHistoryPage] = useState(1)
   const [users, setUsers] = useState<any[]>([])
+  const [locations, setLocations] = useState<any[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string>('')
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('')
+  const [openOverride, setOpenOverride] = useState(false)
+  const [overrideReason, setOverrideReason] = useState('')
+  const [closeTarget, setCloseTarget] = useState<any>(null)
+  const [consolidationDate, setConsolidationDate] = useState(
+    new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+  )
 
   // Modals & Form States
   const [isOpenModalOpen, setIsOpenModalOpen] = useState(false)
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false)
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+  const [isMovementModalOpen, setIsMovementModalOpen] = useState(false)
+  const [movementType, setMovementType] = useState('EGRESO')
+  const [movementConcept, setMovementConcept] = useState('')
+  const [movementAmount, setMovementAmount] = useState('')
+  const [movementNote, setMovementNote] = useState('')
   const [selectedZReport, setSelectedZReport] = useState<any>(null)
 
   const [openingBalance, setOpeningBalance] = useState<string>('50000')
@@ -62,7 +78,7 @@ export default function CashierPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const [summary, hist, userList] = await Promise.all([
+      const [summary, hist, userList, locationList] = await Promise.all([
         getCurrentCashierSessionSummary().catch((err) => {
           if (isSessionError(err)) redirectToLogin()
           return null
@@ -72,11 +88,13 @@ export default function CashierPage() {
           return []
         }),
         getUsersList().catch(() => []),
+        getAllLocations().catch(() => []),
       ])
 
       setActiveSessionSummary(summary)
       setHistory(hist || [])
       setUsers(userList || [])
+      setLocations(locationList || [])
 
       const current = userList?.find((u: any) => u.isCurrent)
       if (current) {
@@ -84,6 +102,10 @@ export default function CashierPage() {
       } else if (userList && userList.length > 0) {
         setSelectedUserId(userList[0].id)
       }
+
+      const activeLocationId = summary?.session?.locationId
+      const firstActiveLocation = locationList?.find((location: any) => location.status === 'ACTIVE')
+      setSelectedLocationId(activeLocationId || firstActiveLocation?.id || '')
 
       if (summary && 'expectedCash' in summary && summary.expectedCash !== undefined) {
         setActualCash(String(summary.expectedCash))
@@ -103,31 +125,78 @@ export default function CashierPage() {
       toast('Debe seleccionar un usuario responsable para abrir la caja.', 'error')
       return
     }
+    if (openOverride && overrideReason.trim().length < 5) {
+      toast('Debe registrar el motivo de la autorización administrativa.', 'error')
+      return
+    }
     try {
       const bal = parseFloat(openingBalance) || 0
-      await openCashierSession(bal, openingNotes, selectedUserId)
+      await openCashierSession(bal, openingNotes, selectedUserId, {
+        locationId: selectedLocationId || undefined,
+        ...(openOverride ? { override: { reason: overrideReason } } : {}),
+      })
       toast('¡SESIÓN DE CAJA ABIERTA Y ASOCIADA AL USUARIO CON ÉXITO!')
       setIsOpenModalOpen(false)
+      setOpenOverride(false)
+      setOverrideReason('')
       loadData()
     } catch (err: any) {
       toast(`Error al abrir caja: ${err.message}`, 'error')
     }
   }
 
+  function startCloseSession(summary: any) {
+    if (!summary?.session?.id) return
+    setCloseTarget(summary)
+    setActualCash(String(summary.expectedCash ?? 0))
+    setClosingNotes('')
+    setIsCloseModalOpen(true)
+  }
+
+  async function handleStartCloseSession(sessionId: string) {
+    try {
+      const details = await getCashierSessionDetails(sessionId)
+      startCloseSession(details)
+    } catch (err: any) {
+      toast(`Error al cargar el turno: ${err.message}`, 'error')
+    }
+  }
+
   async function handleCloseSession(e: React.FormEvent) {
     e.preventDefault()
-    if (!activeSessionSummary?.session?.id) return
+    if (!closeTarget?.session?.id) return
 
     try {
       const counted = parseFloat(actualCash) || 0
-      const res = await closeCashierSession(activeSessionSummary.session.id, counted, closingNotes)
+      const res = await closeCashierSession(closeTarget.session.id, counted, closingNotes)
       toast('¡CIERRE DE CAJA REALIZADO Y REPORTE Z GENERADO!')
       setIsCloseModalOpen(false)
+      setCloseTarget(null)
       setSelectedZReport(res.zReport)
       setIsReportModalOpen(true)
       loadData()
     } catch (err: any) {
       toast(`Error al cerrar caja: ${err.message}`, 'error')
+    }
+  }
+
+  async function handleRegisterMovement(e: React.FormEvent) {
+    e.preventDefault()
+    try {
+      await registerCashMovement({
+        type: movementType,
+        concept: movementConcept,
+        amount: parseFloat(movementAmount) || 0,
+        note: movementNote,
+      })
+      toast('MOVIMIENTO DE CAJA REGISTRADO CORRECTAMENTE')
+      setIsMovementModalOpen(false)
+      setMovementConcept('')
+      setMovementAmount('')
+      setMovementNote('')
+      loadData()
+    } catch (err: any) {
+      toast(`Error al registrar movimiento: ${err.message}`, 'error')
     }
   }
 
@@ -148,8 +217,8 @@ export default function CashierPage() {
     }
   }
 
-  const currentDiff = activeSessionSummary?.expectedCash !== undefined
-    ? (parseFloat(actualCash) || 0) - activeSessionSummary.expectedCash
+  const currentDiff = closeTarget?.expectedCash !== undefined
+    ? (parseFloat(actualCash) || 0) - closeTarget.expectedCash
     : 0
 
   const totalHistoryPages = Math.max(1, Math.ceil(history.length / HISTORY_PAGE_SIZE))
@@ -157,6 +226,53 @@ export default function CashierPage() {
   const paginatedHistory = history.slice(
     (safeHistoryPage - 1) * HISTORY_PAGE_SIZE,
     safeHistoryPage * HISTORY_PAGE_SIZE
+  )
+
+  const todayBusinessDate = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'America/Bogota',
+  })
+  const currentUser = users.find((user: any) => user.isCurrent)
+  const isAdmin = currentUser?.role === 'ADMIN'
+  const selectedUserOpenSessions = history.filter(
+    (session: any) =>
+      session.userId === selectedUserId &&
+      session.status === 'OPEN' &&
+      session.businessDate < todayBusinessDate
+  )
+  const pendingOpenSessions = history
+    .filter(
+      (session: any) => session.status === 'OPEN' && session.businessDate < todayBusinessDate
+    )
+    .sort(
+      (a: any, b: any) =>
+        a.businessDate.localeCompare(b.businessDate) ||
+        new Date(a.openedAt).getTime() - new Date(b.openedAt).getTime()
+    )
+
+  const consolidationSessions = history.filter(
+    (session: any) => session.businessDate === consolidationDate
+  )
+  const consolidation = consolidationSessions.reduce(
+    (acc: any, session: any) => ({
+      sessions: acc.sessions + 1,
+      open: acc.open + (session.status === 'OPEN' ? 1 : 0),
+      salesCount: acc.salesCount + Number(session.salesCount || 0),
+      totalSales: acc.totalSales + Number(session.totalSales || 0),
+      cashSales: acc.cashSales + Number(session.cashSales || 0),
+      cardSales: acc.cardSales + Number(session.cardSales || 0),
+      transferSales: acc.transferSales + Number(session.transferSales || 0),
+      creditSales: acc.creditSales + Number(session.creditSales || 0),
+    }),
+    {
+      sessions: 0,
+      open: 0,
+      salesCount: 0,
+      totalSales: 0,
+      cashSales: 0,
+      cardSales: 0,
+      transferSales: 0,
+      creditSales: 0,
+    }
   )
 
   return (
@@ -175,9 +291,18 @@ export default function CashierPage() {
           </TacticalButton>
 
           {activeSessionSummary?.hasOpenSession ? (
-            <TacticalButton variant="danger" size="sm" onClick={() => setIsCloseModalOpen(true)}>
-              <Lock className="w-3.5 h-3.5 mr-1" /> EFECTUAR CIERRE DE CAJA (Z)
-            </TacticalButton>
+            <>
+              <TacticalButton variant="secondary" size="sm" onClick={() => setIsMovementModalOpen(true)}>
+                <ArrowDownUp className="w-3.5 h-3.5 mr-1" /> MOVIMIENTO DE CAJA
+              </TacticalButton>
+              <TacticalButton
+                variant="danger"
+                size="sm"
+                onClick={() => startCloseSession(activeSessionSummary)}
+              >
+                <Lock className="w-3.5 h-3.5 mr-1" /> EFECTUAR CIERRE DE CAJA (Z)
+              </TacticalButton>
+            </>
           ) : (
             <TacticalButton variant="primary" size="sm" onClick={() => setIsOpenModalOpen(true)}>
               <Unlock className="w-3.5 h-3.5 mr-1" /> ABRIR NUEVO TURNO / CAJA
@@ -186,22 +311,27 @@ export default function CashierPage() {
         </div>
       </div>
 
-      {/* BANNER DE ALERTA DE TURNO VENCIDO */}
-      {activeSessionSummary?.hasOpenSession && activeSessionSummary?.isOverdue && (
-        <div className="bg-danger-dim border-2 border-alert rounded-lg p-4 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-red-soft animate-pulse shadow-xl">
+      {/* BANNER DE TURNOS ANTERIORES PENDIENTES DE CIERRE */}
+      {pendingOpenSessions.length > 0 && (
+        <div className="bg-danger-dim border-2 border-alert rounded-lg p-4 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-red-soft shadow-xl">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-6 h-6 text-alert shrink-0" />
             <div>
               <h4 className="font-bold text-sm text-alert uppercase tracking-wider">
-                🔴 ATENCIÓN: TURNO VENCIDO PENDIENTE DE CIERRE (DÍA ANTERIOR)
+                ATENCIÓN: {pendingOpenSessions.length} TURNO(S) PENDIENTE(S) DE CIERRE
               </h4>
               <p className="text-xs text-fg mt-0.5">
-                Esta caja fue aperturada el <span className="font-bold text-accent">{new Date(activeSessionSummary.session.openedAt).toLocaleString()}</span> (hace {activeSessionSummary.daysOverdue || 1} día/s) y <span className="text-alert font-bold">NO FUE CERRADA AL FINALIZAR LA JORNADA</span>.
+                Cierre cada turno desde el historial. Las fechas y horas reales del cierre
+                quedan registradas al momento del arqueo, sin modificar las ventas.
               </p>
             </div>
           </div>
-          <TacticalButton variant="danger" size="sm" onClick={() => setIsCloseModalOpen(true)}>
-            EFECTUAR CIERRE Z AHORA &gt;
+          <TacticalButton
+            variant="danger"
+            size="sm"
+            onClick={() => handleStartCloseSession(pendingOpenSessions[0].id)}
+          >
+            CERRAR EL MÁS ANTIGUO &gt;
           </TacticalButton>
         </div>
       )}
@@ -244,9 +374,9 @@ export default function CashierPage() {
               </div>
 
               <div className="bg-surface border border-line-dim rounded-lg p-3">
-                <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">NEQUI ({activeSessionSummary.nequiCount || 0})</p>
+                <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">TRANSFERENCIAS</p>
                 <p className="text-base font-black text-cyan mt-1">
-                  {formatCOP(activeSessionSummary.nequiSales || activeSessionSummary.transferSales)}
+                  {formatCOP(activeSessionSummary.transferSales || 0)}
                 </p>
               </div>
 
@@ -264,6 +394,33 @@ export default function CashierPage() {
                 </p>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[10px] bg-night p-3 border border-line-soft rounded">
+              <div>
+                <span className="text-fg-muted">Ingresos caja:</span>{' '}
+                <span className="font-bold text-success">+{formatCOP(activeSessionSummary.cashIncome || 0)}</span>
+              </div>
+              <div>
+                <span className="text-fg-muted">Egresos:</span>{' '}
+                <span className="font-bold text-alert">-{formatCOP(activeSessionSummary.cashExpenses || 0)}</span>
+              </div>
+              <div>
+                <span className="text-fg-muted">Retiros:</span>{' '}
+                <span className="font-bold text-alert">-{formatCOP(activeSessionSummary.cashWithdrawals || 0)}</span>
+              </div>
+              <div>
+                <span className="text-fg-muted">Devoluciones:</span>{' '}
+                <span className="font-bold text-alert">-{formatCOP(activeSessionSummary.cashRefunds || 0)}</span>
+              </div>
+            </div>
+
+            {activeSessionSummary.unclassifiedSales > 0 && (
+              <div className="bg-alert-dim border border-alert-line rounded-lg p-3 text-[10px] text-alert">
+                ATENCIÓN: {activeSessionSummary.unclassifiedSales} venta(s) por{' '}
+                {formatCOP(activeSessionSummary.unclassifiedAmount || 0)} no tienen un pago
+                procesado asociado; no se suman al efectivo esperado.
+              </div>
+            )}
 
             <div className="bg-surface border border-accent/40 rounded-lg p-3 bg-accent/5 flex items-center justify-between">
               <p className="text-xs text-accent font-bold uppercase tracking-wider">EFECTIVO ESPERADO EN CAJÓN:</p>
@@ -313,20 +470,96 @@ export default function CashierPage() {
         )}
       </SectionPanel>
 
+      {/* CONSOLIDADO DIARIO POR FECHA DE NEGOCIO */}
+      <SectionPanel
+        title="CONSOLIDADO DIARIO // TURNOS DEL DÍA"
+        subtitle="Suma de todos los turnos registrados para la fecha de negocio"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-4">
+          <div>
+            <Label>FECHA DE NEGOCIO</Label>
+            <Input
+              type="date"
+              value={consolidationDate}
+              onChange={(e) => setConsolidationDate(e.target.value)}
+              className="w-full sm:w-48"
+            />
+          </div>
+          <p className="text-[10px] text-fg-muted pb-2">
+            {consolidation.sessions} turno(s) · {consolidation.open} sin cerrar
+          </p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-surface border border-line-dim rounded-lg p-3">
+            <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">VENTAS DEL DÍA</p>
+            <p className="text-base font-black text-success mt-1">
+              {formatCOP(consolidation.totalSales)}
+            </p>
+            <p className="text-[10px] text-fg-muted">{consolidation.salesCount} ventas</p>
+          </div>
+          <div className="bg-surface border border-line-dim rounded-lg p-3">
+            <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">EFECTIVO</p>
+            <p className="text-base font-black text-fg mt-1">
+              {formatCOP(consolidation.cashSales)}
+            </p>
+          </div>
+          <div className="bg-surface border border-line-dim rounded-lg p-3">
+            <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">TARJETA / TRANSFERENCIA</p>
+            <p className="text-base font-black text-fg mt-1">
+              {formatCOP(consolidation.cardSales + consolidation.transferSales)}
+            </p>
+          </div>
+          <div className="bg-surface border border-line-dim rounded-lg p-3">
+            <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">CRÉDITO</p>
+            <p className="text-base font-black text-fg mt-1">
+              {formatCOP(consolidation.creditSales)}
+            </p>
+          </div>
+        </div>
+        {consolidation.open > 0 && (
+          <p className="text-[10px] text-alert mt-3">
+            Hay turnos abiertos en esta fecha: sus totales se consolidan definitivamente al
+            realizar el cierre de cada turno.
+          </p>
+        )}
+      </SectionPanel>
+
       {/* HISTORIAL DE CIERRES DIARIOS (REPORTES Z) */}
       <SectionPanel title="HISTORIAL DE CIERRES DE CAJA Y REPORTES Z" subtitle="Registro histórico de arqueos y diferencias">
         <DataTable
           columns={[
             {
+              key: 'businessDate',
+              header: 'FECHA NEGOCIO',
+              render: (h: any) =>
+                h.businessDate
+                  ? new Date(`${h.businessDate}T12:00:00`).toLocaleDateString('es-CO')
+                  : '---',
+            },
+            {
               key: 'openedAt',
-              header: 'FECHA APERTURA',
-              render: (h: any) => new Date(h.openedAt).toLocaleString(),
+              header: 'APERTURA / SEDE',
+              render: (h: any) => (
+                <div>
+                  <div>{new Date(h.openedAt).toLocaleString()}</div>
+                  <div className="text-[10px] text-fg-muted">{h.locationName || '---'}</div>
+                </div>
+              ),
             },
             {
               key: 'userName',
               header: 'CAJERO / USUARIO',
               cellClassName: 'font-semibold text-accent',
-              render: (h: any) => h.userName || h.userId,
+              render: (h: any) => (
+                <div>
+                  <div>{h.userName || h.userId}</div>
+                  {h.isOverride && (
+                    <div className="text-[10px] text-alert" title={h.overrideReason || ''}>
+                      EXCEPCIÓN AUTORIZADA
+                    </div>
+                  )}
+                </div>
+              ),
             },
             {
               key: 'openingBalance',
@@ -361,25 +594,40 @@ export default function CashierPage() {
             {
               key: 'status',
               header: 'ESTADO',
-              render: (h: any) => (
-                <StatusBadge
-                  status={h.status === 'OPEN' ? 'online' : 'default'}
-                  label={h.status === 'OPEN' ? 'ABIERTA' : 'CERRADA'}
-                />
-              ),
+              render: (h: any) => {
+                const isPending =
+                  h.status === 'OPEN' && h.businessDate < todayBusinessDate
+                return (
+                  <StatusBadge
+                    status={isPending ? 'warning' : h.status === 'OPEN' ? 'online' : 'default'}
+                    label={isPending ? 'PENDIENTE' : h.status === 'OPEN' ? 'ABIERTA' : 'CERRADA'}
+                  />
+                )
+              },
             },
             {
               key: 'report',
-              header: 'REPORTE Z',
+              header: 'ACCIONES',
               align: 'right',
               render: (h: any) => (
-                <TacticalButton
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleViewZReport(h.id)}
-                >
-                  <Eye className="w-3 h-3 mr-1" /> REPORTE Z
-                </TacticalButton>
+                <div className="flex items-center justify-end gap-2">
+                  <TacticalButton
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleViewZReport(h.id)}
+                  >
+                    <Eye className="w-3 h-3 mr-1" /> REPORTE Z
+                  </TacticalButton>
+                  {h.status === 'OPEN' && (
+                    <TacticalButton
+                      variant="danger"
+                      size="sm"
+                      onClick={() => handleStartCloseSession(h.id)}
+                    >
+                      <Lock className="w-3 h-3 mr-1" /> CERRAR
+                    </TacticalButton>
+                  )}
+                </div>
               ),
             },
           ]}
@@ -403,7 +651,11 @@ export default function CashierPage() {
       {isOpenModalOpen && (
         <Modal
           open={isOpenModalOpen}
-          onClose={() => setIsOpenModalOpen(false)}
+          onClose={() => {
+            setIsOpenModalOpen(false)
+            setOpenOverride(false)
+            setOverrideReason('')
+          }}
           title="APERTURA DE TURNO DE CAJA"
           icon={<Unlock className="w-4 h-4" />}
           size="md"
@@ -414,7 +666,11 @@ export default function CashierPage() {
                 <Select
                   required
                   value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedUserId(e.target.value)
+                    setOpenOverride(false)
+                    setOverrideReason('')
+                  }}
                   className="font-normal font-semibold text-xs"
                 >
                   <option value="">-- Seleccionar usuario responsable --</option>
@@ -428,6 +684,73 @@ export default function CashierPage() {
                   La caja quedará vinculada legalmente a este usuario para el cuadre y arqueo de turno.
                 </p>
               </div>
+
+              <div>
+                <Label>SEDE / CAJA FÍSICA</Label>
+                <Select
+                  value={selectedLocationId}
+                  onChange={(e) => setSelectedLocationId(e.target.value)}
+                  className="font-normal font-semibold text-xs"
+                >
+                  <option value="">-- Sede activa predeterminada --</option>
+                  {locations
+                    .filter((location: any) => location.status === 'ACTIVE')
+                    .map((location: any) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name}
+                      </option>
+                    ))}
+                </Select>
+                <p className="text-[10px] text-fg-muted mt-1">
+                  Un usuario no puede tener dos turnos abiertos sobre la misma caja.
+                </p>
+              </div>
+
+              {selectedUserOpenSessions.length > 0 && (
+                <div className="bg-danger-dim border border-alert rounded-lg p-3 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-alert shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-alert uppercase tracking-wider">
+                        TURNO ANTERIOR PENDIENTE DE CIERRE
+                      </p>
+                      <p className="text-[10px] text-fg mt-1">
+                        El usuario tiene {selectedUserOpenSessions.length} turno(s) abierto(s).
+                        Lo normal es cerrarlo antes de abrir uno nuevo. La apertura excepcional
+                        requiere autorización de un administrador y queda auditada.
+                      </p>
+                    </div>
+                  </div>
+                  {isAdmin ? (
+                    <label className="flex items-center gap-2 text-[11px] text-fg cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={openOverride}
+                        onChange={(e) => setOpenOverride(e.target.checked)}
+                        className="accent-alert"
+                      />
+                      Autorizar apertura excepcional sin cerrar el turno pendiente
+                    </label>
+                  ) : (
+                    <p className="text-[10px] text-alert font-bold">
+                      Solicite a un administrador para operar sin cerrar el turno pendiente.
+                    </p>
+                  )}
+                  {isAdmin && openOverride && (
+                    <div>
+                      <Label>MOTIVO DE LA AUTORIZACIÓN *</Label>
+                      <TextArea
+                        rows={2}
+                        required
+                        placeholder="Ej: Continuidad operativa autorizada por gerencia..."
+                        value={overrideReason}
+                        onChange={(e) => setOverrideReason(e.target.value)}
+                        className="w-full bg-input border border-line focus:border-accent p-2.5 rounded text-fg"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <Label>BASE INICIAL DE CAJA ($ COP) *</Label>
@@ -458,7 +781,16 @@ export default function CashierPage() {
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-line-dim">
-                <TacticalButton type="button" variant="secondary" size="sm" onClick={() => setIsOpenModalOpen(false)}>
+                <TacticalButton
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setIsOpenModalOpen(false)
+                    setOpenOverride(false)
+                    setOverrideReason('')
+                  }}
+                >
                   CANCELAR
                 </TacticalButton>
                 <TacticalButton type="submit" variant="primary" size="sm">
@@ -469,12 +801,91 @@ export default function CashierPage() {
         </Modal>
       )}
 
+      {/* MODAL: MOVIMIENTO DE CAJA */}
+      {isMovementModalOpen && (
+        <Modal
+          open={isMovementModalOpen}
+          onClose={() => setIsMovementModalOpen(false)}
+          title="MOVIMIENTO MANUAL DE CAJA"
+          icon={<ArrowDownUp className="w-4 h-4" />}
+          size="md"
+        >
+          <form onSubmit={handleRegisterMovement} className="space-y-4 text-xs">
+            <div>
+              <Label>TIPO DE MOVIMIENTO *</Label>
+              <Select
+                required
+                value={movementType}
+                onChange={(e) => setMovementType(e.target.value)}
+              >
+                <option value="INGRESO">INGRESO DE EFECTIVO</option>
+                <option value="EGRESO">EGRESO / GASTO</option>
+                <option value="RETIRO">RETIRO / TRASLADO</option>
+                <option value="DEVOLUCION">DEVOLUCIÓN A CLIENTE</option>
+              </Select>
+              <p className="text-[10px] text-fg-muted mt-1">
+                El ingreso suma al efectivo esperado; egresos, retiros y devoluciones lo reducen.
+              </p>
+            </div>
+
+            <div>
+              <Label>CONCEPTO *</Label>
+              <Input
+                required
+                maxLength={160}
+                value={movementConcept}
+                onChange={(e) => setMovementConcept(e.target.value)}
+                placeholder="Ej: Pago proveedor, retiro a bóveda, devolución ticket..."
+              />
+            </div>
+
+            <div>
+              <Label>VALOR ($ COP) *</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted">$</span>
+                <Input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  value={movementAmount}
+                  onChange={(e) => setMovementAmount(e.target.value)}
+                  className="pl-7 font-bold text-base"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>NOTA / SOPORTE</Label>
+              <TextArea
+                rows={2}
+                value={movementNote}
+                onChange={(e) => setMovementNote(e.target.value)}
+                placeholder="Número de comprobante, autorización o detalle..."
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-line-dim">
+              <TacticalButton type="button" variant="secondary" size="sm" onClick={() => setIsMovementModalOpen(false)}>
+                CANCELAR
+              </TacticalButton>
+              <TacticalButton type="submit" variant="primary" size="sm">
+                REGISTRAR MOVIMIENTO
+              </TacticalButton>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {/* MODAL: EFECTUAR CIERRE Y ARQUEO */}
       {isCloseModalOpen && (
         <Modal
           open={isCloseModalOpen}
-          onClose={() => setIsCloseModalOpen(false)}
-          title="ARQUEO Y CIERRE DIARIO DE CAJA"
+          onClose={() => {
+            setIsCloseModalOpen(false)
+            setCloseTarget(null)
+          }}
+          title="ARQUEO Y CIERRE DE TURNO DE CAJA"
           icon={<Lock className="w-4 h-4" />}
           tone="danger"
           size="lg"
@@ -482,20 +893,37 @@ export default function CashierPage() {
             <form onSubmit={handleCloseSession} className="space-y-4 text-xs">
               <div className="bg-input p-3 rounded border border-line-soft space-y-2">
                 <div className="flex justify-between text-fg-muted">
+                  <span>Fecha de negocio / apertura:</span>
+                  <span className="text-fg font-semibold">
+                    {closeTarget?.businessDate || '---'} ·{' '}
+                    {closeTarget?.session?.openedAt
+                      ? new Date(closeTarget.session.openedAt).toLocaleString()
+                      : '---'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-fg-muted">
                   <span>Cajero Responsable:</span>
-                  <span className="text-accent font-bold">{activeSessionSummary?.userName || 'N/A'}</span>
+                  <span className="text-accent font-bold">{closeTarget?.userName || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between text-fg-muted">
                   <span>Base Inicial en Caja:</span>
-                  <span className="text-fg font-semibold">{formatCOP(activeSessionSummary?.openingBase)}</span>
+                  <span className="text-fg font-semibold">{formatCOP(closeTarget?.openingBase)}</span>
                 </div>
                 <div className="flex justify-between text-fg-muted">
                   <span>Ventas en Efectivo:</span>
-                  <span className="text-success font-bold">+{formatCOP(activeSessionSummary?.cashSales)}</span>
+                  <span className="text-success font-bold">+{formatCOP(closeTarget?.cashSales)}</span>
+                </div>
+                <div className="flex justify-between text-fg-muted">
+                  <span>Ingresos manuales:</span>
+                  <span className="text-success font-bold">+{formatCOP(closeTarget?.cashIncome || 0)}</span>
+                </div>
+                <div className="flex justify-between text-fg-muted">
+                  <span>Egresos / retiros / devoluciones:</span>
+                  <span className="text-alert font-bold">-{formatCOP((closeTarget?.cashExpenses || 0) + (closeTarget?.cashWithdrawals || 0) + (closeTarget?.cashRefunds || 0))}</span>
                 </div>
                 <div className="flex justify-between text-fg font-semibold border-t border-line-faint pt-2 text-sm">
                   <span>Efectivo Esperado en Cajón:</span>
-                  <span className="text-accent">{formatCOP(activeSessionSummary?.expectedCash)}</span>
+                  <span className="text-accent">{formatCOP(closeTarget?.expectedCash)}</span>
                 </div>
               </div>
 
@@ -542,7 +970,15 @@ export default function CashierPage() {
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-line-dim">
-                <TacticalButton type="button" variant="secondary" size="sm" onClick={() => setIsCloseModalOpen(false)}>
+                <TacticalButton
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setIsCloseModalOpen(false)
+                    setCloseTarget(null)
+                  }}
+                >
                   CANCELAR
                 </TacticalButton>
                 <TacticalButton type="submit" variant="danger" size="sm">
@@ -618,8 +1054,8 @@ export default function CashierPage() {
                   <span>{formatCOP(selectedZReport.cashSales)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Ventas Nequi ({selectedZReport.nequiCount || 0}):</span>
-                  <span>{formatCOP(selectedZReport.nequiSales || selectedZReport.transferSales)}</span>
+                  <span>Transferencias / Nequi:</span>
+                  <span>{formatCOP(selectedZReport.transferSales || 0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Ventas Tarjeta Crédito ({selectedZReport.creditCardCount || 0}):</span>
@@ -662,6 +1098,24 @@ export default function CashierPage() {
                 <div className="flex justify-between">
                   <span>Base Inicial:</span>
                   <span>{formatCOP(selectedZReport.openingBase)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Ventas Efectivo:</span>
+                  <span>{formatCOP(selectedZReport.cashSales)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Ingresos Manuales:</span>
+                  <span>{formatCOP(selectedZReport.cashIncome || 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Egresos / Retiros / Devoluciones:</span>
+                  <span>
+                    -{formatCOP(
+                      (selectedZReport.cashExpenses || 0) +
+                      (selectedZReport.cashWithdrawals || 0) +
+                      (selectedZReport.cashRefunds || 0)
+                    )}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Efectivo Esperado:</span>

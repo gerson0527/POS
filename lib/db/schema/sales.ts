@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import {
   pgTable,
   text,
@@ -5,7 +6,10 @@ import {
   integer,
   decimal,
   jsonb,
-  index } from 'drizzle-orm/pg-core'
+  index,
+  uniqueIndex,
+  date,
+  boolean } from 'drizzle-orm/pg-core'
 
 export const cashierSession = pgTable(
   'cashier_session',
@@ -14,6 +18,7 @@ export const cashierSession = pgTable(
     tenantId: text('tenantId').notNull(),
     locationId: text('locationId').notNull(),
     userId: text('userId').notNull(),
+    businessDate: date('businessDate').notNull(),
     openedAt: timestamp('openedAt').notNull().defaultNow(),
     closedAt: timestamp('closedAt'),
     openingBalance: decimal('openingBalance', { precision: 12, scale: 2 }).notNull().default('0'),
@@ -27,6 +32,9 @@ export const cashierSession = pgTable(
     creditSales: decimal('creditSales', { precision: 12, scale: 2 }).default('0'),
     salesCount: integer('salesCount').default(0),
     status: text('status').notNull().default('OPEN'), // OPEN, CLOSED, SUSPENDED
+    isOverride: boolean('isOverride').notNull().default(false),
+    authorizedBy: text('authorizedBy'),
+    overrideReason: text('overrideReason'),
     notes: text('notes'),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
   },
@@ -34,6 +42,18 @@ export const cashierSession = pgTable(
     tenantIdx: index('cashier_session_tenant_idx').on(table.tenantId),
     statusIdx: index('cashier_session_status_idx').on(table.status),
     openedAtIdx: index('cashier_session_opened_at_idx').on(table.openedAt),
+    businessDateIdx: index('cashier_session_business_date_idx').on(
+      table.tenantId,
+      table.businessDate
+    ),
+    locationStatusIdx: index('cashier_session_location_status_idx').on(
+      table.tenantId,
+      table.locationId,
+      table.status
+    ),
+    openUserUnique: uniqueIndex('cashier_session_open_user_unique')
+      .on(table.tenantId, table.userId)
+      .where(sql`${table.status} = 'OPEN' AND ${table.isOverride} = false`),
   })
 )
 
@@ -88,6 +108,26 @@ export const saleItem = pgTable(
   },
   (table) => ({
     saleIdx: index('sale_item_sale_idx').on(table.saleId),
+  })
+)
+
+// CASH_MOVEMENT: Ingresos, egresos, retiros y devoluciones de una caja.
+export const cashMovement = pgTable(
+  'cash_movement',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenantId').notNull(),
+    cashierSessionId: text('cashierSessionId').notNull(),
+    type: text('type').notNull(), // INGRESO, EGRESO, RETIRO, DEVOLUCION
+    concept: text('concept').notNull(),
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+    note: text('note'),
+    createdBy: text('createdBy').notNull(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+  },
+  (table) => ({
+    sessionIdx: index('cash_movement_session_idx').on(table.cashierSessionId),
+    tenantIdx: index('cash_movement_tenant_idx').on(table.tenantId),
   })
 )
 

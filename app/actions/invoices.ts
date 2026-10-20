@@ -116,7 +116,7 @@ export async function getAllInvoices() {
         ? `MIXTO (${mappedMethods.join(' + ')})`
         : primaryPayment
         ? mapMethodName(primaryPayment.method)
-        : 'EFECTIVO'
+        : 'SIN PAGO'
 
     const paymentReferenceLabel =
       primaryPayment?.reference ? primaryPayment.reference : ''
@@ -135,7 +135,8 @@ export async function getAllInvoices() {
       payments,
       items,
       fiscalDocument: fiscalDoc,
-      isElectronicSent: !!fiscalDoc && (fiscalDoc.status === 'ISSUED' || fiscalDoc.status === 'ACCEPTED'),
+      isElectronicSent: Boolean(fiscalDoc?.uniqueCode),
+      dianStatus: fiscalDoc?.status || null,
       cufe: fiscalDoc?.uniqueCode || null,
       xmlUrl: fiscalDoc?.xmlSignedStorageKey || null,
       pdfUrl: fiscalDoc?.pdfStorageKey || null,

@@ -1,6 +1,6 @@
-'use client'
+﻿'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   FileText,
   CreditCard,
@@ -22,6 +22,50 @@ import { getAllInvoices, emitFactusElectronicInvoice } from '@/app/actions/pos-a
 import { InvoiceTable } from '@/components/invoices/InvoiceTable'
 import { XmlAuditModal } from '@/components/invoices/XmlAuditModal'
 import { InvoiceTicketModal } from '@/components/invoices/InvoiceTicketModal'
+
+function getTodayInputValue() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function useAnimatedNumber(target: number, duration = 550) {
+  const [display, setDisplay] = useState(target)
+  const displayRef = useRef(target)
+  const frameRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const from = displayRef.current
+    const delta = target - from
+
+    if (delta === 0) {
+      displayRef.current = target
+      setDisplay(target)
+      return
+    }
+
+    const startedAt = performance.now()
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      const next = from + delta * eased
+      displayRef.current = next
+      setDisplay(next)
+      if (progress < 1) {
+        frameRef.current = requestAnimationFrame(tick)
+      }
+    }
+
+    frameRef.current = requestAnimationFrame(tick)
+    return () => {
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current)
+    }
+  }, [target, duration])
+
+  return display
+}
 
 export default function InvoicesPage() {
   const { toast } = useToast()
@@ -45,8 +89,13 @@ export default function InvoicesPage() {
     try {
       const res = await emitFactusElectronicInvoice(saleId)
       if (res.success) {
-        const cufeVal = (res as any).cufe ? (res as any).cufe.substring(0, 10) : 'EMITIDA'
-        toast(`¡FACTURA ELECTRÓNICA EMITIDA VIA FACTUS V2! CUFE: ${cufeVal}...`)
+        const cufeVal = (res as any).cufe ? (res as any).cufe.substring(0, 10) : 'SIN CUFE'
+        const status = (res as any).dianStatus || 'SUBMITTED'
+        toast(
+          status === 'ACCEPTED'
+            ? `FACTURA ACEPTADA POR DIAN. CUFE: ${cufeVal}...`
+            : `FACTURA TRANSMITIDA. ESTADO DIAN: ${status}. CUFE: ${cufeVal}...`
+        )
         fetchInvoices()
       } else {
         toast(`Error al emitir factura: ${res.message}`, 'error')
@@ -69,6 +118,12 @@ export default function InvoicesPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const today = getTodayInputValue()
+    setDateFrom(today)
+    setDateTo(today)
+  }, [])
 
   useEffect(() => {
     fetchInvoices()
@@ -137,8 +192,16 @@ export default function InvoicesPage() {
     currentPage * itemsPerPage
   )
 
-  // KPI Calculations
-  const completedInvoices = invoices.filter((i) => i.status === 'COMPLETED' || i.status === 'CONFIRMED' || i.status === 'DRAFT')
+  // KPIs por fecha de negocio (el rango DESDE–HASTA alimenta las tarjetas).
+  const dateFilteredInvoices = invoices.filter((inv) => {
+    if (!inv.createdAt) return !dateFrom && !dateTo
+    const invDate = new Date(inv.createdAt)
+    if (dateFrom && invDate < new Date(`${dateFrom}T00:00:00`)) return false
+    if (dateTo && invDate > new Date(`${dateTo}T23:59:59.999`)) return false
+    return true
+  })
+
+  const completedInvoices = dateFilteredInvoices.filter((i) => i.status === 'COMPLETED' || i.status === 'CONFIRMED' || i.status === 'DRAFT')
   const totalBilled = completedInvoices.reduce((acc, curr) => acc + Number(curr.total || 0), 0)
   const invoiceCount = completedInvoices.length
   const avgTicket = invoiceCount > 0 ? totalBilled / invoiceCount : 0
@@ -157,6 +220,11 @@ export default function InvoicesPage() {
   const mixedTotal = completedInvoices
     .filter((i) => categorizeInvoicePayment(i).category === 'MIXED')
     .reduce((acc, curr) => acc + Number(curr.total || 0), 0)
+
+  const animatedTotalBilled = useAnimatedNumber(totalBilled)
+  const animatedAvgTicket = useAnimatedNumber(avgTicket)
+  const animatedCashTotal = useAnimatedNumber(cashTotal)
+  const animatedDigitalTotal = useAnimatedNumber(electronicTotal + mixedTotal)
 
   const handleOpenDetail = (inv: any) => {
     setSelectedInvoice(inv)
@@ -178,7 +246,7 @@ export default function InvoicesPage() {
   const handleExportCSV = () => {
     if (filteredInvoices.length === 0) return
 
-    const headers = ['N Ticket', 'Fecha', 'Cliente', 'Documento', 'Medio Pago', 'Voucher Ref', 'Subtotal', 'IVA 19%', 'Total COP', 'Estado DIAN', 'CUFE']
+    const headers = ['N Ticket', 'Fecha', 'Cliente', 'Documento', 'Medio Pago', 'Voucher Ref', 'Subtotal', 'IVA Total', 'Total COP', 'Estado DIAN', 'CUFE']
     const rows = filteredInvoices.map((inv) => [
       inv.ticketNumber ? `FACT-#${String(inv.ticketNumber).padStart(4, '0')}` : inv.id,
       inv.createdAt ? new Date(inv.createdAt).toLocaleString('es-CO') : '',
@@ -189,7 +257,7 @@ export default function InvoicesPage() {
       inv.subtotal || 0,
       inv.taxAmount || 0,
       inv.total || 0,
-      inv.isElectronicSent ? 'TRANSMITIDA DIAN' : 'PENDIENTE',
+      inv.dianStatus || (inv.isElectronicSent ? 'TRANSMITIDA' : 'PENDIENTE'),
       inv.cufe || 'N/A',
     ])
 
@@ -243,7 +311,7 @@ export default function InvoicesPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="TOTAL FACTURADO"
-          value={formatCOP(totalBilled)}
+          value={formatCOP(animatedTotalBilled)}
           subtext="Valorización de ventas en COP"
           trend={invoiceCount > 0 ? `${invoiceCount} FACTURAS` : 'SIN VENTAS'}
           trendType={invoiceCount > 0 ? 'positive' : 'neutral'}
@@ -252,7 +320,7 @@ export default function InvoicesPage() {
         />
         <MetricCard
           title="TICKET PROMEDIO"
-          value={formatCOP(avgTicket)}
+          value={formatCOP(animatedAvgTicket)}
           subtext="Promedio por transacción"
           trend="ESTADÍSTICA POS"
           trendType="positive"
@@ -261,7 +329,7 @@ export default function InvoicesPage() {
         />
         <MetricCard
           title="RECAUDO EFECTIVO"
-          value={formatCOP(cashTotal)}
+          value={formatCOP(animatedCashTotal)}
           subtext="Ventas en caja chica"
           trend="CAJA PRINCIPAL"
           trendType="neutral"
@@ -270,7 +338,7 @@ export default function InvoicesPage() {
         />
         <MetricCard
           title="PAGOS DIGITALES & MIXTOS"
-          value={formatCOP(electronicTotal + mixedTotal)}
+          value={formatCOP(animatedDigitalTotal)}
           subtext="Nequi, Tarjetas y Multi-Pago"
           trend={mixedTotal > 0 ? `Mixtos: ${formatCOP(mixedTotal)}` : 'CONCILIACIÓN'}
           trendType="neutral"

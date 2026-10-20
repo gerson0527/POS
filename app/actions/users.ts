@@ -4,13 +4,14 @@
 import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
 import { AuditAction } from '@/lib/types'
-import { eq, desc } from 'drizzle-orm'
+import { and, eq, desc } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { sendWelcomeEmail } from '@/lib/email'
+import { hashPassword } from 'better-auth/crypto'
 import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 export async function getUsersList() {
   const currentUserId = await getUserId()
-  await getTenantId(currentUserId)
+  const tenantId = await getTenantId(currentUserId)
 
   const usersList = await db
     .select({
@@ -20,8 +21,14 @@ export async function getUsersList() {
       createdAt: schema.user.createdAt,
       role: schema.userTenant.role,
     })
-    .from(schema.user)
-    .leftJoin(schema.userTenant, eq(schema.user.id, schema.userTenant.userId))
+    .from(schema.userTenant)
+    .innerJoin(schema.user, eq(schema.user.id, schema.userTenant.userId))
+    .where(
+      and(
+        eq(schema.userTenant.tenantId, tenantId),
+        eq(schema.userTenant.status, 'ACTIVE')
+      )
+    )
     .orderBy(desc(schema.user.createdAt))
 
   return usersList.map((u) => ({
@@ -44,10 +51,24 @@ export async function createUserAction(input: {
   await requireRole(currentUserId, ['ADMIN'])
   const tenantId = await getTenantId(currentUserId)
 
+  const email = input.email.trim().toLowerCase()
+  const name = input.name.trim()
+  const password = input.password || ''
+  const role = (input.role || 'CASHIER').toUpperCase()
+
+  if (!name) throw new Error('El nombre del usuario es obligatorio.')
+  if (!email) throw new Error('El correo del usuario es obligatorio.')
+  if (password.length < 12) {
+    throw new Error('La contraseña debe tener al menos 12 caracteres.')
+  }
+  if (!['ADMIN', 'MANAGER', 'CASHIER', 'VIEWER'].includes(role)) {
+    throw new Error('Rol de usuario inválido.')
+  }
+
   const existing = await db
     .select()
     .from(schema.user)
-    .where(eq(schema.user.email, input.email))
+    .where(eq(schema.user.email, email))
     .limit(1)
 
   if (existing.length > 0) {
@@ -55,37 +76,44 @@ export async function createUserAction(input: {
   }
 
   const userId = `usr_${Date.now()}`
+  const passwordHash = await hashPassword(password)
 
-  await db.insert(schema.user).values({
-    id: userId,
-    name: input.name,
-    email: input.email,
-    emailVerified: true,
-  })
+  await db.transaction(async (tx) => {
+    await tx.insert(schema.user).values({
+      id: userId,
+      name,
+      email,
+      emailVerified: true,
+    })
 
-  await db.insert(schema.account).values({
-    id: `acc_${Date.now()}`,
-    accountId: input.email,
-    providerId: 'credential',
-    userId,
-    password: input.password || '12345678',
-  })
+    await tx.insert(schema.account).values({
+      id: `acc_${Date.now()}`,
+      accountId: email,
+      providerId: 'credential',
+      userId,
+      password: passwordHash,
+    })
 
-  await db.insert(schema.userTenant).values({
-    id: `ut_${Date.now()}`,
-    userId,
-    tenantId,
-    role: input.role || 'CASHIER',
-    status: 'ACTIVE',
+    await tx.insert(schema.userTenant).values({
+      id: `ut_${Date.now()}`,
+      userId,
+      tenantId,
+      role,
+      status: 'ACTIVE',
+    })
   })
 
   try {
-    await sendWelcomeEmail(input.email, input.name, input.role || 'CASHIER')
+    await sendWelcomeEmail(email, name, role)
   } catch (emailErr) {
     console.error('Error enviando correo de bienvenida:', emailErr)
   }
 
-  await logAudit(tenantId, currentUserId, AuditAction.CREATE, 'user', userId, { name: input.name, email: input.email, role: input.role })
+  await logAudit(tenantId, currentUserId, AuditAction.CREATE, 'user', userId, {
+    name,
+    email,
+    role,
+  })
   revalidatePath('/dashboard/users')
   return { success: true, userId }
 }

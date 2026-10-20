@@ -297,6 +297,7 @@ export default async function DashboardPage() {
           trendDirection={stats.trendVsYesterday >= 0 ? 'up' : 'down'}
           accentColor="orange"
           accentValue
+          className="animate-in fade-in slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
         />
         <MetricCard
           icon={
@@ -318,6 +319,7 @@ export default async function DashboardPage() {
           trendDirection={stats.openSessions > 0 ? 'up' : 'down'}
           accentColor={stats.openSessions > 0 ? 'green' : 'neutral'}
           accentValue
+          className="animate-in fade-in slide-in-from-bottom-1 duration-200 [animation-delay:40ms] motion-reduce:animate-none"
           action={
             stats.openSessions > 0 ? (
               <Link
@@ -346,6 +348,7 @@ export default async function DashboardPage() {
           trendDirection={stats.lowStockCount === 0 ? 'up' : 'down'}
           accentColor={stats.lowStockCount === 0 ? 'green' : 'red'}
           accentValue
+          className="animate-in fade-in slide-in-from-bottom-1 duration-200 [animation-delay:80ms] motion-reduce:animate-none"
           action={
             <Link
               href="/dashboard/inventory"
@@ -369,6 +372,7 @@ export default async function DashboardPage() {
           trendDirection={stats.overdueCount === 0 ? 'up' : 'down'}
           accentColor={stats.overdueCount === 0 ? 'green' : 'red'}
           accentValue
+          className="animate-in fade-in slide-in-from-bottom-1 duration-200 [animation-delay:120ms] motion-reduce:animate-none"
           action={
             <Link
               href="/dashboard/customers"

@@ -43,7 +43,7 @@ describe('mapDocumentType', () => {
     expect(mapDocumentType('PAS')).toBe('41')
     expect(mapDocumentType('PASAPORTE')).toBe('41')
     expect(mapDocumentType('NIT')).toBe('31')
-    expect(mapDocumentType('RC')).toBe('12')
+    expect(mapDocumentType('RC')).toBe('11')
   })
 
   it('defaultea a CC (13)', () => {
@@ -88,6 +88,13 @@ describe('toPaymentDetail', () => {
       amount: '250.50',
     })
     expect(toPaymentDetail('DEBIT_CARD', 1000).payment_method_code).toBe('49')
+  })
+
+  it('marca las ventas a crédito como pago a plazo', () => {
+    const result = toPaymentDetail('STORE_CREDIT', 1000, 'CREDITO')
+    expect(result.payment_form).toBe('2')
+    expect(result.payment_method_code).toBe('10')
+    expect(result.due_date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 })
 
@@ -137,6 +144,11 @@ describe('toFactusPayload', () => {
     expect(payload.customer.identification).toBe('123456789')
   })
 
+  it('envía el ajuste de redondeo de caja cuando viene en el payload', () => {
+    const payload = toFactusPayload({ ...invoice, cash_rounding_amount: 25 } as InvoicePayload)
+    expect(payload.cash_rounding_amount).toBe('25.00')
+  })
+
   it('defaults de ítem: unit_measure 94 y standard 999', () => {
     const payload = toFactusPayload({
       ...invoice,
@@ -160,10 +172,45 @@ describe('parseFactusBody / extractBill / getFactusDianStatus', () => {
     expect(extractBill({})).toBeUndefined()
   })
 
-  it('prioriza bill.status sobre status raíz', () => {
+  it('prioriza bill.status explícito sobre status raíz', () => {
     expect(getFactusDianStatus({ status: 'ROOT' }, { status: 'ACCEPTED' })).toBe('ACCEPTED')
-    expect(getFactusDianStatus({ status: 'ROOT' }, undefined)).toBe('ROOT')
+    expect(getFactusDianStatus({ status: 'ROOT' }, { status: 'REJECTED' })).toBe('REJECTED')
     expect(getFactusDianStatus({}, undefined)).toBeUndefined()
+  })
+
+  it('usa is_validated=true como ACCEPTED (Factus V2)', () => {
+    expect(
+      getFactusDianStatus(
+        { status: 'Created' },
+        { is_validated: true, validated_at: '20-10-2026 01:05:01 PM', cufe: 'C' }
+      )
+    ).toBe('ACCEPTED')
+  })
+
+  it('no confunde el status raíz "OK"/"Created" con estado DIAN', () => {
+    expect(getFactusDianStatus({ status: 'OK' }, { cufe: 'C' })).toBeUndefined()
+    expect(getFactusDianStatus({ status: 'Created' }, {})).toBeUndefined()
+  })
+
+  it('is_validated=false es REJECTED solo si errors contiene rechazo; si no, SUBMITTED', () => {
+    expect(
+      getFactusDianStatus(
+        { status: 'OK' },
+        { is_validated: false, errors: { FAJ44b: 'Documento rechazado por la DIAN' } }
+      )
+    ).toBe('REJECTED')
+    expect(
+      getFactusDianStatus(
+        { status: 'OK' },
+        { is_validated: false, errors: { RUT01: 'Notificación informativa' } }
+      )
+    ).toBe('SUBMITTED')
+    expect(getFactusDianStatus({ status: 'OK' }, { is_validated: false })).toBe('SUBMITTED')
+  })
+
+  it('acepta status raíz solo si es un estado DIAN explícito', () => {
+    expect(getFactusDianStatus({ status: 'REJECTED' }, undefined)).toBe('REJECTED')
+    expect(getFactusDianStatus({ status: 'PENDING' }, undefined)).toBe('PENDING')
   })
 })
 
@@ -214,17 +261,17 @@ describe('toInvoiceResult', () => {
     expect(r.providerId).toBe('factus-v2')
   })
 
-  it('defaultea dianStatus a ACCEPTED y billNumber al reference_code', () => {
+  it('defaultea dianStatus a SUBMITTED (nunca ACCEPTED) y billNumber al reference_code', () => {
     const r = toInvoiceResult({
       ...base,
       json: {},
       bill: { cufe: 'C' },
       links: {},
     })
-    expect(r.dianStatus).toBe('ACCEPTED')
+    expect(r.dianStatus).toBe('SUBMITTED')
     expect(r.billNumber).toBe('FACT-9')
     expect(r.message).toBe(
-      'Factura FACT-9 emitida y aceptada por DIAN vía Factus V2.'
+      'Factura FACT-9 emitida vía Factus V2; estado DIAN: SUBMITTED.'
     )
   })
 })

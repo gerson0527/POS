@@ -1,13 +1,20 @@
 import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import { SaleStatus } from '@/lib/types'
-import { formatBogotaDateTime } from './_shared'
+import { calculateExpectedCash } from '@/lib/cash/reconcile'
+import {
+  formatBogotaDateTime,
+  getBogotaBusinessDate,
+  businessDateDaysBetween,
+  toBusinessDateString,
+} from './_shared'
 
 type CashierSessionRow = typeof schema.cashierSession.$inferSelect
 type SaleRow = typeof schema.sale.$inferSelect
 type PaymentRow = typeof schema.payment.$inferSelect
 type SaleItemRow = typeof schema.saleItem.$inferSelect
+type CashMovementRow = typeof schema.cashMovement.$inferSelect
 
 export interface ZReportSale extends SaleRow {
   payments: PaymentRow[]
@@ -25,6 +32,7 @@ export interface ZReportCompany {
 export interface ZReportData {
   hasOpenSession: boolean
   session: CashierSessionRow
+  businessDate: string
   user: { id: string; name: string | null; email: string | null } | null
   userName: string
   userEmail: string | null
@@ -52,6 +60,20 @@ export interface ZReportData {
   cardSales: number
   transferSales: number
   creditSales: number
+  otherSales: number
+  otherCount: number
+  unclassifiedSales: number
+  unclassifiedAmount: number
+  cashIncome: number
+  cashIncomeCount: number
+  cashExpenses: number
+  cashExpenseCount: number
+  cashWithdrawals: number
+  cashWithdrawalCount: number
+  cashRefunds: number
+  cashRefundCount: number
+  netCashMovements: number
+  cashMovements: CashMovementRow[]
   openingBase: number
   expectedCash: number
   minTicket: number
@@ -70,6 +92,7 @@ export async function buildSessionZReportData(sess: CashierSessionRow): Promise<
     .from(schema.sale)
     .where(
       and(
+        eq(schema.sale.tenantId, sess.tenantId),
         eq(schema.sale.cashierSessionId, sess.id),
         eq(schema.sale.status, SaleStatus.COMPLETED)
       )
@@ -96,14 +119,22 @@ export async function buildSessionZReportData(sess: CashierSessionRow): Promise<
   let cashCount = 0
   let nequiSales = 0
   let nequiCount = 0
+  let bankTransferSales = 0
   let creditCardSales = 0
   let creditCardCount = 0
   let debitCardSales = 0
   let debitCardCount = 0
+  let creditSales = 0
   let otherSales = 0
   let otherCount = 0
 
-  payments.forEach((p) => {
+  // Solo pagos efectivamente procesados/aprobados cuentan para el arqueo.
+  const validPayments = payments.filter((p) => {
+    const status = (p.status || '').toUpperCase()
+    return status === 'PROCESSED' || status === 'APPROVED'
+  })
+
+  validPayments.forEach((p) => {
     const amt = Number(p.amount || 0)
     const m = (p.method || '').toUpperCase()
     if (m === 'CASH' || m === 'EFECTIVO') {
@@ -122,29 +153,72 @@ export async function buildSessionZReportData(sess: CashierSessionRow): Promise<
       creditCardSales += amt
       creditCardCount++
     } else if (m === 'TRANSFER' || m === 'TRANSFERENCIA') {
-      nequiSales += amt
-      nequiCount++
+      bankTransferSales += amt
+    } else if (m === 'STORE_CREDIT' || m === 'CREDITO') {
+      creditSales += amt
     } else {
       otherSales += amt
       otherCount++
     }
   })
 
-  if (payments.length === 0 && completedSales.length > 0) {
-    cashSales = completedSales.reduce((sum, s) => sum + Number(s.total || 0), 0)
-    cashCount = completedSales.length
-  }
+  const validSaleIds = new Set(validPayments.map((p) => p.saleId))
+  const unclassified = completedSales.filter((s) => !validSaleIds.has(s.id))
+  const unclassifiedSales = unclassified.length
+  const unclassifiedAmount = unclassified.reduce(
+    (sum, s) => sum + Number(s.total || 0),
+    0
+  )
 
   const cardSales = creditCardSales + debitCardSales
-  const transferSales = nequiSales
-  const creditSales = otherSales
+  const transferSales = nequiSales + bankTransferSales
+
+  const cashMovements = await db
+    .select()
+    .from(schema.cashMovement)
+    .where(
+      and(
+        eq(schema.cashMovement.tenantId, sess.tenantId),
+        eq(schema.cashMovement.cashierSessionId, sess.id)
+      )
+    )
+    .orderBy(asc(schema.cashMovement.createdAt))
+
+  let cashIncome = 0
+  let cashIncomeCount = 0
+  let cashExpenses = 0
+  let cashExpenseCount = 0
+  let cashWithdrawals = 0
+  let cashWithdrawalCount = 0
+  let cashRefunds = 0
+  let cashRefundCount = 0
+
+  cashMovements.forEach((movement) => {
+    const amount = Number(movement.amount || 0)
+    const type = (movement.type || '').toUpperCase()
+    if (type === 'INGRESO') {
+      cashIncome += amount
+      cashIncomeCount++
+    } else if (type === 'EGRESO') {
+      cashExpenses += amount
+      cashExpenseCount++
+    } else if (type === 'RETIRO') {
+      cashWithdrawals += amount
+      cashWithdrawalCount++
+    } else if (type === 'DEVOLUCION') {
+      cashRefunds += amount
+      cashRefundCount++
+    }
+  })
+
+  const netCashMovements = cashIncome - cashExpenses - cashWithdrawals - cashRefunds
 
   const salesList: ZReportSale[] = completedSales.map((s) => {
     const salePayments = payments.filter((p) => p.saleId === s.id)
     return {
       ...s,
       payments: salePayments,
-      paymentMethod: salePayments.map((p) => p.method).join(', ') || 'EFECTIVO',
+      paymentMethod: salePayments.map((p) => p.method).join(', ') || 'SIN PAGO',
       paymentReference: salePayments.map((p) => p.reference).filter(Boolean).join(', ') || null,
     }
   })
@@ -168,15 +242,22 @@ export async function buildSessionZReportData(sess: CashierSessionRow): Promise<
   const minTicket = ticketNumbers.length > 0 ? Math.min(...ticketNumbers) : 0
   const maxTicket = ticketNumbers.length > 0 ? Math.max(...ticketNumbers) : 0
 
-  const expectedCash = openingBase + cashSales
+  const expectedCash = calculateExpectedCash({
+    openingBase,
+    cashSales,
+    cashIncome,
+    cashExpenses,
+    cashWithdrawals,
+    cashRefunds,
+  })
 
-  const sessionOpenedAt = new Date(sess.openedAt)
-  const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
+  const todayBusinessDate = getBogotaBusinessDate()
+  const sessionBusinessDate = toBusinessDateString(sess.businessDate)
 
-  const isOverdue = sess.status === 'OPEN' && sessionOpenedAt.getTime() < todayStart.getTime()
+  const isOverdue =
+    sess.status === 'OPEN' && sessionBusinessDate < todayBusinessDate
   const daysOverdue = isOverdue
-    ? Math.max(1, Math.floor((todayStart.getTime() - new Date(sessionOpenedAt.getFullYear(), sessionOpenedAt.getMonth(), sessionOpenedAt.getDate()).getTime()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(1, businessDateDaysBetween(sessionBusinessDate, todayBusinessDate))
     : 0
 
   const sessionUserRes = sess.userId ? await db
@@ -213,7 +294,8 @@ export async function buildSessionZReportData(sess: CashierSessionRow): Promise<
 
   return {
     hasOpenSession: sess.status === 'OPEN',
-    session: sess,
+    session: { ...sess, businessDate: sessionBusinessDate },
+    businessDate: sessionBusinessDate,
     user: sessionUser,
     userName: sessionUser?.name || sessionUser?.email || sess.userId || 'Operador POS',
     userEmail: sessionUser?.email || null,
@@ -241,6 +323,20 @@ export async function buildSessionZReportData(sess: CashierSessionRow): Promise<
     cardSales,
     transferSales,
     creditSales,
+    otherSales,
+    otherCount,
+    unclassifiedSales,
+    unclassifiedAmount,
+    cashIncome,
+    cashIncomeCount,
+    cashExpenses,
+    cashExpenseCount,
+    cashWithdrawals,
+    cashWithdrawalCount,
+    cashRefunds,
+    cashRefundCount,
+    netCashMovements,
+    cashMovements,
     openingBase,
     expectedCash,
     minTicket,

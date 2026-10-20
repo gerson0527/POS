@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { AnimatePresence } from 'motion/react'
 import { createSale, getProducts, completeSale, generateInvoice, emitFactusElectronicInvoice, getCustomers, createCustomer, getCurrentCashierSessionSummary } from '@/app/actions/pos-actions'
 import { isSessionError, redirectToLogin } from '@/lib/hooks/use-protected-query'
 import { useCart } from '@/lib/hooks/use-cart'
@@ -15,9 +16,9 @@ import { PosHeader } from '@/components/pos/PosHeader'
 import { ProductGrid } from '@/components/pos/ProductGrid'
 import { CartPanel } from '@/components/pos/CartPanel'
 import { PaymentModal } from '@/components/pos/PaymentModal'
+import { SaleSuccessOverlay } from '@/components/pos/SaleSuccessOverlay'
 import { ConfirmMoraModal } from '@/components/pos/ConfirmMoraModal'
 import { StockErrorModal } from '@/components/pos/StockErrorModal'
-import { OverdueSessionModal } from '@/components/pos/OverdueSessionModal'
 
 const ITEMS_PER_PAGE = 20
 
@@ -36,6 +37,11 @@ export default function DashboardPOSPage() {
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<'shopping' | 'payment' | 'complete'>('shopping')
   const [saleId, setSaleId] = useState<string | null>(null)
+  const [saleSuccess, setSaleSuccess] = useState<{
+    total: number
+    dianStatus: 'success' | 'pending'
+    cufe?: string
+  } | null>(null)
   const [discount, setDiscount] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -60,13 +66,10 @@ export default function DashboardPOSPage() {
     address: '',
   })
 
-  const [overdueSessionInfo, setOverdueSessionInfo] = useState<{
-    isOverdue: boolean
-    daysOverdue: number
-    openedAt: string
-    sessionId: string
+  const [cashierStatus, setCashierStatus] = useState<{
+    hasOpenSession: boolean
+    pendingSessions: Array<{ id: string; businessDate: string }>
   } | null>(null)
-  const [showOverdueModal, setShowOverdueModal] = useState(false)
 
   const {
     cart,
@@ -90,15 +93,10 @@ export default function DashboardPOSPage() {
   async function checkSessionStatus() {
     try {
       const summary = await getCurrentCashierSessionSummary()
-      if (summary && summary.hasOpenSession && 'isOverdue' in summary && summary.isOverdue) {
-        setOverdueSessionInfo({
-          isOverdue: true,
-          daysOverdue: summary.daysOverdue || 1,
-          openedAt: summary.session?.openedAt ? new Date(summary.session.openedAt).toLocaleDateString() : '',
-          sessionId: summary.session?.id || '',
-        })
-        setShowOverdueModal(true)
-      }
+      setCashierStatus({
+        hasOpenSession: Boolean(summary?.hasOpenSession),
+        pendingSessions: summary?.pendingSessions || [],
+      })
     } catch (err) {
       console.error('Error checking cashier session status:', err)
     }
@@ -118,6 +116,18 @@ export default function DashboardPOSPage() {
     setCurrentPage(1)
   }, [searchQuery])
 
+  // La confirmación de venta se muestra brevemente antes de limpiar el POS.
+  useEffect(() => {
+    if (step !== 'complete' || !saleSuccess) return
+
+    const timer = window.setTimeout(() => {
+      handleNewSale()
+      setSaleSuccess(null)
+    }, 1400)
+
+    return () => window.clearTimeout(timer)
+  }, [step, saleSuccess])
+
   async function loadProducts() {
     try {
       const data = await getProducts()
@@ -130,6 +140,11 @@ export default function DashboardPOSPage() {
   async function proceedWithSale() {
     if (cart.length === 0) {
       toast('Carrito vacío', 'error')
+      return
+    }
+
+    if (cashierStatus && !cashierStatus.hasOpenSession) {
+      toast('No hay una caja abierta para hoy. Abra un turno antes de facturar.', 'error')
       return
     }
 
@@ -248,20 +263,22 @@ export default function DashboardPOSPage() {
         factusResult = { success: false, message: factusErr?.message ?? 'Error desconocido' }
       }
 
-      handleNewSale()
+      setSaleSuccess({
+        total: totals.total,
+        dianStatus: factusResult?.success ? 'success' : 'pending',
+        cufe: factusResult?.cufe,
+      })
+      setStep('complete')
 
-      // Toast del resultado de transmisión
-      if (factusResult?.success) {
+      // Solo se notifica cuando la transmisión falla. En éxito, el popup de venta
+      // completada es el único feedback (no se muestra alerta/toast adicional).
+      if (
+        factusResult &&
+        !factusResult.success &&
+        !/no hay proveedor|no configurado|configúrelo/i.test(factusResult.message ?? '')
+      ) {
         toast(
-          `✅ Venta completada y transmitida a DIAN.\n\nCUFE: ${factusResult.cufe}\n\nVerás esta factura con badge verde en /dashboard/invoices.`
-        )
-      } else if (/no hay proveedor|no configurado|configúrelo/i.test(factusResult?.message ?? '')) {
-        // Facturación electrónica no configurada (sin credenciales reales de Factus):
-        // la venta local SÍ quedó registrada; no exponemos detalles técnicos al cajero.
-        toast('✅ Factura realizada con éxito.')
-      } else {
-        toast(
-          `⚠ Venta completada. La factura local se creó, pero NO se transmitió a DIAN:\n\n${factusResult?.message ?? 'sin error'}\n\nVe a /dashboard/invoices y dale "TRANSMITIR DIAN" para reintentar.`,
+          `⚠ Venta completada. La factura local se creó, pero NO se transmitió a DIAN:\n\n${factusResult.message ?? 'sin error'}\n\nVe a /dashboard/invoices y dale "TRANSMITIR DIAN" para reintentar.`,
           'error'
         )
       }
@@ -280,6 +297,7 @@ export default function DashboardPOSPage() {
   function handleNewSale() {
     clearCart()
     setSaleId(null)
+    setSaleSuccess(null)
     setStep('shopping')
     setDiscount(0)
     setCustomer(EMPTY_CUSTOMER)
@@ -382,20 +400,37 @@ export default function DashboardPOSPage() {
 
   return (
     <div className="h-[calc(100vh-100px)] md:h-[calc(100vh-110px)] flex flex-col justify-between overflow-hidden gap-3">
-      {/* ALERTA CRÍTICA: TURNO VENCIDO DEL DÍA ANTERIOR */}
-      {overdueSessionInfo?.isOverdue && (
-        <div className="bg-danger-dim border border-alert text-red-soft px-4 py-2 rounded text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shrink-0 animate-pulse">
+      {/* BLOQUEO: SIN TURNO DE CAJA ABIERTO PARA LA FECHA DE HOY */}
+      {cashierStatus && !cashierStatus.hasOpenSession && (
+        <div className="bg-danger-dim border border-alert text-red-soft px-4 py-2 rounded text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2 font-bold">
             <AlertTriangle className="w-4 h-4 text-alert shrink-0" />
             <span>
-              ⚠️ ALERTA: TIENE UN TURNO DE CAJA PENDIENTE DE CIERRE DESDE HACE {overdueSessionInfo.daysOverdue} DÍA(S) ({overdueSessionInfo.openedAt}).
+              NO HAY UNA CAJA ABIERTA PARA HOY. ABRA UN TURNO O CIERRE EL TURNO PENDIENTE ANTES DE FACTURAR.
             </span>
           </div>
           <Link
             href="/dashboard/cash-closure"
             className="bg-alert text-white font-bold px-3 py-1 rounded hover:bg-white hover:text-black transition-colors text-[11px] shrink-0"
           >
-            REALIZAR CIERRE AHORA &gt;
+            IR A CAJA &gt;
+          </Link>
+        </div>
+      )}
+
+      {cashierStatus?.hasOpenSession && cashierStatus.pendingSessions.length > 0 && (
+        <div className="bg-warn-bg-3 border border-warn-bg-5 text-warning px-4 py-2 rounded text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2 font-bold">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>
+              EXISTE UN TURNO ANTERIOR PENDIENTE DE CIERRE. EL TURNO ACTUAL FUE ABIERTO CON AUTORIZACIÓN.
+            </span>
+          </div>
+          <Link
+            href="/dashboard/cash-closure"
+            className="bg-warning text-black font-bold px-3 py-1 rounded hover:bg-white transition-colors text-[11px] shrink-0"
+          >
+            REVISAR CIERRES &gt;
           </Link>
         </div>
       )}
@@ -423,6 +458,7 @@ export default function DashboardPOSPage() {
           discount={discount}
           onDiscountChange={setDiscount}
           loading={loading}
+          cashierBlocked={Boolean(cashierStatus && !cashierStatus.hasOpenSession)}
           onProceed={handleCreateSale}
           onRemoveItem={removeFromCart}
           onUpdateQuantity={updateQuantity}
@@ -458,6 +494,16 @@ export default function DashboardPOSPage() {
         />
       )}
 
+      <AnimatePresence>
+        {saleSuccess && (
+          <SaleSuccessOverlay
+            total={saleSuccess.total}
+            dianStatus={saleSuccess.dianStatus}
+            cufe={saleSuccess.cufe}
+          />
+        )}
+      </AnimatePresence>
+
       {/* MODAL: CONFIRMACIÓN DE MORA */}
       {confirmMoraOpen && customerCreditInfo && (
         <ConfirmMoraModal
@@ -482,13 +528,6 @@ export default function DashboardPOSPage() {
       )}
 
       {/* MODAL AUDITORÍA: NOTIFICACIÓN DE TURNO DE CAJA VENCIDO (DÍA ANTERIOR) */}
-      {showOverdueModal && overdueSessionInfo?.isOverdue && (
-        <OverdueSessionModal
-          open={showOverdueModal}
-          info={overdueSessionInfo}
-          onClose={() => setShowOverdueModal(false)}
-        />
-      )}
     </div>
   )
 }

@@ -4,6 +4,20 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================================
+   MOVIMIENTO - Tokens compartidos por CSS y componentes
+   ============================================================ */
+
+:root {
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 280ms;
+  --motion-success: 420ms;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
    TOKENS DE TEMA — POS DIAN (rediseño comercial)
    Tema CLARO por defecto; tema oscuro bajo .dark (next-themes).
    Los nombres de utilidades (bg-panel, text-fg, border-line…)
@@ -470,6 +484,23 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 /* ============================================================
+   MOVIMIENTO REDUCIDO
+   Las animaciones no son necesarias para operar el POS.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
    IMPRESIÓN (comprobantes de factura y reporte Z de cierre)
    Al hacer window.print() solo se imprime el área imprimible:
    se oculta el resto de la UI (fondo oscuro, botones, modales)
@@ -478,6 +509,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media print {
   @page {
     margin: 10mm;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
   }
 
   html,

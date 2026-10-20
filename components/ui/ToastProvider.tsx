@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { AlertTriangle, CheckCircle2, Info } from 'lucide-react'
 
 type ToastType = 'success' | 'error' | 'info'
@@ -42,13 +43,15 @@ const TYPE_ICON = {
   info: Info,
 } as const
 
+const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1]
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([])
   const nextId = useRef(1)
 
   const toast = useCallback((message: string, type: ToastType = 'success') => {
     const id = nextId.current++
-    setItems((prev) => [...prev, { id, message, type }])
+    setItems((prev) => [...prev.slice(-2), { id, message, type }])
     window.setTimeout(() => {
       setItems((prev) => prev.filter((t) => t.id !== id))
     }, 4000)
@@ -58,19 +61,26 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ toast }}>
       {children}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 no-print pointer-events-none">
-        {items.map((t) => {
-          const Icon = TYPE_ICON[t.type]
-          return (
-            <div
-              key={t.id}
-              role="status"
-              className={`pointer-events-auto max-w-md border p-3 rounded-[6px] flex items-center gap-3 animate-in fade-in duration-200 text-xs font-bold shadow-lg ${TYPE_STYLES[t.type]}`}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              <span className="min-w-0 break-words">{t.message}</span>
-            </div>
-          )
-        })}
+        <AnimatePresence initial={false}>
+          {items.map((t) => {
+            const Icon = TYPE_ICON[t.type]
+            return (
+              <motion.div
+                key={t.id}
+                role="status"
+                layout
+                initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                transition={{ duration: 0.2, ease: EASE_OUT }}
+                className={`pointer-events-auto max-w-md border p-3 rounded-[6px] flex items-center gap-3 text-xs font-bold shadow-lg ${TYPE_STYLES[t.type]}`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="min-w-0 break-words">{t.message}</span>
+              </motion.div>
+            )
+          })}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   )

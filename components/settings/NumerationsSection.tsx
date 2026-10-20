@@ -15,23 +15,33 @@ import {
   createNumeration,
   updateNumeration,
   deleteNumeration,
+  getFactusConfigForCurrentTenant,
+  fetchFactusNumberingRanges,
 } from '@/app/actions/pos-actions'
+import {
+  NUMERATION_DOCUMENT_TYPES,
+  NUMERATION_DOCUMENT_TYPE_LABELS,
+} from '@/lib/fiscal/numeration'
+import { formatInvoiceNumber } from '@/lib/utils/pos-utils'
 import type { NumerationItem } from './types'
-
-const documentTypeLabels: Record<string, string> = {
-  INVOICE: 'FACTURA ELECTRÓNICA DE VENTA',
-  POS_INVOICE: 'TIQUETE ELECTRÓNICO POS',
-  CREDIT_NOTE: 'NOTA CRÉDITO ELECTRÓNICA',
-  DEBIT_NOTE: 'NOTA DÉBITO ELECTRÓNICA',
-}
 
 const EMPTY_NUMERATION_FORM = {
   resolution: '',
-  prefix: '',
+  prefix: 'REC',
   startRange: 1,
-  endRange: 50000,
-  currentNumber: 1,
-  documentType: 'INVOICE',
+  endRange: 999999,
+  currentNumber: 0,
+  documentType: 'DOCUMENTO_EQUIVALENTE_POS',
+}
+
+type FactusRangeItem = {
+  id: number
+  prefix: string
+  from: number
+  to: number
+  current: number
+  status: string
+  document?: string
 }
 
 interface NumerationsSectionProps {
@@ -45,6 +55,9 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
 
   const [saving, setSaving] = useState(false)
   const [numerations, setNumerations] = useState<NumerationItem[]>([])
+  const [factusRangeId, setFactusRangeId] = useState(0)
+  const [factusRanges, setFactusRanges] = useState<FactusRangeItem[]>([])
+  const [factusRangesError, setFactusRangesError] = useState<string | null>(null)
   const [showNumerationForm, setShowNumerationForm] = useState(false)
   const [editingNumerationId, setEditingNumerationId] = useState<string | null>(null)
   const [numerationForm, setNumerationForm] = useState(EMPTY_NUMERATION_FORM)
@@ -54,10 +67,29 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
     onLoadingChange?.(true)
     ;(async () => {
       try {
-        const data = await getNumerations()
-        if (!cancelled) setNumerations(data as NumerationItem[])
+        const [data, factusConfig] = await Promise.all([
+          getNumerations(),
+          getFactusConfigForCurrentTenant(),
+        ])
+        if (!cancelled) {
+          setNumerations(data as NumerationItem[])
+          setFactusRangeId(Number(factusConfig?.factusNumberingRangeId ?? 0))
+        }
       } catch (err) {
         console.error('Error al cargar resoluciones:', err)
+      }
+
+      // El rango oficial de facturación electrónica es de solo lectura y lo
+      // administra Factus: si falla la consulta, no rompe el resto de la sección.
+      try {
+        const ranges = await fetchFactusNumberingRanges()
+        if (!cancelled) {
+          setFactusRanges(ranges)
+          setFactusRangesError(null)
+        }
+      } catch (err) {
+        console.error('Error al consultar rangos de Factus:', err)
+        if (!cancelled) setFactusRangesError('No se pudo consultar el rango oficial en Factus.')
       } finally {
         if (!cancelled) onLoadingChange?.(false)
       }
@@ -78,10 +110,7 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
 
   function openNewNumerationForm() {
     setEditingNumerationId(null)
-    setNumerationForm({
-      ...EMPTY_NUMERATION_FORM,
-      prefix: 'FE',
-    })
+    setNumerationForm({ ...EMPTY_NUMERATION_FORM })
     setShowNumerationForm(true)
   }
 
@@ -156,8 +185,8 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
 
   return (
     <SectionPanel
-      title="NUMERACIÓN Y RESOLUCIONES FISCALES DIAN"
-      subtitle="CONFIGURACIÓN DE RANGOS DE FACTURACIÓN Y DOCUMENTOS ELECTRÓNICOS"
+      title="NUMERACIÓN DE COMPROBANTES Y RESOLUCIONES"
+      subtitle="CONSECUTIVOS INTERNOS DEL POS · LA NUMERACIÓN ELECTRÓNICA LA ASIGNA FACTUS"
       action={
         <TacticalButton
           variant="primary"
@@ -170,6 +199,74 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
       }
     >
       <div className="space-y-6 font-mono text-xs">
+        <div className="bg-surface border border-line rounded p-3 text-[11px] text-fg-muted leading-relaxed">
+          La numeración oficial de las facturas electrónicas la asigna{' '}
+          <strong className="text-fg">FACTUS</strong>
+          {factusRangeId > 0 ? ` con el rango N° ${factusRangeId}` : ''} (se configura en{' '}
+          <strong className="text-fg">FACTURACIÓN ELECTRÓNICA</strong>). Esta sección controla los
+          consecutivos internos del POS y los documentos no electrónicos.
+        </div>
+
+        {/* Rango oficial de Factus (solo lectura) */}
+        {factusRangeId > 0 && (
+          <div className="bg-surface border border-line rounded p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <span className="text-[10px] font-bold uppercase text-fg-muted">
+                RANGO ELECTRÓNICO OFICIAL · FACTUS (SOLO LECTURA)
+              </span>
+              <span className="text-[10px] text-fg-muted">
+                RANGO CONFIGURADO: N° {factusRangeId}
+              </span>
+            </div>
+
+            {factusRangesError ? (
+              <p className="text-[11px] text-danger">{factusRangesError}</p>
+            ) : factusRanges.length === 0 ? (
+              <p className="text-[11px] text-fg-muted">
+                Sin datos del proveedor. Use “LISTAR RANGOS DEL PROVEEDOR” en FACTURACIÓN ELECTRÓNICA.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-[10px] font-mono">
+                  <thead>
+                    <tr className="text-fg-muted uppercase">
+                      <th className="text-left px-2 py-1">Documento</th>
+                      <th className="text-left px-2 py-1">Prefijo</th>
+                      <th className="text-left px-2 py-1">Rango</th>
+                      <th className="text-left px-2 py-1">Último asignado</th>
+                      <th className="text-left px-2 py-1">Próximo</th>
+                      <th className="text-left px-2 py-1">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line-soft">
+                    {factusRanges.map((r) => (
+                      <tr key={r.id} className={r.id === factusRangeId ? 'bg-accent/10' : ''}>
+                        <td className="px-2 py-1.5 text-fg-muted">{r.document || '—'}</td>
+                        <td className="px-2 py-1.5 text-fg font-bold">{r.prefix || '—'}</td>
+                        <td className="px-2 py-1.5 text-fg-muted">
+                          {r.from > 0 && r.to > 0 ? `${r.from} - ${r.to}` : '—'}
+                        </td>
+                        <td className="px-2 py-1.5 text-fg-muted">
+                          {r.current > 1 ? `${r.prefix}${r.current - 1}` : '— (ninguno)'}
+                        </td>
+                        <td className="px-2 py-1.5 text-accent font-bold">
+                          {r.current > 0 ? `${r.prefix}${r.current}` : '—'}
+                        </td>
+                        <td className="px-2 py-1.5 text-fg-muted">{r.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <p className="text-[10px] text-fg-muted mt-2">
+              Es el secuencial oficial que asigna Factus/DIAN: no se edita aquí y siempre manda sobre
+              el consecutivo local.
+            </p>
+          </div>
+        )}
+
         {/* Form Create / Edit Resolution */}
         {showNumerationForm && (
           <form
@@ -214,10 +311,11 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
                   onChange={(e) => setNumerationForm({ ...numerationForm, documentType: e.target.value })}
                   className="bg-raised text-fg px-4 py-2 outline-none font-normal"
                 >
-                  <option value="INVOICE">FACTURA ELECTRÓNICA DE VENTA (01)</option>
-                  <option value="POS_INVOICE">TIQUETE ELECTRÓNICO POS (05)</option>
-                  <option value="CREDIT_NOTE">NOTA CRÉDITO ELECTRÓNICA (91)</option>
-                  <option value="DEBIT_NOTE">NOTA DÉBITO ELECTRÓNICA (92)</option>
+                  {NUMERATION_DOCUMENT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {NUMERATION_DOCUMENT_TYPE_LABELS[type] ?? type}
+                    </option>
+                  ))}
                 </Select>
               </div>
 
@@ -237,17 +335,26 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
 
               <div className="space-y-1">
                 <Label>
-                  CONSECUTIVO / NÚMERO ACTUAL *
+                  ÚLTIMO CONSECUTIVO USADO *
                 </Label>
                 <Input
                   type="number"
                   required
-                  min="1"
-                  placeholder="Ej: 1"
+                  min="0"
+                  placeholder="0"
                   value={numerationForm.currentNumber}
-                  onChange={(e) => setNumerationForm({ ...numerationForm, currentNumber: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => {
+                    const parsed = parseInt(e.target.value, 10)
+                    setNumerationForm({
+                      ...numerationForm,
+                      currentNumber: Number.isNaN(parsed) ? 0 : parsed,
+                    })
+                  }}
                   className="bg-raised text-fg px-4 py-2 outline-none font-bold text-accent"
                 />
+                <span className="block text-[10px] text-fg-muted">
+                  Use 0 si aún no se ha emitido ninguno (el próximo será 1).
+                </span>
               </div>
 
               <div className="space-y-1">
@@ -304,8 +411,10 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
           <div className="space-y-4">
             {numerations.map((num) => {
               const totalRange = num.endRange - num.startRange + 1
-              const usedCount = Math.max(0, num.currentNumber - num.startRange)
+              const usedCount = Math.max(0, Math.min(totalRange, num.currentNumber - num.startRange + 1))
               const percentUsed = Math.min(100, Math.round((usedCount / totalRange) * 100))
+              const nextNumber = Math.min(num.currentNumber + 1, num.endRange)
+              const availableCount = Math.max(0, num.endRange - num.currentNumber)
 
               return (
                 <div
@@ -325,7 +434,7 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
                           </span>
                         </div>
                         <span className="text-[10px] text-fg-muted uppercase">
-                          {documentTypeLabels[num.documentType] || num.documentType}
+                          {NUMERATION_DOCUMENT_TYPE_LABELS[num.documentType] ?? num.documentType}
                         </span>
                       </div>
                     </div>
@@ -366,26 +475,32 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
                   </div>
 
                   {/* Progress Bar & Range Details */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                     <div className="bg-raised p-3 rounded border border-line-soft">
                       <span className="text-[10px] text-fg-muted block uppercase font-bold">RANGO HABILITADO</span>
                       <span className="text-fg font-bold mt-0.5 block">
-                        {num.prefix}{num.startRange} — {num.prefix}{num.endRange}
+                        {formatInvoiceNumber(num.prefix, num.startRange)} —{' '}
+                        {formatInvoiceNumber(num.prefix, num.endRange)}
                       </span>
                     </div>
 
                     <div className="bg-raised p-3 rounded border border-line-soft">
-                      <span className="text-[10px] text-fg-muted block uppercase font-bold">CONSECUTIVO ACTUAL</span>
+                      <span className="text-[10px] text-fg-muted block uppercase font-bold">ÚLTIMO USADO</span>
                       <span className="text-accent font-bold mt-0.5 block">
-                        {num.prefix}{num.currentNumber}
+                        {usedCount > 0 ? formatInvoiceNumber(num.prefix, num.currentNumber) : '— NINGUNO —'}
                       </span>
                     </div>
 
                     <div className="bg-raised p-3 rounded border border-line-soft">
-                      <span className="text-[10px] text-fg-muted block uppercase font-bold">DISPONIBILIDAD DE RANGO</span>
+                      <span className="text-[10px] text-fg-muted block uppercase font-bold">PRÓXIMO NÚMERO</span>
                       <span className="text-fg font-bold mt-0.5 block">
-                        {num.endRange - num.currentNumber + 1} FACTURAS
+                        {formatInvoiceNumber(num.prefix, nextNumber)}
                       </span>
+                    </div>
+
+                    <div className="bg-raised p-3 rounded border border-line-soft">
+                      <span className="text-[10px] text-fg-muted block uppercase font-bold">DISPONIBILIDAD</span>
+                      <span className="text-fg font-bold mt-0.5 block">{availableCount} NÚMEROS</span>
                     </div>
                   </div>
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { auth } from '@/lib/auth'
 
 // Rutas públicas que no requieren autenticación
 const PUBLIC_PATHS = [
@@ -17,62 +18,71 @@ const PROTECTED_PREFIXES = [
   '/api/reports',
 ]
 
-export function proxy(request: NextRequest) {
+function unauthorizedResponse() {
+  return new NextResponse(
+    JSON.stringify({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Acceso denegado: autenticación requerida',
+      },
+    }),
+    {
+      status: 401,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    }
+  )
+}
+
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // 1. Permitir archivos estáticos y rutas públicas de auth
   const isPublicPath = PUBLIC_PATHS.some(path => pathname.startsWith(path))
   if (isPublicPath) {
     return addSecurityHeaders(NextResponse.next())
   }
 
-  // 2. Verificar si la ruta actual es una ruta protegida
   const isProtectedPath = PROTECTED_PREFIXES.some(prefix => pathname.startsWith(prefix))
+  if (!isProtectedPath) {
+    return addSecurityHeaders(NextResponse.next())
+  }
 
-  if (isProtectedPath) {
-    // Extraer token de sesión de Better Auth o cookies/headers JWT
-    const sessionToken = 
-      request.cookies.get('better-auth.session_token')?.value ||
-      request.cookies.get('__Secure-better-auth.session_token')?.value ||
-      request.headers.get('authorization')?.replace('Bearer ', '')
+  const authorization = request.headers.get('authorization') || ''
+  const bearerToken = authorization.startsWith('Bearer ')
+    ? authorization.slice('Bearer '.length).trim()
+    : ''
 
-    // Si no hay sesión y es una petición de API -> HTTP 401 Unauthorized
-    if (!sessionToken && pathname.startsWith('/api/')) {
-      return new NextResponse(
-        JSON.stringify({
-          success: false,
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'Acceso denegado: Token de autenticación requerido',
-          },
-        }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
+  // La API pública se autentica con API key (prefijo.secreto). La validación
+  // real de hash, estado, expiración y rate limit se hace en el route handler.
+  if (pathname.startsWith('/api/v1') && bearerToken.includes('.')) {
+    return addSecurityHeaders(NextResponse.next())
+  }
 
-    // Si no hay sesión y es una ruta de interfaz (dashboard/pos) -> Redirigir a /login
-    if (!sessionToken && (pathname.startsWith('/dashboard') || pathname.startsWith('/pos'))) {
+  const hasSessionCookie =
+    Boolean(request.cookies.get('better-auth.session_token')?.value) ||
+    Boolean(request.cookies.get('__Secure-better-auth.session_token')?.value)
+
+  if (!hasSessionCookie) {
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/pos')) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
-      return NextResponse.redirect(loginUrl)
+      return addSecurityHeaders(NextResponse.redirect(loginUrl))
     }
+    return addSecurityHeaders(unauthorizedResponse())
+  }
 
-    // Validar encabezado X-Tenant-ID obligatorio para peticiones de API multi-tenant
-    if (pathname.startsWith('/api/v1')) {
-      const tenantId = request.headers.get('x-tenant-id') || request.cookies.get('tenant_id')?.value
-      if (!tenantId) {
-        return new NextResponse(
-          JSON.stringify({
-            success: false,
-            error: {
-              code: 'TENANT_HEADER_MISSING',
-              message: 'Acceso denegado: Se requiere el encabezado X-Tenant-ID o cookie tenant_id',
-            },
-          }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        )
+  try {
+    const session = await auth.api.getSession({ headers: request.headers })
+    if (!session?.user) {
+      if (pathname.startsWith('/dashboard') || pathname.startsWith('/pos')) {
+        const loginUrl = new URL('/login', request.url)
+        loginUrl.searchParams.set('redirect', pathname)
+        return addSecurityHeaders(NextResponse.redirect(loginUrl))
       }
+      return addSecurityHeaders(unauthorizedResponse())
     }
+  } catch {
+    return addSecurityHeaders(unauthorizedResponse())
   }
 
   return addSecurityHeaders(NextResponse.next())

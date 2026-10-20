@@ -18,6 +18,20 @@ export async function updateTenantFactusConfig(input: FactusConfigInput) {
   await requireRole(userId, ['ADMIN'])
   const tenantId = await getTenantId(userId)
 
+  // Sin rango de numeración no se puede emitir: se rechaza el guardado de una
+  // configuración "a medias" en lugar de fallar luego al cobrar una venta.
+  if (input.factusNumberingRangeId !== undefined) {
+    const rangeId = Number(input.factusNumberingRangeId)
+    if (!Number.isInteger(rangeId) || rangeId < 0) {
+      throw new Error('El ID del rango de numeración debe ser un entero positivo.')
+    }
+    if (rangeId === 0 && input.factusClientId) {
+      throw new Error(
+        'Seleccione un rango de numeración válido (botón "Listar rangos del proveedor") antes de guardar la configuración.'
+      )
+    }
+  }
+
   // Cifrado de campos sensibles + redacción para logs/auditoría: fuente única en
   // lib/invoicing/tenant-credentials.ts (Fase 4.25). buildFactusConfigUpdate aplica
   // las reglas "vacío = no cambiar" para los secretos.

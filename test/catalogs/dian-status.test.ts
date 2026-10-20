@@ -22,6 +22,7 @@ describe('mapFiscalStatus', () => {
 
   it('es case-insensitive sobre estados válidos', () => {
     expect(mapFiscalStatus('accepted')).toBe('ACCEPTED')
+    expect(mapFiscalStatus('VALIDATED')).toBe('ACCEPTED')
     expect(mapFiscalStatus('  Queued  ')).toBe('QUEUED')
   })
 
@@ -37,10 +38,10 @@ describe('mapFiscalStatus', () => {
     expect(mapFiscalStatus('QUEUE')).toBe('QUEUED')
   })
 
-  it('valores desconocidos o vacíos → ACCEPTED', () => {
-    expect(mapFiscalStatus('COSA_RARA')).toBe('ACCEPTED')
-    expect(mapFiscalStatus('')).toBe('ACCEPTED')
-    expect(mapFiscalStatus(undefined)).toBe('ACCEPTED')
-    expect(mapFiscalStatus(null as any)).toBe('ACCEPTED')
+  it('valores desconocidos o vacíos nunca se asumen aceptados', () => {
+    expect(mapFiscalStatus('COSA_RARA')).toBe('TECHNICAL_FAILURE')
+    expect(mapFiscalStatus('')).toBe('SUBMITTED')
+    expect(mapFiscalStatus(undefined)).toBe('SUBMITTED')
+    expect(mapFiscalStatus(null as any)).toBe('SUBMITTED')
   })
 })

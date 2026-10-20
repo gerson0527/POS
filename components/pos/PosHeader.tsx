@@ -25,7 +25,7 @@ export function PosHeader({ step }: PosHeaderProps) {
       <div className="flex items-center gap-3">
         <Link
           href="/dashboard/cashier"
-          className="flex items-center gap-1.5 bg-warn-bg-2 hover:bg-accent text-accent hover:text-white border border-accent/40 px-3 py-1.5 rounded text-xs font-bold transition-colors"
+          className="flex items-center gap-1.5 bg-warn-bg-2 hover:bg-accent text-accent hover:text-white border border-accent/40 px-3 py-1.5 rounded text-xs font-bold transition-[background-color,color,transform] duration-150 active:scale-[0.98]"
         >
           <Lock className="w-3.5 h-3.5" />
           <span>Cierre de caja</span>
@@ -33,9 +33,9 @@ export function PosHeader({ step }: PosHeaderProps) {
 
         <div className="hidden sm:flex items-center gap-2 font-sans text-xs">
           <div
-            className={`px-3 py-1 rounded border text-[11px] ${
+            className={`px-3 py-1 rounded border text-[11px] transition-[background-color,border-color,color,transform] duration-150 ${
               step === 'shopping'
-                ? 'bg-accent text-white border-accent font-bold'
+                ? 'bg-accent text-white border-accent font-bold scale-[1.02]'
                 : 'bg-surface text-fg-muted border-line'
             }`}
           >
@@ -43,9 +43,9 @@ export function PosHeader({ step }: PosHeaderProps) {
           </div>
           <span className="text-line-strong">&gt;</span>
           <div
-            className={`px-3 py-1 rounded border text-[11px] ${
+            className={`px-3 py-1 rounded border text-[11px] transition-[background-color,border-color,color,transform] duration-150 ${
               step === 'payment'
-                ? 'bg-accent text-white border-accent font-bold'
+                ? 'bg-accent text-white border-accent font-bold scale-[1.02]'
                 : 'bg-surface text-fg-muted border-line'
             }`}
           >

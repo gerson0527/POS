@@ -19,8 +19,8 @@ export interface RateLimitResult {
 
 /**
  * Incrementa el contador de `key` y evalúa si la petición está permitida.
- * Si la consulta falla, se permite (fail-open) para no tumbar el endpoint por un
- * error transitorio de BD; el fallo se registra.
+ * Si la consulta falla, se DENIEGA (fail-closed): un fallo de BD no debe
+ * desactivar el límite de peticiones de una API key.
  */
 export async function checkRateLimit(
   key: string,
@@ -51,7 +51,7 @@ export async function checkRateLimit(
     const count = Number(first?.count ?? 1)
     return { allowed: count <= limit, count, limit, retryAfterSeconds }
   } catch (err) {
-    console.error('[rate-limit] error consultando el contador; se permite la petición:', err)
-    return { allowed: true, count: 0, limit, retryAfterSeconds: 0 }
+    console.error('[rate-limit] error consultando el contador; se deniega la petición:', err)
+    return { allowed: false, count: limit, limit, retryAfterSeconds: 60 }
   }
 }

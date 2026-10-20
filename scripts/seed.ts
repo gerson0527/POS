@@ -322,30 +322,19 @@ export async function runSeed() {
   }
   console.log(`✅ ${stockCount} Registros de inventario creados (100 productos x 3 sucursales)`)
 
-  // 7. Numeración Fiscal DIAN
+  // 7. Numeración de comprobantes internos del POS.
+  // La numeración de facturas electrónicas la administra Factus (factusNumberingRangeId);
+  // aquí solo vive el consecutivo interno de tickets/comprobantes.
   const resolutionsData = [
     {
-      id: 'num_pos_001',
+      id: 'num_internal_rec_001',
       tenantId,
-      resolution: '18764000001',
-      prefix: 'SETP',
+      resolution: 'VENTA-INTERNA-POS',
+      prefix: 'REC',
       startRange: 1,
-      endRange: 500000,
-      currentNumber: 105,
+      endRange: 999999,
+      currentNumber: 0,
       documentType: 'DOCUMENTO_EQUIVALENTE_POS',
-      status: 'ACTIVE',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 'num_fe_001',
-      tenantId,
-      resolution: '18764000002',
-      prefix: 'SETP',
-      startRange: 1,
-      endRange: 100000,
-      currentNumber: 24,
-      documentType: 'FACTURA_ELECTRONICA_VENTA',
       status: 'ACTIVE',
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -358,7 +347,7 @@ export async function runSeed() {
       await db.insert(schema.numeration).values(num)
     }
   }
-  console.log('✅ 2 Resoluciones fiscales DIAN activas')
+  console.log('✅ Numeración interna del POS (REC) activa')
 
   console.log('🎉 SEED COMPLETO COMPLETADO CON ÉXITO.')
   console.log('----------------------------------------------------')

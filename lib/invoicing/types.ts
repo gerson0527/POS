@@ -100,6 +100,8 @@ export interface InvoicePayload {
   send_email?: boolean
   /** Observaciones de la factura. */
   observation?: string
+  /** Ajuste de redondeo de caja (Factus: ±500.00). Se suma al total de ítems. */
+  cash_rounding_amount?: number | string
   /** Detalle de pagos. */
   payment_details: InvoicePaymentDetailPayload[]
   /** Datos del cliente. */
@@ -154,12 +156,25 @@ export interface InvoiceProviderConfig {
 export interface InvoiceProvider {
   readonly providerId: string
   readonly displayName: string
+  /** Rango de numeración resuelto (.env + override del tenant). */
+  readonly numberingRangeId: number
   /** Valida credenciales/dependencias sin emitir factura real. */
   testConnection(): Promise<{ ok: boolean; message: string }>
   /** Emite la factura electrónica según el payload. */
   sendInvoice(payload: InvoicePayload): Promise<InvoiceResult>
   /** Lista los rangos de numeración disponibles (útil durante la configuración). */
-  listNumberingRanges(): Promise<Array<{ id: number; prefix: string; from: number; to: number; current: number; status: string }>>
+  listNumberingRanges(): Promise<
+    Array<{
+      id: number
+      prefix: string
+      from: number
+      to: number
+      /** Siguiente número del rango (último asignado = current - 1). */
+      current: number
+      status: string
+      document?: string
+    }>
+  >
 }
 
 // Errores tipados para manejo uniforme

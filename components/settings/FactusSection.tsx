@@ -52,7 +52,9 @@ export function FactusSection({ refreshKey = 0, onLoadingChange }: FactusSection
     environment: null,
   })
   const [factusTestResult, setFactusTestResult] = useState<{ ok: boolean; message: string } | null>(null)
-  const [factusRanges, setFactusRanges] = useState<Array<{ id: number; prefix: string; from: number; to: number; current: number; status: string }>>([])
+  const [factusRanges, setFactusRanges] = useState<
+    Array<{ id: number; prefix: string; from: number; to: number; current: number; status: string; document?: string }>
+  >([])
   const [factusLoading, setFactusLoading] = useState(false)
 
   async function loadFactusConfigData() {
@@ -302,18 +304,32 @@ export function FactusSection({ refreshKey = 0, onLoadingChange }: FactusSection
                       ),
                     },
                     {
+                      key: 'document',
+                      header: 'Documento',
+                      thClassName: 'px-2! py-1.5!',
+                      cellClassName: 'px-2! py-1.5! text-fg-muted',
+                      render: (r) => r.document || '—',
+                    },
+                    {
                       key: 'prefix',
                       header: 'Prefijo',
                       thClassName: 'px-2! py-1.5!',
                       cellClassName: 'px-2! py-1.5! text-fg font-mono',
-                      render: (r) => r.prefix,
+                      render: (r) => r.prefix || '—',
                     },
                     {
                       key: 'rango',
                       header: 'Rango',
                       thClassName: 'px-2! py-1.5!',
                       cellClassName: 'px-2! py-1.5! text-fg-muted',
-                      render: (r) => `${r.from} - ${r.to}`,
+                      render: (r) => (r.from > 0 && r.to > 0 ? `${r.from} - ${r.to}` : '—'),
+                    },
+                    {
+                      key: 'proximo',
+                      header: 'Próximo Nº',
+                      thClassName: 'px-2! py-1.5!',
+                      cellClassName: 'px-2! py-1.5! text-accent font-bold',
+                      render: (r) => (r.current > 0 ? r.current.toLocaleString('es-CO') : '—'),
                     },
                     {
                       key: 'status',

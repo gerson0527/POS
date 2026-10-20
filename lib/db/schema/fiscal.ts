@@ -6,7 +6,9 @@ import {
   decimal,
   jsonb,
   index,
-  unique } from 'drizzle-orm/pg-core'
+  unique,
+  uniqueIndex } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 // NUMERATION: Numeración fiscal DIAN
 export const numeration = pgTable(
@@ -19,7 +21,7 @@ export const numeration = pgTable(
     startRange: integer('startRange').notNull(),
     endRange: integer('endRange').notNull(),
     currentNumber: integer('currentNumber').notNull(),
-    documentType: text('documentType').notNull(), // INVOICE, CREDIT_NOTE, DEBIT_NOTE
+    documentType: text('documentType').notNull(), // DOCUMENTO_EQUIVALENTE_POS, FACTURA_ELECTRONICA_VENTA, NOTA_CREDITO, NOTA_DEBITO, NOTA_AJUSTE
     status: text('status').notNull().default('ACTIVE'),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt').notNull().defaultNow(),
@@ -63,5 +65,11 @@ export const fiscalDocument = pgTable(
   (table) => ({
     tenantIdx: index('fiscal_document_tenant_idx').on(table.tenantId),
     saleIdx: index('fiscal_document_sale_idx').on(table.saleId),
+    fullNumberUnique: uniqueIndex('fiscal_document_fullnumber_unique')
+      .on(table.tenantId, table.prefix, table.fullNumber)
+      .where(sql`${table.fullNumber} is not null`),
+    saleInvoiceUnique: uniqueIndex('fiscal_document_sale_invoice_unique')
+      .on(table.saleId)
+      .where(sql`${table.documentType} = 'FACTURA_ELECTRONICA_VENTA'`),
   })
 )

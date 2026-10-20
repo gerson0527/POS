@@ -53,6 +53,7 @@ export const customerCreditTransaction = pgTable(
     customerId: text('customerId').notNull(),
     type: text('type').notNull(), // CHARGE (cargo), PAYMENT (abono)
     amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+    paidAmount: decimal('paidAmount', { precision: 12, scale: 2 }).notNull().default('0'),
     balanceAfter: decimal('balanceAfter', { precision: 12, scale: 2 }).notNull(),
     saleId: text('saleId'),
     note: text('note'),

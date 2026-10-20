@@ -140,6 +140,14 @@ export default function DashboardLayout({
           </button>
         </div>
       </div>
+      {isMobileOpen && (
+        <button
+          type="button"
+          aria-label="Cerrar menú de navegación"
+          onClick={() => setIsMobileOpen(false)}
+          className="fixed inset-0 z-30 bg-black/40 md:hidden animate-in fade-in duration-150"
+        />
+      )}
       {/* Desktop Fixed Sidebar (approx 240px / w-60) */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-60 bg-sidebar border-r border-line flex flex-col justify-between transition-transform duration-200 ease-in-out md:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
@@ -185,7 +193,7 @@ export default function DashboardLayout({
                   key={item.href}
                   href={item.href}
                   onClick={() => setIsMobileOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[4px] text-xs font-medium transition-all duration-150 relative ${isActive
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[4px] text-xs font-medium transition-[background-color,color,box-shadow,transform] duration-150 relative ${isActive
                       ? 'bg-accent text-white shadow-md font-semibold'
                       : 'text-fg-mid hover:bg-hover hover:text-fg'
                     }`}

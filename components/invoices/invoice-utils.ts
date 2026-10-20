@@ -11,6 +11,40 @@ export function cufeLines(cufe?: string | null): string[] {
   return cufe.toUpperCase().match(/.{1,32}/g) || [cufe.toUpperCase()]
 }
 
+const FISCAL_STATUS_LABELS: Record<string, string> = {
+  PENDING_GENERATION: 'PENDIENTE',
+  NUMBER_RESERVED: 'NUMERACIÓN RESERVADA',
+  GENERATED: 'GENERADA',
+  SIGNED: 'FIRMADA',
+  QUEUED: 'EN COLA',
+  SUBMITTED: 'TRANSMITIDA',
+  ACCEPTED: 'ACEPTADA',
+  REJECTED: 'RECHAZADA',
+  RETRY_SCHEDULED: 'REINTENTO PROGRAMADO',
+  CONTINGENCY_ISSUED: 'CONTINGENCIA',
+  TECHNICAL_FAILURE: 'FALLA TÉCNICA',
+}
+
+export function fiscalUiStatus(inv: any) {
+  const status = String(
+    inv?.fiscalDocument?.status || inv?.dianStatus || inv?.status || ''
+  ).toUpperCase()
+  const cufe = inv?.cufe || inv?.fiscalDocument?.uniqueCode || null
+  const isAccepted = status === 'ACCEPTED'
+  const isRejected = status === 'REJECTED' || status === 'TECHNICAL_FAILURE'
+  const isTransmitted = Boolean(cufe) && !isRejected
+  const canTransmit = !cufe && !isRejected && status !== 'QUEUED' && status !== 'SUBMITTED'
+  return {
+    status,
+    label: FISCAL_STATUS_LABELS[status] || (cufe ? 'TRANSMITIDA' : 'PENDIENTE'),
+    cufe,
+    isAccepted,
+    isRejected,
+    isTransmitted,
+    canTransmit,
+  }
+}
+
 export function invoiceFlags(inv: any) {
   const ticketFormatted = inv.ticketNumber
     ? `FACT-#${String(inv.ticketNumber).padStart(4, '0')}`
@@ -20,6 +54,13 @@ export function invoiceFlags(inv: any) {
     : 0
   const isMixedPayment = inv.paymentMethod?.includes('MIXTO') || (inv.payments && inv.payments.length > 1)
   const isWithoutStock = inv.notes?.includes('SIN STOCK') || inv.notes?.includes('WITHOUT_STOCK')
-  const isSent = !!inv.isElectronicSent
-  return { ticketFormatted, totalItemsCount, isMixedPayment, isWithoutStock, isSent }
+  const fiscal = fiscalUiStatus(inv)
+  return {
+    ticketFormatted,
+    totalItemsCount,
+    isMixedPayment,
+    isWithoutStock,
+    isSent: fiscal.isTransmitted || fiscal.isAccepted,
+    fiscal,
+  }
 }

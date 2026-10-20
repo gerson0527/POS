@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Banknote, CheckCircle2, CreditCard, Layers, Plus, Smartphone, Wallet, X } from 'lucide-react'
+import { useAutoAnimate } from '@formkit/auto-animate/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { Modal } from '@/components/ui/Modal'
 import { SectionPanel } from '@/components/tactical/SectionPanel'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
@@ -43,6 +45,8 @@ const REF_PLACEHOLDER: Record<string, string> = {
   [PaymentMethod.TRANSFER]: 'Ej: Consecutivo transferencia',
 }
 
+const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1]
+
 function methodLabel(method: PaymentMethod): string {
   if (method === PaymentMethod.STORE_CREDIT) return 'CRÉDITO (CUENTA CORRIENTE)'
   return BASE_METHODS.find((m) => m.method === method)?.label ?? method
@@ -75,6 +79,10 @@ export function PaymentModal({ open, saleId, total, loading, customerCredit, onB
   const [singleReference, setSingleReference] = useState('')
   const [lines, setLines] = useState<SplitLine[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [splitListRef] = useAutoAnimate<HTMLDivElement>({
+    duration: 180,
+    easing: 'ease-out',
+  })
   const nextIdRef = useRef(1)
 
   // Cupo disponible del cliente (infinito si el crédito no tiene límite definido).
@@ -243,7 +251,7 @@ export function PaymentModal({ open, saleId, total, loading, customerCredit, onB
                       if (!methodNeedsReference(item.method)) setSingleReference('')
                       setError(null)
                     }}
-                    className={`p-3 rounded border font-mono text-xs font-bold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                    className={`p-3 rounded border font-mono text-xs font-bold flex flex-col items-center gap-1.5 transition-[background-color,border-color,color,transform,box-shadow] duration-150 cursor-pointer active:scale-95 ${
                       isSelected
                         ? 'bg-accent text-white border-accent shadow-lg scale-[1.02]'
                         : 'bg-surface text-fg-muted border-line hover:border-line-strong hover:text-fg'
@@ -256,7 +264,7 @@ export function PaymentModal({ open, saleId, total, loading, customerCredit, onB
               })}
             </div>
           ) : (
-            <div className="space-y-2">
+            <div ref={splitListRef} className="space-y-2">
               {lines.map((line, idx) => (
                 <div
                   key={line.id}
@@ -286,7 +294,7 @@ export function PaymentModal({ open, saleId, total, loading, customerCredit, onB
                           type="button"
                           title={m.label}
                           onClick={() => setLineMethod(line.id, m.method)}
-                          className={`w-9 h-9 rounded border font-mono text-[10px] font-bold transition-all cursor-pointer ${
+                          className={`w-9 h-9 rounded border font-mono text-[10px] font-bold transition-[background-color,border-color,color,transform] duration-150 cursor-pointer active:scale-90 ${
                             line.method === m.method
                               ? 'bg-accent text-white border-accent'
                               : 'bg-veil text-fg-muted border-line hover:border-line-strong hover:text-fg'
@@ -400,11 +408,24 @@ export function PaymentModal({ open, saleId, total, loading, customerCredit, onB
           </div>
         </div>
 
-        {error && (
-          <p className="font-mono text-[11px] text-danger bg-danger-bg border border-danger-line rounded px-3 py-2">
-            {error}
-          </p>
-        )}
+        <AnimatePresence initial={false}>
+          {error && (
+            <motion.p
+              key={error}
+              initial={{ opacity: 0, y: -4, x: 0 }}
+              animate={{ opacity: 1, y: 0, x: [0, -3, 3, -2, 2, 0] }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{
+                opacity: { duration: 0.16, ease: EASE_OUT },
+                y: { duration: 0.16, ease: EASE_OUT },
+                x: { duration: 0.18, ease: 'easeInOut' },
+              }}
+              className="font-mono text-[11px] text-danger bg-danger-bg border border-danger-line rounded px-3 py-2"
+            >
+              {error}
+            </motion.p>
+          )}
+        </AnimatePresence>
 
         {/* Actions */}
         <div className="space-y-2.5 pt-3 border-t border-line-soft">

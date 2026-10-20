@@ -33,7 +33,7 @@ export function CreateUserModal({ open, onClose, onSubmitted }: CreateUserModalP
       await createUserAction({
         name: userForm.name,
         email: userForm.email,
-        password: userForm.password || '12345678',
+        password: userForm.password,
         role: userForm.role,
       })
       toast(`¡USUARIO "${userForm.name.toUpperCase()}" REGISTRADO CORRECTAMENTE!`)
@@ -82,11 +82,13 @@ export function CreateUserModal({ open, onClose, onSubmitted }: CreateUserModalP
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>
-              Contraseña
+              Contraseña *
             </Label>
             <Input
               type="password"
-              placeholder="Auto o 12345678"
+              required
+              minLength={12}
+              placeholder="Mínimo 12 caracteres"
               value={userForm.password}
               onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
             />

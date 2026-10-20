@@ -3,15 +3,29 @@
 import { db } from '@/lib/db'
 import { apiKey } from '@/lib/db/schema'
 import crypto from 'crypto'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { checkRateLimit } from '@/lib/security/rate-limit'
 import { rateLimitedError } from '@/lib/errors'
+
+function parseRateWindow(value: string | null | undefined): number {
+  const raw = (value || '1h').trim().toLowerCase()
+  const match = /^(\d+)\s*([smhd])$/.exec(raw)
+  if (!match) return 60 * 60 * 1000
+  const amount = Number(match[1])
+  const unit = match[2]
+  const multiplier =
+    unit === 's' ? 1000 : unit === 'm' ? 60_000 : unit === 'd' ? 86_400_000 : 3_600_000
+  return Math.max(1000, amount * multiplier)
+}
 
 export async function validateAPIKey(
   key: string
 ): Promise<{ valid: boolean; tenantId?: string; scopes?: string[] }> {
-  const [prefix, secret] = key.split('.')
-  if (!prefix || !secret) {
+  const separator = key.indexOf('.')
+  if (separator <= 0) return { valid: false }
+  const prefix = key.slice(0, separator)
+  const secret = key.slice(separator + 1)
+  if (!prefix || secret.length < 16) {
     return { valid: false }
   }
 
@@ -20,7 +34,7 @@ export async function validateAPIKey(
   const record = await db
     .select()
     .from(apiKey)
-    .where(eq(apiKey.keyHash, keyHash))
+    .where(and(eq(apiKey.keyHash, keyHash), eq(apiKey.keyPrefix, prefix)))
     .limit(1)
 
   if (!record.length) {
@@ -39,10 +53,10 @@ export async function validateAPIKey(
     return { valid: false }
   }
 
-  // Rate limit persistente (H-4): contador en BD (sobrevive a serverless), no en memoria.
-  const windowMs = 60 * 60 * 1000 // 1 hora
+  // Rate limit persistente (H-4), con la ventana configurada en la clave.
+  const windowMs = parseRateWindow(key_record.rateLimitWindow)
   const rate = await checkRateLimit(
-    `apikey:${key_record.id}`,
+    `apikey:${key_record.id}:${windowMs}`,
     key_record.rateLimit || 1000,
     windowMs
   )

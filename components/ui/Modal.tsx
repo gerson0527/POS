@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, type ReactNode } from 'react'
+import { motion } from 'motion/react'
 import { X } from 'lucide-react'
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
@@ -23,6 +24,8 @@ const TONE_TEXT = {
   default: 'text-accent',
   danger: 'text-alert',
 } as const
+
+const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
 export interface ModalProps {
   open: boolean
@@ -117,13 +120,22 @@ export function Modal({
       }`
 
   return (
-    <div
+    <motion.div
       className={`fixed inset-0 bg-black/80 backdrop-blur-sm ${zIndexClass} flex items-center justify-center p-4 no-print`}
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15, ease: 'easeOut' }}
     >
-      <div ref={panelRef} className={panelClass}>
+      <motion.div
+        ref={panelRef}
+        className={panelClass}
+        initial={{ opacity: 0, scale: 0.97, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.18, ease: EASE_OUT }}
+      >
         {(title || icon || actions) && (
           <div className="flex items-center justify-between border-b border-line-dim pb-3">
             <div className={`flex items-center gap-2 font-bold text-sm ${TONE_TEXT[tone]}`}>
@@ -144,7 +156,7 @@ export function Modal({
           </div>
         )}
         {children}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

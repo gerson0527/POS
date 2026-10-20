@@ -3,10 +3,10 @@
 //
 // Fase 4.25 (§7.1): separado en capas testables —
 //   loadInvoiceContext()   → única parte con acceso a BD (impura)
-//   buildCustomerPayload / buildItems / buildPayments / computeExactInvoiceTotal → puras y exportadas
+//   buildCustomerPayload / buildItems / buildPayments / computeExactInvoiceTotal / computeCashRoundingAmount → puras y exportadas
 // Los mapeos vienen de factus-mappers.ts (rompe la dependencia invertida sobre FactusProvider).
 
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
 import {
@@ -21,7 +21,6 @@ import { mapDocumentType, mapTax, toMoneyString, toPaymentDetail } from './factu
 const DEFAULT_UMA_CODE = '94'
 const DEFAULT_STANDARD_CODE = '999'
 const DEFAULT_SCHEME_ID = '0'
-const DEFAULT_NUMERATION_RANGE_ID = 0
 
 interface BuildContext {
   tenant: {
@@ -79,7 +78,10 @@ export function buildCustomerPayload(
  *  Cada fila de `itemsRows` tiene la forma `{ item: saleItem, product: product|null }`
  *  (por el .select({ item, product }) con leftJoin). Los campos del sale_item
  *  viven en `it.item.*`, NO directamente en `it`. */
-export function buildItems(items: any[]): InvoiceItemPayload[] {
+export function buildItems(items: any[], discountPercentage = 0): InvoiceItemPayload[] {
+  const discountRate = Number.isFinite(discountPercentage)
+    ? Math.min(100, Math.max(0, discountPercentage))
+    : 0
   return items.map((row) => {
     const it = row.item ?? {}
     const product = row.product ?? {}
@@ -97,7 +99,7 @@ export function buildItems(items: any[]): InvoiceItemPayload[] {
       name: product.name || it.productName || 'Producto POS',
       quantity: Number(it.quantity),
       price: Number(it.unitPrice),
-      discount_rate: 0,
+      discount_rate: discountRate,
       unit_measure_code: product.unitMeasureCode || DEFAULT_UMA_CODE,
       standard_code: product.standardCode || DEFAULT_STANDARD_CODE,
       scheme_id: product.schemeId || DEFAULT_SCHEME_ID,
@@ -107,7 +109,7 @@ export function buildItems(items: any[]): InvoiceItemPayload[] {
 }
 
 /** Construye los payment_details a partir de los payments.
- *  `invoiceTotal` es el total EXACTO de la factura (suma de ítems + IVA).
+ *  `invoiceTotal` es el total objetivo de la factura (exacto + redondeo de caja).
  *  DIAN exige que la suma de payment_details == total de factura; el POS redondea
  *  el cobro en efectivo a la centena, así que reconciliamos aquí el monto. */
 export function buildPayments(payments: any[], invoiceTotal: number): InvoicePaymentDetailPayload[] {
@@ -116,7 +118,7 @@ export function buildPayments(payments: any[], invoiceTotal: number): InvoicePay
   }
   if (payments.length === 1) {
     const p = payments[0]
-    // Un solo pago: el monto debe cuadrar con el total exacto de la factura.
+    // Un solo pago: el monto debe cuadrar con el total objetivo de la factura.
     const amount = invoiceTotal > 0 ? invoiceTotal : Number(p.amount)
     return [toPaymentDetail(p.method, amount, p.reference)]
   }
@@ -135,11 +137,13 @@ export function buildPayments(payments: any[], invoiceTotal: number): InvoicePay
 
 /**
  * Total EXACTO de la factura según DIAN: suma de (cantidad × precio + IVA) por ítem.
- * El POS redondea sale.total a la centena ($100) como convenio de caja, pero la
- * factura electrónica debe cuadrar exactamente con la suma de los ítems; si no,
- * Factus rechaza con 422 ("La suma de detalles de pago no es igual al total").
+ * El POS redondea sale.total a la centena ($100) como convenio de caja; esa
+ * diferencia se envía a Factus como `cash_rounding_amount` (ver
+ * computeCashRoundingAmount) para que el total electrónico coincida con el cobro.
  */
-export function computeExactInvoiceTotal(itemsRows: any[]): number {
+export function computeExactInvoiceTotal(itemsRows: any[], discountPercentage = 0): number {
+  const discountFactor =
+    1 - Math.min(100, Math.max(0, Number(discountPercentage) || 0)) / 100
   const itemsForTotal = itemsRows.map((row) => ({
     quantity: Number(row.item.quantity ?? 0),
     unitPrice: Number(row.item.unitPrice ?? 0),
@@ -149,22 +153,53 @@ export function computeExactInvoiceTotal(itemsRows: any[]): number {
     itemsForTotal
       .reduce((sum, it) => {
         const lineSubtotal = it.quantity * it.unitPrice
-        return sum + lineSubtotal * (1 + it.ivaRate / 100)
+        return sum + lineSubtotal * (1 + it.ivaRate / 100) * discountFactor
       }, 0)
       .toFixed(2)
   )
 }
 
-/** Carga venta + tenant + ítems + pagos desde la BD (única parte impura). */
-export async function loadInvoiceContext(saleId: string): Promise<{
+/**
+ * Ajuste de redondeo de caja para Factus (`cash_rounding_amount`).
+ *
+ * Factus calcula el total con los ítems y le suma este ajuste; el resultado debe
+ * coincidir con la suma de `payment_details` (el cobro real del POS). Como el POS
+ * redondea a la centena, la diferencia es como máximo ±50; si es mayor, no es un
+ * redondeo sino una inconsistencia (p. ej. descuentos no reflejados en ítems) y
+ * se devuelve 0 para no enviar un ajuste inválido.
+ */
+export function computeCashRoundingAmount(exactInvoiceTotal: number, posTotal: number): number {
+  const diff = Number((posTotal - exactInvoiceTotal).toFixed(2))
+  if (!Number.isFinite(diff) || Math.abs(diff) > 50) return 0
+  return diff
+}
+
+/**
+ * Carga venta + tenant + ítems + pagos desde la BD (única parte impura).
+ * `numberingRangeId` permite usar el rango ya resuelto por el provider
+ * (.env + override del tenant); si no se pasa, se lee el del tenant.
+ */
+export async function loadInvoiceContext(
+  saleId: string,
+  numberingRangeId?: number,
+  tenantId?: string
+): Promise<{
   sale: any
   tenant: any
   ctx: BuildContext
   itemsRows: any[]
   paymentsRows: any[]
 }> {
-  // Cargar venta
-  const saleRows = await db.select().from(schema.sale).where(eq(schema.sale.id, saleId)).limit(1)
+  // Cargar venta (si se conoce el tenant, se exige que coincida)
+  const saleRows = await db
+    .select()
+    .from(schema.sale)
+    .where(
+      tenantId
+        ? and(eq(schema.sale.id, saleId), eq(schema.sale.tenantId, tenantId))
+        : eq(schema.sale.id, saleId)
+    )
+    .limit(1)
   const sale = saleRows[0]
   if (!sale) throw new Error('Venta no encontrada al construir la factura')
 
@@ -175,7 +210,7 @@ export async function loadInvoiceContext(saleId: string): Promise<{
     tenant: {
       id: tenant.id,
       nit: tenant.nit || '',
-      numberingRangeId: Number(tenant.factusNumberingRangeId ?? DEFAULT_NUMERATION_RANGE_ID),
+      numberingRangeId: Number(numberingRangeId ?? tenant.factusNumberingRangeId ?? 0),
       numberingPrefix: 'FACT',
       municipalityCode: '11001',
       tributeCode: 'ZZ',
@@ -189,7 +224,13 @@ export async function loadInvoiceContext(saleId: string): Promise<{
       product: schema.product,
     })
     .from(schema.saleItem)
-    .leftJoin(schema.product, eq(schema.saleItem.productId, schema.product.id))
+    .leftJoin(
+      schema.product,
+      and(
+        eq(schema.saleItem.productId, schema.product.id),
+        eq(schema.product.tenantId, sale.tenantId)
+      )
+    )
     .where(eq(schema.saleItem.saleId, saleId))
 
   // Cargar pagos
@@ -201,14 +242,45 @@ export async function loadInvoiceContext(saleId: string): Promise<{
   return { sale, tenant, ctx, itemsRows, paymentsRows }
 }
 
+/**
+ * reference_code ÚNICO y estable por venta para Factus.
+ *
+ * Factus garantiza idempotencia por `reference_code`: si se reenvía uno ya
+ * procesado, devuelve la factura existente (no crea una nueva). Por eso NO se
+ * puede derivar del ticketNumber (se repite tras resets/seed y en el sandbox
+ * compartido colisiona con facturas de ejemplo, devolviendo otro cliente/ítems).
+ * El id de la venta es único y estable entre reintentos.
+ */
+export function buildInvoiceReference(saleId: string): string {
+  return `FACT-${saleId}`
+}
+
 /** Construye el InvoicePayload completo. */
 export async function buildInvoicePayload(input: {
   saleId: string
+  tenantId?: string
   operationType?: string
+  numberingRangeId?: number
 }): Promise<InvoicePayload> {
-  const { sale, ctx, itemsRows, paymentsRows } = await loadInvoiceContext(input.saleId)
+  const { sale, ctx, itemsRows, paymentsRows } = await loadInvoiceContext(
+    input.saleId,
+    input.numberingRangeId,
+    input.tenantId
+  )
 
-  const exactInvoiceTotal = computeExactInvoiceTotal(itemsRows)
+  if (!Number.isInteger(ctx.tenant.numberingRangeId) || ctx.tenant.numberingRangeId <= 0) {
+    throw new Error(
+      'No hay rango de numeración electrónica configurado. Configúrelo en /dashboard/settings → Facturación electrónica.'
+    )
+  }
+
+  const discountPercentage = Number(sale.discountPercentage ?? 0)
+  const exactInvoiceTotal = computeExactInvoiceTotal(itemsRows, discountPercentage)
+  const cashRoundingAmount = computeCashRoundingAmount(
+    exactInvoiceTotal,
+    Number(sale.total ?? exactInvoiceTotal)
+  )
+  const invoiceTotal = Number((exactInvoiceTotal + cashRoundingAmount).toFixed(2))
 
   // Cargar cliente (puede venir del sale o ser "consumidor final")
   const customer = sale.customerDocNumber
@@ -229,12 +301,13 @@ export async function buildInvoicePayload(input: {
 
   return {
     numbering_range_id: ctx.tenant.numberingRangeId,
-    reference_code: `FACT-${sale.ticketNumber ?? Date.now()}`,
+    reference_code: buildInvoiceReference(sale.id),
     document: '01',
     operation_type: input.operationType ?? '10',
     send_email: Boolean(sale.customerEmail),
     observation: 'Factura emitida automáticamente desde POS Retail',
-    payment_details: buildPayments(paymentsRows, exactInvoiceTotal || Number(sale.total ?? 0)),
+    cash_rounding_amount: cashRoundingAmount,
+    payment_details: buildPayments(paymentsRows, invoiceTotal),
     customer: customer
       ? buildCustomerPayload(customer, ctx.tenant.municipalityCode || '11001', ctx.tenant.tributeCode || 'ZZ')
       : buildCustomerPayload(
@@ -250,6 +323,6 @@ export async function buildInvoicePayload(input: {
           '11001',
           'ZZ'
         ),
-    items: buildItems(itemsRows),
+    items: buildItems(itemsRows, discountPercentage),
   } as InvoicePayload
 }

@@ -34,6 +34,10 @@ export class FactusProvider implements InvoiceProvider {
 
   constructor(private readonly config: InvoiceProviderConfig) {}
 
+  get numberingRangeId(): number {
+    return this.config.numberingRangeId
+  }
+
   /** POST /oauth/token — password grant (con cache). */
   private authenticate(): Promise<string> {
     return requestFactusToken(this.config, this.tokenCache, this.providerId)
@@ -55,10 +59,18 @@ export class FactusProvider implements InvoiceProvider {
   }
 
   async listNumberingRanges(): Promise<
-    Array<{ id: number; prefix: string; from: number; to: number; current: number; status: string }>
+    Array<{
+      id: number
+      prefix: string
+      from: number
+      to: number
+      current: number
+      status: string
+      document?: string
+    }>
   > {
     const token = await this.authenticate()
-    const res = await fetch(`${this.config.baseUrl}/v2/numbering-ranges?filter_type=BILL`, {
+    const res = await fetch(`${this.config.baseUrl}/v2/numbering-ranges`, {
       method: 'GET',
       headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
     })
@@ -69,15 +81,18 @@ export class FactusProvider implements InvoiceProvider {
       })
     }
     const data: any = await res.json()
-    const list = data?.data ?? data
+    // Factus V2 responde { status, message, data: { data: [...], pagination } }.
+    // `current` es el SIGUIENTE número del rango (último asignado = current - 1).
+    const list = data?.data?.data ?? data?.data ?? data
     if (!Array.isArray(list)) return []
     return list.map((r: any) => ({
       id: Number(r.id),
-      prefix: String(r.prefix ?? ''),
+      prefix: String(r.prefix ?? '').trim(),
       from: Number(r.from ?? 0),
       to: Number(r.to ?? 0),
       current: Number(r.current ?? 0),
-      status: String(r.status ?? 'UNKNOWN'),
+      status: r.is_active === false || r.is_active === 0 ? 'INACTIVO' : 'ACTIVO',
+      document: typeof r.document === 'string' ? r.document.trim() : undefined,
     }))
   }
 
@@ -107,8 +122,14 @@ export class FactusProvider implements InvoiceProvider {
     const text = await res.text()
     const json = parseFactusBody(text)
     const bill = extractBill(json)
-    const ok = res.ok && (bill?.cufe || bill?.id)
     const dianStatus = getFactusDianStatus(json, bill)
+    const rejected = /REJECT|RECHAZ|ERROR|FAIL/i.test(dianStatus || '')
+    // Una respuesta HTTP 200 sin CUFE no es una factura aceptada. El id interno
+    // de Factus no reemplaza al CUFE exigido por DIAN. Si `is_validated` es false
+    // la DIAN aún no confirmó: se trata como fallo para que el outbox reintente
+    // con el mismo reference_code (Factus lo documenta como reintento idempotente).
+    const ok =
+      res.ok && Boolean(bill?.cufe) && !rejected && bill?.is_validated !== false
 
     if (!ok) {
       // Logueamos solo un recorte del body (puede contener datos del cliente)

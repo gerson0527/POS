@@ -4,7 +4,7 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -19,14 +19,26 @@ export async function requireApiSession() {
 
 export async function requireApiTenantId(userId: string): Promise<string> {
   const memberships = await db
-    .select({ tenantId: schema.userTenant.tenantId, status: schema.userTenant.status })
+    .select({ tenantId: schema.userTenant.tenantId })
     .from(schema.userTenant)
-    .where(eq(schema.userTenant.userId, userId))
+    .where(
+      and(
+        eq(schema.userTenant.userId, userId),
+        eq(schema.userTenant.status, 'ACTIVE')
+      )
+    )
     .limit(1)
 
-  if (!memberships.length) throw tenantNotAssignedError()
-  if (memberships[0].status !== 'ACTIVE') {
-    throw new AppError('TENANT_SUSPENDED', 'La membresía del usuario no está activa.')
+  if (!memberships.length) {
+    const anyMembership = await db
+      .select({ id: schema.userTenant.id })
+      .from(schema.userTenant)
+      .where(eq(schema.userTenant.userId, userId))
+      .limit(1)
+    if (anyMembership.length) {
+      throw new AppError('TENANT_SUSPENDED', 'La membresía del usuario no está activa.')
+    }
+    throw tenantNotAssignedError()
   }
   return memberships[0].tenantId
 }

@@ -12,8 +12,9 @@ export async function emitFactusElectronicInvoice(saleId: string) {
   try {
     const userId = await getUserId()
     await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
+    const tenantId = await getTenantId(userId)
     const { emitSaleElectronicInvoice } = await import('@/lib/invoicing/emit-invoice')
-    return await emitSaleElectronicInvoice(saleId)
+    return await emitSaleElectronicInvoice(saleId, tenantId)
   } catch (err: any) {
     return {
       success: false,
@@ -73,7 +74,15 @@ export async function testFactusConnection(): Promise<{ ok: boolean; message: st
 }
 
 export async function fetchFactusNumberingRanges(): Promise<
-  Array<{ id: number; prefix: string; from: number; to: number; current: number; status: string }>
+  Array<{
+    id: number
+    prefix: string
+    from: number
+    to: number
+    current: number
+    status: string
+    document?: string
+  }>
 > {
   const tenantId = await getCurrentTenantIdSafe()
   const { getInvoiceProvider } = await import('@/lib/invoicing')
@@ -94,15 +103,11 @@ export async function getInvoiceProviderStatus(): Promise<{
   const { getInvoiceProviderSummary } = await import('@/lib/invoicing')
   const summary = await getInvoiceProviderSummary(tenantId)
   return {
-    configured: summary.envConfigured || !!summary.activeBaseUrl,
-    providerId: summary.envConfigured ? 'factus-v2' : null,
+    configured: summary.envConfigured || summary.tenantHasOverride,
+    providerId: summary.envConfigured || summary.tenantHasOverride ? 'factus-v2' : null,
     environment: summary.activeEnvironment,
     baseUrl: summary.activeBaseUrl,
-    source: summary.envConfigured
-      ? summary.tenantHasOverride
-        ? 'tenant-override'
-        : 'env'
-      : 'none',
+    source: summary.tenantHasOverride ? 'tenant-override' : summary.envConfigured ? 'env' : 'none',
     tenantOverridesNumbering: summary.tenantOverridesNumbering,
   }
 }

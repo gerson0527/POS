@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { db } from '@/lib/db'
-import { fiscalDocument } from '@/lib/db/schema'
+import { fiscalDocument, sale } from '@/lib/db/schema'
 import { validateAPIKey } from '@/lib/api/public-api'
 import { jsonError, parseJsonBody, parseQueryParams } from '@/lib/api/http'
 import { AppError } from '@/lib/errors'
-import { and, eq } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
 // Fase 3.22: validación zod de query/body en lugar de lecturas manuales.
@@ -16,7 +16,9 @@ const querySchema = z.object({
 
 const createInvoiceSchema = z.object({
   saleId: z.string().min(1, 'saleId es requerido'),
-  cufe: z.string().min(1, 'cufe es requerido'),
+  cufe: z
+    .string()
+    .regex(/^[A-Fa-f0-9]{96}$/, 'cufe debe tener 96 caracteres hexadecimales'),
 })
 
 async function requireApiKey(request: Request, scope: 'read' | 'write') {
@@ -51,15 +53,35 @@ export async function GET(request: Request) {
     }
 
     const invoices = await db
-      .select()
+      .select({
+        id: fiscalDocument.id,
+        saleId: fiscalDocument.saleId,
+        documentType: fiscalDocument.documentType,
+        status: fiscalDocument.status,
+        prefix: fiscalDocument.prefix,
+        fullNumber: fiscalDocument.fullNumber,
+        uniqueCode: fiscalDocument.uniqueCode,
+        issueDate: fiscalDocument.issueDate,
+        totalsSnapshot: fiscalDocument.totalsSnapshot,
+        qrCodeContent: fiscalDocument.qrCodeContent,
+        pdfStorageKey: fiscalDocument.pdfStorageKey,
+        xmlSignedStorageKey: fiscalDocument.xmlSignedStorageKey,
+        createdAt: fiscalDocument.createdAt,
+      })
       .from(fiscalDocument)
       .where(and(...conditions))
+      .orderBy(desc(fiscalDocument.createdAt))
       .limit(limit)
       .offset(offset)
 
+    const countRows = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(fiscalDocument)
+      .where(and(...conditions))
+
     return Response.json({
       data: invoices,
-      total: invoices.length,
+      total: Number(countRows[0]?.total ?? 0),
       limit,
       offset,
     })
@@ -73,17 +95,91 @@ export async function POST(request: Request) {
     const validation = await requireApiKey(request, 'write')
 
     const body = await parseJsonBody(request, createInvoiceSchema)
-
-    // Create invoice (simplified) — Fase 4.24: modelo fiscal único (fiscal_document).
-    const newInvoice = {
-      id: `fdoc_${randomUUID()}`,
-      tenantId: validation.tenantId,
-      saleId: body.saleId,
-      uniqueCode: body.cufe,
-      status: 'PENDING_GENERATION',
+    if (!body.cufe.trim()) {
+      throw new AppError('VALIDATION_ERROR', 'El CUFE no puede estar vacío.')
     }
 
-    return Response.json({ data: newInvoice }, { status: 201 })
+    const saleRows = await db
+      .select({
+        id: sale.id,
+        subtotal: sale.subtotal,
+        taxAmount: sale.taxAmount,
+        total: sale.total,
+        locationId: sale.locationId,
+        status: sale.status,
+      })
+      .from(sale)
+      .where(
+        and(
+          eq(sale.id, body.saleId),
+          eq(sale.tenantId, validation.tenantId!)
+        )
+      )
+      .limit(1)
+
+    const saleRow = saleRows[0]
+    if (!saleRow) throw new AppError('NOT_FOUND', 'La venta no existe en este tenant.')
+    if (saleRow.status !== 'COMPLETED') {
+      throw new AppError('CONFLICT', 'Solo se puede facturar una venta completada.')
+    }
+
+    const existingRows = await db
+      .select()
+      .from(fiscalDocument)
+      .where(
+        and(
+          eq(fiscalDocument.tenantId, validation.tenantId!),
+          eq(fiscalDocument.saleId, body.saleId),
+          eq(fiscalDocument.documentType, 'FACTURA_ELECTRONICA_VENTA')
+        )
+      )
+      .limit(1)
+
+    const existing = existingRows[0]
+    if (existing?.uniqueCode && existing.uniqueCode !== body.cufe.trim()) {
+      throw new AppError(
+        'CONFLICT',
+        'La venta ya tiene un documento fiscal con otro CUFE.'
+      )
+    }
+
+    const values = {
+      status: 'ACCEPTED',
+      uniqueCode: body.cufe.trim(),
+      fullNumber: existing?.fullNumber || body.cufe.trim(),
+      prefix: existing?.prefix || 'FACT',
+      totalsSnapshot: {
+        subtotal: saleRow.subtotal,
+        taxAmount: saleRow.taxAmount,
+        total: saleRow.total,
+      },
+      updatedAt: new Date(),
+    }
+
+    const saved = existing
+      ? await db
+          .update(fiscalDocument)
+          .set(values)
+          .where(
+            and(
+              eq(fiscalDocument.id, existing.id),
+              eq(fiscalDocument.tenantId, validation.tenantId!)
+            )
+          )
+          .returning()
+      : await db
+          .insert(fiscalDocument)
+          .values({
+            id: `fdoc_${randomUUID()}`,
+            tenantId: validation.tenantId!,
+            branchId: saleRow.locationId,
+            saleId: body.saleId,
+            documentType: 'FACTURA_ELECTRONICA_VENTA',
+            ...values,
+          })
+          .returning()
+
+    return Response.json({ data: saved[0] }, { status: existing ? 200 : 201 })
   } catch (error) {
     return jsonError(error)
   }

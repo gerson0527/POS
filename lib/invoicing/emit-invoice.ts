@@ -3,16 +3,25 @@
 // (sesión + llamada + retorno); aquí vive la orquestación: venta → provider →
 // idempotencia → persistencia en fiscal_document (modelo único desde Fase 4.24).
 
-import { eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
+import { randomUUID } from 'node:crypto'
 import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
 import { mapFiscalStatus } from '@/lib/catalogs/dian-status'
 import { getInvoiceProvider } from './index'
 import { buildInvoicePayload } from './build-bill'
 
-export async function emitSaleElectronicInvoice(saleId: string) {
+export async function emitSaleElectronicInvoice(saleId: string, tenantId?: string) {
   try {
-    const saleRows = await db.select().from(schema.sale).where(eq(schema.sale.id, saleId)).limit(1)
+    const saleRows = await db
+      .select()
+      .from(schema.sale)
+      .where(
+        tenantId
+          ? and(eq(schema.sale.id, saleId), eq(schema.sale.tenantId, tenantId))
+          : eq(schema.sale.id, saleId)
+      )
+      .limit(1)
     const sale = saleRows[0]
     if (!sale) return { success: false, message: 'Venta no encontrada.' }
 
@@ -31,23 +40,37 @@ export async function emitSaleElectronicInvoice(saleId: string) {
     const existingDocs = await db
       .select()
       .from(schema.fiscalDocument)
-      .where(eq(schema.fiscalDocument.saleId, saleId))
+      .where(
+        and(
+          eq(schema.fiscalDocument.saleId, saleId),
+          eq(schema.fiscalDocument.tenantId, sale.tenantId)
+        )
+      )
+      .orderBy(desc(schema.fiscalDocument.createdAt))
       .limit(1)
     const existing = existingDocs[0]
     if (existing?.uniqueCode) {
+      const rejected =
+        existing.status === 'REJECTED' || existing.status === 'TECHNICAL_FAILURE'
       return {
-        success: true,
+        success: !rejected,
         cufe: existing.uniqueCode,
         qrCodeUrl: existing.qrCodeContent || undefined,
         pdfUrl: existing.pdfStorageKey || undefined,
         xmlUrl: existing.xmlSignedStorageKey || undefined,
         dianStatus: existing.status,
         billNumber: existing.fullNumber || undefined,
-        message: `La venta ya estaba transmitida a DIAN (documento ${existing.fullNumber || existing.uniqueCode}). No se envió una nueva factura.`,
+        message: rejected
+          ? `El documento ${existing.fullNumber || existing.uniqueCode} fue rechazado o falló técnicamente (${existing.status}). No se reenvía automáticamente: requiere corrección y una nueva numeración/nota de crédito.`
+          : `La venta ya estaba transmitida a DIAN (documento ${existing.fullNumber || existing.uniqueCode}). No se envió una nueva factura.`,
       }
     }
 
-    const payload = await buildInvoicePayload({ saleId })
+    const payload = await buildInvoicePayload({
+      saleId,
+      tenantId: sale.tenantId,
+      numberingRangeId: provider.numberingRangeId,
+    })
     const result = await provider.sendInvoice(payload)
 
     if (result.success && result.cufe) {
@@ -66,7 +89,12 @@ export async function emitSaleElectronicInvoice(saleId: string) {
         issueTime: new Date().toLocaleTimeString('es-CO'),
         issuerSnapshot: { tenantId: sale.tenantId },
         customerSnapshot: payload.customer,
-        totalsSnapshot: { total: sale.total, subtotal: sale.subtotal },
+        totalsSnapshot: {
+          total: sale.total,
+          subtotal: sale.subtotal,
+          taxAmount: sale.taxAmount,
+          discountAmount: sale.discountAmount,
+        },
         paymentSnapshot: payload.payment_details,
         // El campo real de InvoiceResult es `qrCodeUrl` (URL de verificación DIAN
         // que Factus retorna en bill.qr / links.qr). El lector anterior
@@ -81,18 +109,38 @@ export async function emitSaleElectronicInvoice(saleId: string) {
           await db
             .update(schema.fiscalDocument)
             .set(fiscalValues)
-            .where(eq(schema.fiscalDocument.id, existing.id))
+            .where(
+              and(
+                eq(schema.fiscalDocument.id, existing.id),
+                eq(schema.fiscalDocument.tenantId, sale.tenantId)
+              )
+            )
         } else {
-          await db
+          const inserted = await db
             .insert(schema.fiscalDocument)
             .values({
-              id: `fdoc_${Date.now()}`,
+              id: `fdoc_${randomUUID()}`,
               tenantId: sale.tenantId,
               branchId: sale.locationId || 'main_branch',
               saleId: sale.id,
               ...fiscalValues,
             })
             .onConflictDoNothing()
+            .returning({ id: schema.fiscalDocument.id })
+
+          if (!inserted.length) {
+            // Otra emisión concurrente insertó el documento primero:
+            // se completa ese registro en lugar de perder los datos de Factus.
+            await db
+              .update(schema.fiscalDocument)
+              .set(fiscalValues)
+              .where(
+                and(
+                  eq(schema.fiscalDocument.saleId, sale.id),
+                  eq(schema.fiscalDocument.tenantId, sale.tenantId)
+                )
+              )
+          }
         }
       } catch (dbErr: any) {
         // La factura YA quedó aceptada por DIAN: no reportarla como "no transmitida"

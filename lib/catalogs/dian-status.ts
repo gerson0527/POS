@@ -24,13 +24,26 @@ export type FiscalDocumentStatus = (typeof FISCAL_DOCUMENT_STATUSES)[number]
 
 /**
  * Mapea el estado devuelto por Factus/DIAN al enum real de la tabla fiscal_document
- * (FiscalDocumentStatus). Valores fuera del enum se normalizan a ACCEPTED.
+ * (FiscalDocumentStatus). Un valor desconocido NUNCA se asume aceptado: se marca
+ * como TECHNICAL_FAILURE para exigir revisión/reintento.
  */
 export function mapFiscalStatus(dianStatus?: string): string {
   const raw = (dianStatus || '').trim().toUpperCase()
   if ((FISCAL_DOCUMENT_STATUSES as readonly string[]).includes(raw)) return raw
   if (raw.includes('REJECT') || raw.includes('RECHAZ')) return 'REJECTED'
+  if (raw.includes('FAIL') || raw.includes('ERROR') || raw.includes('FALLA')) {
+    return 'TECHNICAL_FAILURE'
+  }
+  if (
+    raw.includes('ACCEPT') ||
+    raw.includes('ACEPT') ||
+    raw.includes('APROB') ||
+    raw.includes('VALID')
+  ) {
+    return 'ACCEPTED'
+  }
   if (raw.includes('PEND')) return 'SUBMITTED'
   if (raw.includes('QUEUE') || raw.includes('COLA')) return 'QUEUED'
-  return 'ACCEPTED'
+  if (!raw) return 'SUBMITTED'
+  return 'TECHNICAL_FAILURE'
 }

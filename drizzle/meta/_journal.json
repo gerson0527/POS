@@ -22,6 +22,34 @@
       "when": 1792274059419,
       "tag": "0002_material_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792424495510,
+      "tag": "0003_early_imperial_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792451733117,
+      "tag": "0004_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792467000000,
+      "tag": "0005_cash_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792514015798,
+      "tag": "0006_daily_cash_sessions",
+      "breakpoints": true
     }
   ]
 }

@@ -17,7 +17,7 @@ const POS_TO_FACTUS_DOCUMENT_TYPE: Record<string, string> = {
   PAS: '41',
   PASAPORTE: '41',
   NIT: '31',
-  RC: '12',
+  RC: '11',
 }
 
 /** Respuesta cruda de /v2/bills/validate. */
@@ -27,11 +27,15 @@ export interface FactusRawResponse {
   data?: {
     bill?: {
       id?: number
+      number?: string
       cufe?: string
       qr?: string
       public_url?: string
       xml_url?: string
       status?: string
+      is_validated?: boolean
+      validated_at?: string | null
+      errors?: Record<string, string> | unknown[]
     }
   }
 }
@@ -68,11 +72,15 @@ export function toPaymentDetail(
   amount: number,
   referenceCode?: string
 ): InvoicePaymentDetailPayload {
+  const isStoreCredit = posMethod.toUpperCase().trim() === 'STORE_CREDIT'
   return {
-    payment_form: '1',
+    payment_form: isStoreCredit ? '2' : '1',
     payment_method_code: mapPaymentMethod(posMethod),
     reference_code: referenceCode,
     amount: toMoneyString(amount),
+    due_date: isStoreCredit
+      ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      : undefined,
   }
 }
 
@@ -85,7 +93,7 @@ export function toFactusPayload(invoice: InvoicePayload) {
     operation_type: invoice.operation_type,
     send_email: invoice.send_email ?? false,
     observation: invoice.observation ?? '',
-    cash_rounding_amount: toMoneyString(0),
+    cash_rounding_amount: toMoneyString(invoice.cash_rounding_amount ?? 0),
     payment_details: invoice.payment_details.map((p) => ({
       payment_form: String(p.payment_form),
       payment_method_code: String(p.payment_method_code),
@@ -136,9 +144,52 @@ export function extractBill(json: FactusRawResponse): any {
   return (json as any)?.data?.bill ?? (json as any)?.data
 }
 
-/** Estado DIAN devuelto por Factus (bill.status o status raíz). */
+// `/v2/bills/validate` responde `status: "Created"` / `"OK"` a nivel raíz: es el
+// estado HTTP de Factus, NO el estado DIAN. El estado real está en `data.is_validated`
+// (y en `data.errors` para rechazos). Usar el status raíz como estado DIAN marcaba
+// facturas válidas como TECHNICAL_FAILURE.
+const GENERIC_PROVIDER_STATUSES = new Set([
+  'OK',
+  'CREATED',
+  'SUCCESS',
+  'SOLICITUD EXITOSA',
+])
+const EXPLICIT_DIAN_STATUS = /ACCEPT|ACEPT|APROB|VALID|REJECT|RECHAZ|ERROR|FAIL|FALLA|PEND|QUEUE|COLA/i
+
+function hasRejectionError(errors: unknown): boolean {
+  if (!errors) return false
+  const values = Array.isArray(errors) ? errors : Object.values(errors)
+  return values.some((value) => {
+    const message =
+      typeof value === 'object' && value !== null
+        ? (value as any).message ?? JSON.stringify(value)
+        : String(value)
+    return /rechaz/i.test(message)
+  })
+}
+
+/**
+ * Estado DIAN devuelto por Factus. `data.is_validated` es la fuente autoritativa
+ * (ver docs Factus V2: "verificar is_validated"); `bill.status` solo se usa si es
+ * un estado DIAN explícito. Un status raíz genérico ("OK"/"Created") se ignora.
+ */
 export function getFactusDianStatus(json: FactusRawResponse, bill: any): string | undefined {
-  return (bill?.status ?? (json as any)?.status) as string | undefined
+  const billStatus = typeof bill?.status === 'string' ? bill.status.trim() : ''
+  if (billStatus && !GENERIC_PROVIDER_STATUSES.has(billStatus.toUpperCase())) {
+    return billStatus
+  }
+
+  if (bill?.is_validated === true) return 'ACCEPTED'
+
+  if (bill?.is_validated === false) {
+    const errors = bill?.errors ?? (json as any)?.errors
+    return hasRejectionError(errors) ? 'REJECTED' : 'SUBMITTED'
+  }
+
+  const rootStatus = typeof (json as any)?.status === 'string' ? (json as any).status.trim() : ''
+  if (rootStatus && EXPLICIT_DIAN_STATUS.test(rootStatus)) return rootStatus
+
+  return undefined
 }
 
 /**
@@ -208,17 +259,20 @@ export function toInvoiceResult(params: {
   providerId: string
 }): InvoiceResult {
   const { invoice, json, bill, dianStatus, links, providerId } = params
+  const status = dianStatus ?? 'SUBMITTED'
   return {
     success: true,
     cufe: bill?.cufe,
     qrCodeUrl: links.qrCodeUrl,
     pdfUrl: links.pdfUrl,
     xmlUrl: links.xmlUrl,
-    dianStatus: dianStatus ?? 'ACCEPTED',
+    dianStatus: status,
     billNumber: bill?.number ?? invoice.reference_code,
     message:
       (json as any)?.message ??
-      `Factura ${invoice.reference_code} emitida y aceptada por DIAN vía Factus V2.`,
+      (status === 'ACCEPTED'
+        ? `Factura ${invoice.reference_code} emitida y aceptada por DIAN vía Factus V2.`
+        : `Factura ${invoice.reference_code} emitida vía Factus V2; estado DIAN: ${status}.`),
     providerId,
     rawResponse: json,
   }

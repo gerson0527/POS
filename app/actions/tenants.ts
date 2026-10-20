@@ -7,6 +7,7 @@ import { AuditAction } from '@/lib/types'
 import { and, eq, desc, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { sendWelcomeEmail } from '@/lib/email'
+import { hashPassword } from 'better-auth/crypto'
 import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 export async function createTenantWithAdmin(input: {
   // Datos del usuario admin
@@ -34,15 +35,39 @@ export async function createTenantWithAdmin(input: {
   await requireRole(currentUserId, ['ADMIN'])
   const currentTenantId = await getTenantId(currentUserId)
 
+  const platformUser = await db
+    .select({ email: schema.user.email })
+    .from(schema.user)
+    .where(eq(schema.user.id, currentUserId))
+    .limit(1)
+  const platformAdmins = (process.env.PLATFORM_ADMIN_EMAILS || '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+  if (
+    !platformUser[0]?.email ||
+    !platformAdmins.includes(platformUser[0].email.toLowerCase())
+  ) {
+    throw new Error('Solo el administrador de plataforma puede crear tenants.')
+  }
+
+  const adminEmail = input.adminEmail.trim().toLowerCase()
+  const adminName = input.adminName.trim()
+  if (!adminName) throw new Error('El nombre del administrador es obligatorio.')
+  if (!adminEmail.includes('@')) throw new Error('El correo del administrador no es válido.')
+  if ((input.adminPassword || '').length < 12) {
+    throw new Error('La contraseña del administrador debe tener al menos 12 caracteres.')
+  }
+
   // 1. Validar que el email no exista ya
   const existing = await db
     .select()
     .from(schema.user)
-    .where(eq(schema.user.email, input.adminEmail))
+    .where(eq(schema.user.email, adminEmail))
     .limit(1)
 
   if (existing.length > 0) {
-    throw new Error(`El correo ${input.adminEmail} ya está registrado. Use otro.`)
+    throw new Error(`El correo ${adminEmail} ya está registrado. Use otro.`)
   }
 
   // 2. Validar NIT (único en tenant)
@@ -82,57 +107,62 @@ export async function createTenantWithAdmin(input: {
     }
   }
 
-  // 4. Crear el tenant
+  if (!input.companyName?.trim() || !input.companyLegalName?.trim() || !nitClean) {
+    throw new Error('Nombre, razón social y NIT son obligatorios.')
+  }
+
   const tenantId = `tenant_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
-  await db.insert(schema.tenant).values({
-    id: tenantId,
-    name: input.companyName.trim(),
-    legalName: input.companyLegalName.trim(),
-    nit: nitClean,
-    tradeName: input.companyTradeName?.trim() || null,
-    email: input.companyEmail?.trim() || input.adminEmail.trim(),
-    phone: input.companyPhone?.trim() || null,
-    address: input.companyAddress?.trim() || null,
-    city: input.companyCity?.trim() || null,
-    department: input.companyDepartment?.trim() || null,
-    country: input.companyCountry?.trim() || 'Colombia',
-    legalRepresentative: input.companyLegalRepresentative?.trim() || null,
-    legalRepDocNumber: input.companyLegalRepDocNumber?.trim() || null,
-    economicActivity: input.companyEconomicActivity?.trim() || null,
-    website: input.companyWebsite?.trim() || null,
-    dbSlug,
-    dbProvisioned: 'NO', // Stage 2: marcar como 'SI' cuando la DB exista
-    status: 'ACTIVE',
-    onboardingCompleted: 'SI',
-    onboardingCompletedAt: new Date(),
-    onboardingCompletedBy: currentUserId,
-  })
-
-  // 5. Crear el usuario admin
   const userId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
-  await db.insert(schema.user).values({
-    id: userId,
-    name: input.adminName.trim(),
-    email: input.adminEmail.trim(),
-    emailVerified: true,
-  })
+  const passwordHash = await hashPassword(input.adminPassword)
 
-  // 6. Crear cuenta con la contraseña
-  await db.insert(schema.account).values({
-    id: `acc_${Date.now()}`,
-    accountId: input.adminEmail.trim(),
-    providerId: 'credential',
-    userId,
-    password: input.adminPassword,
-  })
+  // Tenant, usuario, credenciales y membresía se crean en una sola transacción.
+  await db.transaction(async (tx) => {
+    await tx.insert(schema.tenant).values({
+      id: tenantId,
+      name: input.companyName.trim(),
+      legalName: input.companyLegalName.trim(),
+      nit: nitClean,
+      tradeName: input.companyTradeName?.trim() || null,
+      email: input.companyEmail?.trim() || adminEmail,
+      phone: input.companyPhone?.trim() || null,
+      address: input.companyAddress?.trim() || null,
+      city: input.companyCity?.trim() || null,
+      department: input.companyDepartment?.trim() || null,
+      country: input.companyCountry?.trim() || 'Colombia',
+      legalRepresentative: input.companyLegalRepresentative?.trim() || null,
+      legalRepDocNumber: input.companyLegalRepDocNumber?.trim() || null,
+      economicActivity: input.companyEconomicActivity?.trim() || null,
+      website: input.companyWebsite?.trim() || null,
+      dbSlug,
+      dbProvisioned: 'NO',
+      status: 'ACTIVE',
+      onboardingCompleted: 'SI',
+      onboardingCompletedAt: new Date(),
+      onboardingCompletedBy: currentUserId,
+    })
 
-  // 7. Vincular como ADMIN del nuevo tenant
-  await db.insert(schema.userTenant).values({
-    id: `ut_${Date.now()}`,
-    userId,
-    tenantId,
-    role: 'ADMIN',
-    status: 'ACTIVE',
+    await tx.insert(schema.user).values({
+      id: userId,
+      name: adminName,
+      email: adminEmail,
+      emailVerified: true,
+    })
+
+    await tx.insert(schema.account).values({
+      id: `acc_${Date.now()}`,
+      accountId: adminEmail,
+      providerId: 'credential',
+      userId,
+      password: passwordHash,
+    })
+
+    await tx.insert(schema.userTenant).values({
+      id: `ut_${Date.now()}`,
+      userId,
+      tenantId,
+      role: 'ADMIN',
+      status: 'ACTIVE',
+    })
   })
 
   // 8. Log de auditoría (en el tenant del admin actual, que registra al nuevo)
@@ -140,7 +170,7 @@ export async function createTenantWithAdmin(input: {
     name: input.companyName,
     nit: nitClean,
     dbSlug,
-    adminEmail: input.adminEmail,
+    adminEmail,
   })
 
   // 9. Provisionar la BD del nuevo tenant (crea la DB física + corre migraciones)
@@ -164,7 +194,7 @@ export async function createTenantWithAdmin(input: {
 
   // 10. Email de bienvenida (opcional, no bloquea)
   try {
-    await sendWelcomeEmail(input.adminEmail, input.adminName, 'ADMIN')
+    await sendWelcomeEmail(adminEmail, adminName, 'ADMIN')
   } catch (emailErr) {
     console.error('Error enviando correo de bienvenida:', emailErr)
   }
@@ -185,23 +215,45 @@ export async function listAllTenants() {
   const currentUserId = await getUserId()
   const currentTenantId = await getTenantId(currentUserId)
 
-  // Solo el admin master puede listar todos los tenants
-  const memberships = await db
-    .select()
-    .from(schema.userTenant)
-    .where(
-      and(
-        eq(schema.userTenant.userId, currentUserId),
-        eq(schema.userTenant.tenantId, currentTenantId)
-      )
-    )
+  const membership = await requireRole(currentUserId, ['ADMIN'])
+  if (membership.tenantId !== currentTenantId) {
+    throw new Error('No se pudo validar el tenant activo.')
+  }
+
+  // El listado global solo lo pueden ver los correos configurados como
+  // administradores de plataforma. Sin lista configurada se deniega.
+  const userRows = await db
+    .select({ email: schema.user.email })
+    .from(schema.user)
+    .where(eq(schema.user.id, currentUserId))
     .limit(1)
-  if (!memberships[0] || memberships[0].role !== 'ADMIN') {
-    throw new Error('Solo el admin master puede listar todos los tenants.')
+  const allowedEmails = (process.env.PLATFORM_ADMIN_EMAILS || '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+  if (!userRows[0]?.email || !allowedEmails.includes(userRows[0].email.toLowerCase())) {
+    throw new Error('Solo el administrador de plataforma puede listar todos los tenants.')
   }
 
   const tenants = await db
-    .select()
+    .select({
+      id: schema.tenant.id,
+      name: schema.tenant.name,
+      legalName: schema.tenant.legalName,
+      nit: schema.tenant.nit,
+      tradeName: schema.tenant.tradeName,
+      email: schema.tenant.email,
+      phone: schema.tenant.phone,
+      address: schema.tenant.address,
+      city: schema.tenant.city,
+      department: schema.tenant.department,
+      country: schema.tenant.country,
+      dbSlug: schema.tenant.dbSlug,
+      dbProvisioned: schema.tenant.dbProvisioned,
+      status: schema.tenant.status,
+      onboardingCompleted: schema.tenant.onboardingCompleted,
+      createdAt: schema.tenant.createdAt,
+    })
     .from(schema.tenant)
     .orderBy(desc(schema.tenant.createdAt))
 

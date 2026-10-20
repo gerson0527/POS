@@ -225,24 +225,48 @@ export function InvoiceTable({
           },
           {
             key: 'dian',
-            header: 'FACTURACIÓN ELECTRÓNICA (DIAN)',
+            header: 'ESTADO DIAN',
             align: 'center',
             cellClassName: 'whitespace-nowrap',
             render: (inv: any) => {
-              const { isSent } = invoiceFlags(inv)
-              return isSent ? (
-                <div className="flex flex-col items-center gap-1">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-ok-dim border border-ok-line text-ok shadow">
-                    <ShieldCheck className="w-3.5 h-3.5 text-ok" />
-                    <span>✓ TRANSMITIDA (DIAN)</span>
-                  </span>
-                  {inv.cufe && (
-                    <span className="text-[9px] text-fg-muted font-mono">
-                      CUFE: {inv.cufe.substring(0, 12)}...
+              const { fiscal } = invoiceFlags(inv)
+              if (fiscal.isAccepted) {
+                return (
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-ok-dim border border-ok-line text-ok shadow">
+                      <ShieldCheck className="w-3.5 h-3.5 text-ok" />
+                      <span>ACEPTADA (DIAN)</span>
                     </span>
-                  )}
-                </div>
-              ) : (
+                    {fiscal.cufe && (
+                      <span className="text-[9px] text-fg-muted font-mono">
+                        CUFE: {String(fiscal.cufe).substring(0, 12)}...
+                      </span>
+                    )}
+                  </div>
+                )
+              }
+              if (fiscal.isRejected) {
+                return (
+                  <TacticalButton
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onEmit(inv.id)}
+                    loading={emittingId === inv.id}
+                    icon={<RefreshCw className="w-3 h-3 text-danger" />}
+                  >
+                    REINTENTAR ({fiscal.label})
+                  </TacticalButton>
+                )
+              }
+              if (fiscal.isTransmitted) {
+                return (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-warn-dim border border-warn-line text-warn">
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    {fiscal.label}
+                  </span>
+                )
+              }
+              return (
                 <TacticalButton
                   variant="secondary"
                   size="sm"

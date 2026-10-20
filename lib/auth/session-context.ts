@@ -3,8 +3,8 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
-import { headers } from 'next/headers'
+import { and, eq } from 'drizzle-orm'
+import { cookies, headers } from 'next/headers'
 import { forbiddenError, tenantNotAssignedError, tenantSuspendedError, unauthorizedError } from './errors'
 
 export type TenantRole = 'ADMIN' | 'CASHIER' | 'MANAGER' | 'VIEWER'
@@ -28,22 +28,34 @@ export async function requireMembership(userId: string): Promise<TenantMembershi
   const memberships = await db
     .select()
     .from(schema.userTenant)
-    .where(eq(schema.userTenant.userId, userId))
-    .limit(1)
+    .where(
+      and(
+        eq(schema.userTenant.userId, userId),
+        eq(schema.userTenant.status, 'ACTIVE')
+      )
+    )
 
   // Seguridad: NUNCA crear la membresía automáticamente. Antes cualquier cuenta
   // sin vínculo obtenía role ADMIN en tenant_default (escalada de privilegios).
   // Las altas legales pasan por createUserAction / createTenantWithAdmin.
   if (!memberships.length) {
+    const anyMembership = await db
+      .select({ id: schema.userTenant.id })
+      .from(schema.userTenant)
+      .where(eq(schema.userTenant.userId, userId))
+      .limit(1)
+    if (anyMembership.length) throw tenantSuspendedError()
     throw tenantNotAssignedError()
   }
 
-  const membership = memberships[0]
-  if (membership.status && membership.status !== 'ACTIVE') {
-    throw tenantSuspendedError()
-  }
+  const cookieStore = await cookies()
+  const preferredTenantId = cookieStore.get('tenant_id')?.value
+  const active =
+    (preferredTenantId
+      ? memberships.find((membership) => membership.tenantId === preferredTenantId)
+      : undefined) || memberships[0]
 
-  return { tenantId: membership.tenantId, role: membership.role as TenantRole }
+  return { tenantId: active.tenantId, role: active.role as TenantRole }
 }
 
 /** Devuelve el tenant activo del usuario o lanza SessionError tipado. */

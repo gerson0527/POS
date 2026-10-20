@@ -6,7 +6,11 @@ import { Modal } from '@/components/ui/Modal'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { formatCOP } from '@/lib/utils/pos-utils'
 import { numeroALetras } from '@/lib/dian/amount-in-words'
-import { dianPayment, cufeLines } from '@/components/invoices/invoice-utils'
+import {
+  dianPayment,
+  cufeLines,
+  fiscalUiStatus,
+} from '@/components/invoices/invoice-utils'
 
 interface InvoiceTicketModalProps {
   invoice: any
@@ -14,9 +18,12 @@ interface InvoiceTicketModalProps {
 }
 
 export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps) {
-  // Solo es una factura electrónica real si DIAN ya la aceptó (CUFE presente).
-  // Un fiscal_document en PENDING_GENERATION es un documento interno, no fiscal.
-  const isElectronicSent = Boolean(invoice.isElectronicSent || invoice.cufe)
+  const fiscal = fiscalUiStatus(invoice)
+  // Un CUFE indica que el documento fue transmitido; solo ACCEPTED tiene valor
+  // fiscal pleno. Un rechazo o falla técnica nunca se presenta como aceptado.
+  const isElectronicSent = Boolean(fiscal.cufe || fiscal.isAccepted)
+  const isFiscalValid = fiscal.isAccepted
+  const cufe = fiscal.cufe
 
   return (
     <Modal
@@ -59,7 +66,11 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
           <div className="mt-2 inline-block border-2 border-black px-4 py-1">
             <p className="font-black text-[12px] uppercase">
               {isElectronicSent
-                ? `FACTURA DE VENTA ELECTRÓNICA N° ${invoice.fullNumber}`
+                ? `${
+                    fiscal.isRejected
+                      ? 'FACTURA ELECTRÓNICA RECHAZADA'
+                      : 'FACTURA DE VENTA ELECTRÓNICA'
+                  } N° ${invoice.fullNumber}`
                 : `FACTURA DE VENTA N° ${
                     invoice.fullNumber ||
                     `FACT-#${String(invoice.ticketNumber || 0).padStart(4, '0')}`
@@ -148,7 +159,7 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
             <span>{formatCOP(Number(invoice.subtotal || 0))}</span>
           </div>
           <div className="flex justify-between">
-            <span>IVA (19% IMPUESTO):</span>
+            <span>IVA TOTAL:</span>
             <span>{formatCOP(Number(invoice.taxAmount || 0))}</span>
           </div>
           {Number(invoice.discountAmount) > 0 && (
@@ -202,9 +213,11 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
         {/* PIE DEL COMPROBANTE / TRAZABILIDAD DIAN */}
         <div className="text-center text-[9px] text-gray-600 pt-3 border-t-2 border-black space-y-1">
           <p className="font-black uppercase text-black text-[10px]">
-            {isElectronicSent
-              ? 'FACTURA ELECTRÓNICA DE VENTA — DOCUMENTO CON VALOR FISCAL'
-              : 'COMPROBANTE DE VENTA — DOCUMENTO INTERNO'}
+            {isFiscalValid
+              ? 'FACTURA ELECTRÓNICA DE VENTA - DOCUMENTO CON VALOR FISCAL'
+              : isElectronicSent
+                ? `DOCUMENTO ELECTRÓNICO - ${fiscal.label}`
+                : 'COMPROBANTE DE VENTA - DOCUMENTO INTERNO'}
           </p>
           <p className="font-bold text-black">¡MUCHAS GRACIAS POR SU COMPRA!</p>
           <p>Conserve este comprobante para garantías.</p>
@@ -212,35 +225,26 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
           {isElectronicSent && (
             <div className="flex justify-center gap-4 text-[10px] font-bold text-black pt-1 border-t border-dotted border-gray-400 mt-1">
               <span>FOLIO: {invoice.fullNumber}</span>
-              <span>
-                ESTADO DIAN:{' '}
-                {invoice.fiscalDocument?.status === 'ACCEPTED'
-                  ? 'ACEPTADA'
-                  : invoice.fiscalDocument?.status === 'REJECTED'
-                    ? 'RECHAZADA'
-                    : invoice.fiscalDocument?.status === 'CONTINGENCY_ISSUED'
-                      ? 'CONTINGENCIA'
-                      : 'TRANSMITIDA'}
-              </span>
+              <span>ESTADO DIAN: {fiscal.label}</span>
             </div>
           )}
 
-          {isElectronicSent && invoice.qrUrl && (
+          {isFiscalValid && invoice.qrUrl && (
             <div className="mx-auto my-2 w-28 h-28 flex items-center justify-center border border-gray-400 p-1.5 bg-white">
               <QRCodeSVG value={invoice.qrUrl} size={96} level="M" />
             </div>
           )}
 
-          {isElectronicSent && cufeLines(invoice.cufe || invoice.fiscalDocument?.uniqueCode).length > 0 && (
+          {cufe && cufeLines(cufe).length > 0 && (
             <div className="text-black pt-1">
-              <p className="font-bold text-[9px] mb-0.5">CUFE — CÓDIGO ÚNICO DE FACTURA ELECTRÓNICA</p>
+              <p className="font-bold text-[9px] mb-0.5">CUFE - CÓDIGO ÚNICO DE FACTURA ELECTRÓNICA</p>
               <p className="font-mono text-[8.5px] leading-[1.4] whitespace-pre-line">
-                {cufeLines(invoice.cufe || invoice.fiscalDocument?.uniqueCode).join('\n')}
+                {cufeLines(cufe).join('\n')}
               </p>
             </div>
           )}
 
-          {isElectronicSent && invoice.qrUrl && (
+          {isFiscalValid && invoice.qrUrl && (
             <p className="text-[8px] break-all text-gray-500 pt-1">
               Consulte/valide este documento en: {invoice.qrUrl}
             </p>
@@ -271,7 +275,7 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
             </p>
           )}
 
-          {isElectronicSent && (
+          {isFiscalValid && (
             <p className="text-[8px] text-gray-500 pt-1 leading-tight">
               Documento electrónico verificable en el consultor de la DIAN.
             </p>

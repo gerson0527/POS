@@ -62,7 +62,7 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        'bg-panel border border-line border-l-2 rounded-[6px] p-4 md:p-5 flex flex-col justify-between transition-colors hover:border-line-strong',
+        'bg-panel border border-line border-l-2 rounded-[6px] p-4 md:p-5 flex flex-col justify-between transition-[border-color,transform] duration-150 hover:border-line-strong hover:-translate-y-0.5',
         accent.border,
         className,
       )}

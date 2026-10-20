@@ -229,7 +229,7 @@ export default function OnboardingPage() {
             return (
               <div
                 key={s.idx}
-                className={`flex-1 flex items-center gap-2 p-3 rounded border transition-all ${
+                className={`flex-1 flex items-center gap-2 p-3 rounded border transition-[background-color,border-color,color,transform] duration-150 ${
                   isActive
                     ? 'bg-accent/10 border-accent text-fg'
                     : isComplete
@@ -259,6 +259,10 @@ export default function OnboardingPage() {
 
         {/* Form Body */}
         <div className="bg-veil border border-line-soft rounded-[8px] p-6 space-y-5 min-h-[420px]">
+          <div
+            key={step}
+            className="space-y-5 animate-in fade-in slide-in-from-bottom-1 duration-150"
+          >
           {step === 0 && (
             <>
               <div className="flex items-center gap-2 text-[#10px] text-fg-muted font-bold uppercase tracking-widest">
@@ -448,6 +452,7 @@ export default function OnboardingPage() {
               </div>
             </>
           )}
+          </div>
 
           {error && (
             <div className="flex items-start gap-2 p-3 rounded text-[11px] font-bold bg-alert-dim border border-alert-line text-danger">

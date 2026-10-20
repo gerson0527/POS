@@ -21,6 +21,13 @@ const securityHeaders = [
 ]
 
 const nextConfig = {
+  output: 'standalone',
+  turbopack: {
+    root: process.cwd(),
+  },
+  experimental: {
+    turbopackFileSystemCacheForDev: false,
+  },
   images: {
     unoptimized: true,
   },

@@ -6,19 +6,45 @@ import * as schema from '@/lib/db/schema'
 import { AuditAction } from '@/lib/types'
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
+import { encryptSecret } from '@/lib/security/encrypt'
 import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 export async function getCompanyInfo() {
   const userId = await getUserId()
   const tenantId = await getTenantId(userId)
 
   const tenants = await db
-    .select()
+    .select({
+      id: schema.tenant.id,
+      name: schema.tenant.name,
+      legalName: schema.tenant.legalName,
+      tradeName: schema.tenant.tradeName,
+      nit: schema.tenant.nit,
+      email: schema.tenant.email,
+      phone: schema.tenant.phone,
+      address: schema.tenant.address,
+      city: schema.tenant.city,
+      department: schema.tenant.department,
+      country: schema.tenant.country,
+      website: schema.tenant.website,
+      dianSoftwareId: schema.tenant.dianSoftwareId,
+      dianUsername: schema.tenant.dianUsername,
+      dianTestSetId: schema.tenant.dianTestSetId,
+      dianEnvironment: schema.tenant.dianEnvironment,
+      hasDianPassword: schema.tenant.dianPassword,
+      hasDianSoftwarePin: schema.tenant.dianSoftwarePin,
+    })
     .from(schema.tenant)
     .where(eq(schema.tenant.id, tenantId))
     .limit(1)
 
   if (tenants.length > 0) {
-    return tenants[0]
+    const { hasDianPassword, hasDianSoftwarePin, ...safe } = tenants[0]
+    return {
+      ...safe,
+      dianSoftwarePin: '',
+      dianPassword: '',
+      hasDianCredentials: Boolean(hasDianPassword || hasDianSoftwarePin),
+    }
   }
 
   return {
@@ -35,6 +61,7 @@ export async function getCompanyInfo() {
     dianPassword: '',
     dianTestSetId: '',
     dianEnvironment: '2',
+    hasDianCredentials: false,
   }
 }
 
@@ -210,6 +237,15 @@ export async function updateCompanyInfo(input: {
     .where(eq(schema.tenant.id, tenantId))
     .limit(1)
 
+  const secretUpdate = {
+    ...(input.dianSoftwarePin
+      ? { dianSoftwarePin: encryptSecret(input.dianSoftwarePin) }
+      : {}),
+    ...(input.dianPassword
+      ? { dianPassword: encryptSecret(input.dianPassword) }
+      : {}),
+  }
+
   if (tenants.length > 0) {
     await db
       .update(schema.tenant)
@@ -221,11 +257,10 @@ export async function updateCompanyInfo(input: {
         phone: input.phone || null,
         address: input.address || null,
         dianSoftwareId: input.dianSoftwareId || null,
-        dianSoftwarePin: input.dianSoftwarePin || null,
         dianUsername: input.dianUsername || null,
-        dianPassword: input.dianPassword || null,
         dianTestSetId: input.dianTestSetId || null,
         dianEnvironment: input.dianEnvironment || '2',
+        ...secretUpdate,
         updatedAt: new Date(),
       })
       .where(eq(schema.tenant.id, tenantId))
@@ -239,16 +274,19 @@ export async function updateCompanyInfo(input: {
       phone: input.phone || null,
       address: input.address || null,
       dianSoftwareId: input.dianSoftwareId || null,
-      dianSoftwarePin: input.dianSoftwarePin || null,
       dianUsername: input.dianUsername || null,
-      dianPassword: input.dianPassword || null,
       dianTestSetId: input.dianTestSetId || null,
       dianEnvironment: input.dianEnvironment || '2',
+      ...secretUpdate,
       status: 'ACTIVE',
     })
   }
 
-  await logAudit(tenantId, userId, AuditAction.UPDATE, 'tenant', tenantId, input)
+  await logAudit(tenantId, userId, AuditAction.UPDATE, 'tenant', tenantId, {
+    ...input,
+    dianSoftwarePin: input.dianSoftwarePin ? '***' : undefined,
+    dianPassword: input.dianPassword ? '***' : undefined,
+  })
   revalidatePath('/dashboard/settings')
   revalidatePath('/dashboard')
   return { success: true }

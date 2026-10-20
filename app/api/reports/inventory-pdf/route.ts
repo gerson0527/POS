@@ -20,13 +20,17 @@ const postSchema = z.object({
 
 async function resolveTenantId(userId: string): Promise<string | null> {
   const memberships = await db
-    .select({ tenantId: schema.userTenant.tenantId, status: schema.userTenant.status })
+    .select({ tenantId: schema.userTenant.tenantId })
     .from(schema.userTenant)
-    .where(eq(schema.userTenant.userId, userId))
+    .where(
+      and(
+        eq(schema.userTenant.userId, userId),
+        eq(schema.userTenant.status, 'ACTIVE')
+      )
+    )
     .limit(1)
 
-  if (!memberships.length) return null
-  return memberships[0].status === 'ACTIVE' ? memberships[0].tenantId : null
+  return memberships[0]?.tenantId ?? null
 }
 
 async function handleReport(request: Request): Promise<Response> {
@@ -72,7 +76,13 @@ async function handleReport(request: Request): Promise<Response> {
         locationId: schema.inventory.locationId,
       })
       .from(schema.inventory)
-      .innerJoin(schema.product, eq(schema.inventory.productId, schema.product.id))
+      .innerJoin(
+        schema.product,
+        and(
+          eq(schema.inventory.productId, schema.product.id),
+          eq(schema.product.tenantId, tenantId)
+        )
+      )
       .where(
         locationId
           ? and(eq(schema.inventory.tenantId, tenantId), eq(schema.inventory.locationId, locationId))
@@ -83,8 +93,16 @@ async function handleReport(request: Request): Promise<Response> {
       const locs = await db
         .select({ name: schema.location.name })
         .from(schema.location)
-        .where(eq(schema.location.id, locationId))
+        .where(
+          and(
+            eq(schema.location.id, locationId),
+            eq(schema.location.tenantId, tenantId)
+          )
+        )
         .limit(1)
+      if (!locs.length) {
+        return NextResponse.json({ error: 'Ubicación no encontrada' }, { status: 404 })
+      }
       locationLabel = locs[0]?.name || 'UBICACIÓN'
     }
 

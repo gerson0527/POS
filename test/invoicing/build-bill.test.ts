@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildCustomerPayload,
+  buildInvoiceReference,
   buildPayments,
+  computeCashRoundingAmount,
   computeExactInvoiceTotal,
   splitNit,
 } from '@/lib/invoicing/build-bill'
@@ -41,6 +43,38 @@ describe('computeExactInvoiceTotal', () => {
 
   it('sin ítems → 0', () => {
     expect(computeExactInvoiceTotal([])).toBe(0)
+  })
+})
+
+describe('computeCashRoundingAmount', () => {
+  it('redondeo hacia arriba: POS 14.900 vs exacto 14.875 → +25', () => {
+    expect(computeCashRoundingAmount(14875, 14900)).toBe(25)
+  })
+
+  it('redondeo hacia abajo: POS 14.900 vs exacto 14.925 → -25', () => {
+    expect(computeCashRoundingAmount(14925, 14900)).toBe(-25)
+  })
+
+  it('total exacto → 0', () => {
+    expect(computeCashRoundingAmount(119000, 119000)).toBe(0)
+  })
+
+  it('diferencia mayor a ±50 (descuento no reflejado) → 0', () => {
+    expect(computeCashRoundingAmount(150000, 120000)).toBe(0)
+  })
+})
+
+describe('buildInvoiceReference', () => {
+
+  it('es estable para la misma venta (reintentos idempotentes)', () => {
+    expect(buildInvoiceReference('sale_1792443185756')).toBe(
+      buildInvoiceReference('sale_1792443185756')
+    )
+  })
+
+  it('no colisiona entre ventas con el mismo ticket (Factus devolvería la factura existente)', () => {
+    expect(buildInvoiceReference('sale_1')).not.toBe(buildInvoiceReference('sale_2'))
+    expect(buildInvoiceReference('sale_1')).toBe('FACT-sale_1')
   })
 })
 

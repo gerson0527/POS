@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX "fiscal_document_fullnumber_unique" ON "fiscal_document" USING btree ("tenantId","prefix","fullNumber") WHERE "fiscal_document"."fullNumber" is not null;--> statement-breakpoint
+CREATE UNIQUE INDEX "fiscal_document_sale_invoice_unique" ON "fiscal_document" USING btree ("saleId") WHERE "fiscal_document"."documentType" = 'FACTURA_ELECTRONICA_VENTA';

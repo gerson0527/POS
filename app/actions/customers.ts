@@ -240,55 +240,87 @@ export async function chargeCustomerCredit(input: {
   await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
 
-  const cust = await db
-    .select()
-    .from(schema.customer)
-    .where(and(eq(schema.customer.id, input.customerId), eq(schema.customer.tenantId, tenantId)))
-    .limit(1)
-
-  if (!cust.length) throw new Error('Cliente no encontrado')
-
-  const customer = cust[0]
-
-  if (customer.creditEnabled !== 'SI') {
-    throw new Error('El cliente no tiene crédito habilitado')
+  const requested = Number(input.amount)
+  if (!Number.isFinite(requested) || requested <= 0) {
+    throw new Error('El valor del cargo debe ser mayor a cero.')
   }
-  if (customer.creditStatus === 'BLOQUEADO') {
-    throw new Error('El cliente tiene el crédito bloqueado')
-  }
-  if (Number(customer.creditLimit) > 0 && Number(customer.creditBalance) + input.amount > Number(customer.creditLimit)) {
-    throw new Error(`Cupo insuficiente. Disponible: $${(Number(customer.creditLimit) - Number(customer.creditBalance)).toLocaleString('es-CO')}`)
-  }
+  const amount = Math.round(requested * 100) / 100
 
-  const newBalance = Number(customer.creditBalance) + input.amount
-  const txId = `cct_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
+  const result = await db.transaction(async (tx) => {
+    const cust = await tx
+      .select()
+      .from(schema.customer)
+      .where(
+        and(
+          eq(schema.customer.id, input.customerId),
+          eq(schema.customer.tenantId, tenantId)
+        )
+      )
+      .limit(1)
+      .for('update')
 
-  await db.insert(schema.customerCreditTransaction).values({
-    id: txId,
-    tenantId,
-    customerId: input.customerId,
-    type: 'CHARGE',
-    amount: String(input.amount),
-    balanceAfter: String(newBalance),
-    saleId: input.saleId || null,
-    note: input.note || null,
-    dueDate: input.dueDate ? new Date(input.dueDate) : new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-    status: 'PENDIENTE',
+    if (!cust.length) throw new Error('Cliente no encontrado')
+
+    const customer = cust[0]
+    const balance = Number(customer.creditBalance || 0)
+    const limit = Number(customer.creditLimit || 0)
+
+    if (customer.creditEnabled !== 'SI') {
+      throw new Error('El cliente no tiene crédito habilitado')
+    }
+    if (customer.creditStatus === 'BLOQUEADO') {
+      throw new Error('El cliente tiene el crédito bloqueado')
+    }
+    if (limit > 0 && balance + amount > limit) {
+      throw new Error(
+        `Cupo insuficiente. Disponible: $${(limit - balance).toLocaleString('es-CO')}`
+      )
+    }
+
+    const newBalance = Math.round((balance + amount) * 100) / 100
+    const txId = `cct_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
+
+    await tx.insert(schema.customerCreditTransaction).values({
+      id: txId,
+      tenantId,
+      customerId: input.customerId,
+      type: 'CHARGE',
+      amount: String(amount),
+      paidAmount: '0',
+      balanceAfter: String(newBalance),
+      saleId: input.saleId || null,
+      note: input.note || null,
+      dueDate: input.dueDate
+        ? new Date(input.dueDate)
+        : new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+      status: 'PENDIENTE',
+    })
+
+    await tx
+      .update(schema.customer)
+      .set({
+        creditBalance: String(newBalance),
+        creditStatus: newBalance > 0 ? customer.creditStatus || 'AL_DIA' : 'AL_DIA',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(schema.customer.id, input.customerId),
+          eq(schema.customer.tenantId, tenantId)
+        )
+      )
+
+    return { txId, newBalance }
   })
 
-  await db
-    .update(schema.customer)
-    .set({
-      creditBalance: String(newBalance),
-      creditStatus: newBalance > 0 ? (customer.creditStatus || 'AL_DIA') : 'AL_DIA',
-      updatedAt: new Date(),
-    })
-    .where(eq(schema.customer.id, input.customerId))
-
-  await logAudit(tenantId, userId, AuditAction.CREATE, 'credit', txId, input)
+  await logAudit(tenantId, userId, AuditAction.CREATE, 'credit', result.txId, {
+    customerId: input.customerId,
+    amount,
+    saleId: input.saleId || null,
+  })
 
   revalidatePath('/dashboard/customers')
-  return { txId, newBalance, success: true }
+  return { ...result, success: true }
 }
 
 export async function payCustomerCredit(input: {
@@ -298,71 +330,159 @@ export async function payCustomerCredit(input: {
   note?: string
 }) {
   const userId = await getUserId()
-  await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
+  const membership = await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
   const tenantId = await getTenantId(userId)
 
-  const cust = await db
-    .select()
-    .from(schema.customer)
-    .where(and(eq(schema.customer.id, input.customerId), eq(schema.customer.tenantId, tenantId)))
-    .limit(1)
+  const requested = Number(input.amount)
+  if (!Number.isFinite(requested) || requested <= 0) {
+    throw new Error('El valor del abono debe ser mayor a cero.')
+  }
+  const payment = Math.round(requested * 100) / 100
+  const method = (input.paymentMethod || 'CASH').toUpperCase()
 
-  if (!cust.length) throw new Error('Cliente no encontrado')
+  const result = await db.transaction(async (tx) => {
+    const cust = await tx
+      .select()
+      .from(schema.customer)
+      .where(
+        and(
+          eq(schema.customer.id, input.customerId),
+          eq(schema.customer.tenantId, tenantId)
+        )
+      )
+      .limit(1)
+      .for('update')
 
-  const customer = cust[0]
-  const payment = Math.min(Number(input.amount), Number(customer.creditBalance))
-  const newBalance = Number(customer.creditBalance) - payment
+    if (!cust.length) throw new Error('Cliente no encontrado')
+    const customer = cust[0]
+    const balance = Math.round(Number(customer.creditBalance) * 100) / 100
 
-  const txId = `cct_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
+    if (balance <= 0) throw new Error('El cliente no tiene saldo pendiente.')
+    if (payment > balance) {
+      throw new Error(`El abono no puede superar el saldo de $${balance.toFixed(2)}.`)
+    }
 
-  await db.insert(schema.customerCreditTransaction).values({
-    id: txId,
-    tenantId,
-    customerId: input.customerId,
-    type: 'PAYMENT',
-    amount: String(payment),
-    balanceAfter: String(newBalance),
-    note: input.note || null,
-    status: 'PAGADO',
-    paymentMethod: input.paymentMethod || 'CASH',
+    const newBalance = Math.round((balance - payment) * 100) / 100
+    const txId = `cct_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
+
+    await tx.insert(schema.customerCreditTransaction).values({
+      id: txId,
+      tenantId,
+      customerId: input.customerId,
+      type: 'PAYMENT',
+      amount: String(payment),
+      paidAmount: '0',
+      balanceAfter: String(newBalance),
+      note: input.note || null,
+      status: 'PAGADO',
+      paymentMethod: method,
+    })
+
+    const pending = await tx
+      .select()
+      .from(schema.customerCreditTransaction)
+      .where(
+        and(
+          eq(schema.customerCreditTransaction.tenantId, tenantId),
+          eq(schema.customerCreditTransaction.customerId, input.customerId),
+          eq(schema.customerCreditTransaction.type, 'CHARGE'),
+          sql`${schema.customerCreditTransaction.status} IN ('PENDIENTE', 'VENCIDO')`
+        )
+      )
+      .orderBy(asc(schema.customerCreditTransaction.createdAt))
+      .for('update')
+
+    let remaining = payment
+    for (const charge of pending) {
+      if (remaining <= 0) break
+      const chargeAmount = Math.round(Number(charge.amount) * 100) / 100
+      const alreadyPaid = Math.round(Number(charge.paidAmount) * 100) / 100
+      const outstanding = Math.max(0, Math.round((chargeAmount - alreadyPaid) * 100) / 100)
+      if (outstanding <= 0) continue
+
+      const applied = Math.min(remaining, outstanding)
+      const newPaid = Math.round((alreadyPaid + applied) * 100) / 100
+      remaining = Math.round((remaining - applied) * 100) / 100
+
+      await tx
+        .update(schema.customerCreditTransaction)
+        .set({
+          paidAmount: String(newPaid),
+          status: newPaid >= chargeAmount ? 'PAGADO' : charge.status,
+        })
+        .where(
+          and(
+            eq(schema.customerCreditTransaction.id, charge.id),
+            eq(schema.customerCreditTransaction.tenantId, tenantId)
+          )
+        )
+    }
+
+    await tx
+      .update(schema.customer)
+      .set({
+        creditBalance: String(newBalance),
+        creditStatus: newBalance > 0 ? customer.creditStatus : 'AL_DIA',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(schema.customer.id, input.customerId),
+          eq(schema.customer.tenantId, tenantId)
+        )
+      )
+
+    let cashMovementId: string | null = null
+    if (method === 'CASH' || method === 'EFECTIVO') {
+      const sessionConditions = [
+        eq(schema.cashierSession.tenantId, tenantId),
+        eq(schema.cashierSession.status, 'OPEN'),
+      ]
+      if (membership.role === 'CASHIER') {
+        sessionConditions.push(eq(schema.cashierSession.userId, userId))
+      }
+
+      const openSession = await tx
+        .select({ id: schema.cashierSession.id })
+        .from(schema.cashierSession)
+        .where(and(...sessionConditions))
+        .orderBy(desc(schema.cashierSession.openedAt))
+        .limit(1)
+
+      if (!openSession.length) {
+        throw new Error('No hay una caja abierta para registrar el abono en efectivo.')
+      }
+
+      cashMovementId = `cm_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
+      await tx.insert(schema.cashMovement).values({
+        id: cashMovementId,
+        tenantId,
+        cashierSessionId: openSession[0].id,
+        type: 'INGRESO',
+        concept: `Abono crédito cliente ${customer.name}`.slice(0, 160),
+        amount: String(payment),
+        note: input.note || null,
+        createdBy: userId,
+      })
+    }
+
+    return { txId, newBalance, cashMovementId }
   })
 
-  // Settle oldest pending charges first
-  const pending = await db
-    .select()
-    .from(schema.customerCreditTransaction)
-    .where(
-      and(
-        eq(schema.customerCreditTransaction.customerId, input.customerId),
-        eq(schema.customerCreditTransaction.status, 'PENDIENTE'),
-        eq(schema.customerCreditTransaction.type, 'CHARGE')
-      )
-    )
-    .orderBy(asc(schema.customerCreditTransaction.createdAt))
-
-  let remaining = payment
-  for (const tx of pending) {
-    if (remaining <= 0) break
-    await db
-      .update(schema.customerCreditTransaction)
-      .set({ status: 'PAGADO' })
-      .where(eq(schema.customerCreditTransaction.id, tx.id))
-    remaining -= Number(tx.amount)
-  }
-
-  await db
-    .update(schema.customer)
-    .set({
-      creditBalance: String(newBalance),
-      creditStatus: newBalance > 0 ? customer.creditStatus : 'AL_DIA',
-      updatedAt: new Date(),
-    })
-    .where(eq(schema.customer.id, input.customerId))
-
-  await logAudit(tenantId, userId, AuditAction.CREATE, 'credit', txId, input)
+  await logAudit(tenantId, userId, AuditAction.CREATE, 'credit', result.txId, {
+    customerId: input.customerId,
+    amount: payment,
+    paymentMethod: method,
+    cashMovementId: result.cashMovementId,
+  })
 
   revalidatePath('/dashboard/customers')
-  return { txId, newBalance, settled: payment, success: true }
+  if (result.cashMovementId) {
+    revalidatePath('/dashboard/pos')
+    revalidatePath('/dashboard/cashier')
+    revalidatePath('/dashboard/cash-closure')
+  }
+  return { ...result, settled: payment, success: true }
 }
 
 export async function getCustomerCreditDetail(customerId: string) {

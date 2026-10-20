@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:integration": "vitest run test/integration",
     "db:seed": "npx dotenv -e .env -- npx tsx scripts/seed.ts",
     "db:generate": "npx dotenv -e .env -- drizzle-kit generate",
     "db:migrate": "npx dotenv -e .env -- npx tsx scripts/db-migrate.ts",
@@ -18,11 +19,13 @@
     "db:studio": "npx dotenv -e .env -- drizzle-kit studio"
   },
   "dependencies": {
+    "@formkit/auto-animate": "^0.10.0",
     "better-auth": "^1.6.25",
     "clsx": "^2.1.1",
     "dotenv-cli": "^11.0.0",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.16.0",
+    "motion": "^14.4.0",
     "next": "16.2.6",
     "next-themes": "^0.4.6",
     "nodemailer": "^9.0.3",
