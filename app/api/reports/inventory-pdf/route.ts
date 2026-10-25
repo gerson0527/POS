@@ -9,6 +9,9 @@ import { generateInventoryReport } from '@/lib/reports/pdf-generator'
 import { jsonError, parseQueryParams, parseJsonBody } from '@/lib/api/http'
 import { AppError } from '@/lib/errors'
 
+// El arranque en frío del Chromium serverless puede tardar; garantizamos margen.
+export const maxDuration = 60
+
 // Fase 3.22: validación zod de los filtros de ubicación.
 const querySchema = z.object({
   location: z.string().optional(),

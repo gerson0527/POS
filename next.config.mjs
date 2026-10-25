@@ -31,7 +31,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  serverExternalPackages: ['nodemailer', 'puppeteer'],
+  serverExternalPackages: ['nodemailer', 'puppeteer', '@sparticuz/chromium'],
   async headers() {
     return [
       {
