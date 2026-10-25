@@ -23,6 +23,9 @@ import {
 import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { StatusBadge } from '@/components/tactical/StatusBadge'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { getMyAccess } from '@/app/actions/pos-actions'
+import { isPathAllowedForRole } from '@/lib/auth/permissions'
+import type { TenantRole } from '@/lib/auth/session-context'
 
 export default function DashboardLayout({
   children,
@@ -32,6 +35,33 @@ export default function DashboardLayout({
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
+  // Rol del usuario autenticado. Se resuelve en servidor para poder ocultar
+  // la navegación y bloquear rutas que el rol no puede usar (p. ej. la
+  // contadora sólo entra a /dashboard/invoices).
+  const [role, setRole] = useState<TenantRole | null>(null)
+  const [accessLoaded, setAccessLoaded] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const access = await getMyAccess()
+        if (!mounted) return
+        setRole(access.role)
+        setAccessLoaded(true)
+        if (!isPathAllowedForRole(access.role, pathname)) {
+          router.replace(access.homePath)
+        }
+      } catch {
+        if (mounted) setAccessLoaded(true)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+    // Solo al montar: el rol no cambia durante la sesión.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Guard de onboarding: si el usuario es admin y el tenant aún no completó
   // el wizard de primera vez, redirigir a /dashboard/onboarding.
@@ -90,7 +120,12 @@ export default function DashboardLayout({
     { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
   ]
 
-  const navItems = isMasterAdmin ? masterNavItems : standardNavItems
+  const navItems = isMasterAdmin
+    ? masterNavItems
+    : role === 'ACCOUNTANT'
+      ? // La contadora sólo trabaja el módulo de facturación.
+        standardNavItems.filter((item) => item.href === '/dashboard/invoices')
+      : standardNavItems
 
   // Breadcrumb text based on current path
   const getBreadcrumb = () => {
@@ -181,7 +216,12 @@ export default function DashboardLayout({
 
           {/* Nav Links */}
           <nav className="p-3 space-y-1">
-            {navItems.map((item) => {
+            {!accessLoaded ? (
+              <div className="px-3.5 py-2 text-[10px] font-mono uppercase tracking-wider text-fg-muted">
+                Cargando permisos...
+              </div>
+            ) : (
+              navItems.map((item) => {
               const Icon = item.icon
               const isActive =
                 item.href === '/dashboard'
@@ -208,7 +248,8 @@ export default function DashboardLayout({
                   <span className="truncate">{item.label}</span>
                 </Link>
               )
-            })}
+              })
+            )}
           </nav>
         </div>
 

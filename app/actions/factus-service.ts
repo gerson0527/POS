@@ -11,7 +11,9 @@ import type { TenantRole } from '@/lib/auth/session-context'
 export async function emitFactusElectronicInvoice(saleId: string) {
   try {
     const userId = await getUserId()
-    await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER'])
+    // La contadora (ACCOUNTANT) es quien revisa y transmite las facturas
+    // pendientes cuando la empresa opera en modo de envío manual.
+    await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER', 'ACCOUNTANT'])
     const tenantId = await getTenantId(userId)
     const { emitSaleElectronicInvoice } = await import('@/lib/invoicing/emit-invoice')
     return await emitSaleElectronicInvoice(saleId, tenantId)

@@ -18,7 +18,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/ui/ToastProvider'
 import { formatCOP } from '@/lib/utils/pos-utils'
 import { categorizeInvoicePayment } from '@/lib/utils/payment-splits'
-import { getAllInvoices, emitFactusElectronicInvoice } from '@/app/actions/pos-actions'
+import { getAllInvoices, emitFactusElectronicInvoice, updateSaleItemTax, getMyAccess } from '@/app/actions/pos-actions'
 import { InvoiceTable } from '@/components/invoices/InvoiceTable'
 import { XmlAuditModal } from '@/components/invoices/XmlAuditModal'
 import { InvoiceTicketModal } from '@/components/invoices/InvoiceTicketModal'
@@ -82,7 +82,39 @@ export default function InvoicesPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [emittingId, setEmittingId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [canManageInvoiceTax, setCanManageInvoiceTax] = useState(false)
   const itemsPerPage = 10
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const access = await getMyAccess()
+        setCanManageInvoiceTax(Boolean(access.canManageInvoiceTax))
+      } catch {
+        setCanManageInvoiceTax(false)
+      }
+    })()
+  }, [])
+
+  /** Ajuste de IVA de una línea de la factura pendiente (contadora). */
+  const handleSaveTax = async (itemId: string, ivaRate: number) => {
+    if (!selectedInvoice) return
+    const res = await updateSaleItemTax({
+      saleId: selectedInvoice.id,
+      saleItemId: itemId,
+      ivaRate,
+    })
+    if (res.success) {
+      toast(res.message)
+      await fetchInvoices()
+      // Refresca el detalle abierto con los valores recalculados.
+      const fresh = await getAllInvoices()
+      const updated = (fresh || []).find((i: any) => i.id === selectedInvoice.id)
+      if (updated) setSelectedInvoice(updated)
+    } else {
+      toast(res.message, 'error')
+    }
+  }
 
   const handleEmitFactus = async (saleId: string) => {
     setEmittingId(saleId)
@@ -411,7 +443,12 @@ export default function InvoicesPage() {
 
       {/* MODAL 2: COMPROBANTE Y VER FACTURA DETALLADA CON PAGOS MÚLTIPLES */}
       {isDetailModalOpen && selectedInvoice && (
-        <InvoiceTicketModal invoice={selectedInvoice} onClose={() => setIsDetailModalOpen(false)} />
+        <InvoiceTicketModal
+          invoice={selectedInvoice}
+          onClose={() => setIsDetailModalOpen(false)}
+          canEditTax={canManageInvoiceTax}
+          onSaveTax={handleSaveTax}
+        />
       )}
     </div>
   )

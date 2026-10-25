@@ -11,6 +11,7 @@ import {
 import { and, eq, asc, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { getUserId, getTenantId, logAudit, publishEvent, requireRole } from './_shared'
+import { ALL_ROLES } from '@/lib/auth/permissions'
 function escapeCsv(value: unknown): string {
   if (value === null || value === undefined) return ''
   const s = String(value)
@@ -22,6 +23,7 @@ function escapeCsv(value: unknown): string {
 
 export async function exportProductsToCSV(): Promise<{ csv: string; filename: string }> {
   const userId = await getUserId()
+  await requireRole(userId, ALL_ROLES)
   const tenantId = await getTenantId(userId)
 
   const products = await db
@@ -330,6 +332,7 @@ export async function createProduct(input: CreateProductDTO & { initialStock?: n
 
 export async function getProducts(includeInactive = true) {
   const userId = await getUserId()
+  await requireRole(userId, ALL_ROLES)
   const tenantId = await getTenantId(userId)
 
   const whereClause = includeInactive

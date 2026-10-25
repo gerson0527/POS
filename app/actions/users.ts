@@ -9,8 +9,36 @@ import { revalidatePath } from 'next/cache'
 import { sendWelcomeEmail } from '@/lib/email'
 import { hashPassword } from 'better-auth/crypto'
 import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
+import { requireMembership } from '@/lib/auth/session-context'
+import { canManageInvoiceTax, homePathForRole, isPathAllowedForRole, ALL_ROLES } from '@/lib/auth/permissions'
+
+/**
+ * Contexto de acceso del usuario autenticado: rol, ruta de inicio y
+ * permisos de facturación. Lo consume el layout del dashboard para ocultar
+ * la navegación que no corresponde al rol y para bloquear el acceso directo
+ * a rutas no autorizadas.
+ */
+export async function getMyAccess() {
+  const userId = await getUserId()
+  const membership = await requireMembership(userId)
+  return {
+    role: membership.role,
+    homePath: homePathForRole(membership.role),
+    canManageInvoiceTax: canManageInvoiceTax(membership.role),
+    allowedPathPrefixes: membership.role === 'ACCOUNTANT' ? ['/dashboard/invoices'] : ['/dashboard'],
+  }
+}
+
+/** Verifica (en servidor) si el usuario actual puede entrar a una ruta del dashboard. */
+export async function canAccessPath(pathname: string) {
+  const userId = await getUserId()
+  const membership = await requireMembership(userId)
+  return isPathAllowedForRole(membership.role, pathname)
+}
+
 export async function getUsersList() {
   const currentUserId = await getUserId()
+  await requireRole(currentUserId, ALL_ROLES)
   const tenantId = await getTenantId(currentUserId)
 
   const usersList = await db
@@ -61,7 +89,7 @@ export async function createUserAction(input: {
   if (password.length < 12) {
     throw new Error('La contraseña debe tener al menos 12 caracteres.')
   }
-  if (!['ADMIN', 'MANAGER', 'CASHIER', 'VIEWER'].includes(role)) {
+  if (!['ADMIN', 'MANAGER', 'CASHIER', 'VIEWER', 'ACCOUNTANT'].includes(role)) {
     throw new Error('Rol de usuario inválido.')
   }
 

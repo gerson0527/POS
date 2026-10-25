@@ -103,6 +103,7 @@ export function CreateUserModal({ open, onClose, onSubmitted }: CreateUserModalP
             >
               <option value="CASHIER">CAJERO / CAJA POS</option>
               <option value="MANAGER">SUPERVISOR KARDEX</option>
+              <option value="ACCOUNTANT">CONTADORA / CONTADOR (SÓLO FACTURAS)</option>
               <option value="VIEWER">AUDITOR FISCAL (LECTURA)</option>
             </Select>
           </div>

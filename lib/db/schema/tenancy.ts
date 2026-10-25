@@ -52,6 +52,10 @@ export const tenant = pgTable(
     factusPassword: text('factusPassword'),
     factusEnvironment: text('factusEnvironment').default('sandbox'),
     factusNumberingRangeId: integer('factusNumberingRangeId'),
+    // AUTO: el POS transmite la factura a la DIAN al completar la venta.
+    // MANUAL: la venta queda PENDIENTE y la contadora (rol ACCOUNTANT) revisa
+    // el IVA y transmite la factura desde /dashboard/invoices.
+    dianTransmissionMode: text('dianTransmissionMode').notNull().default('AUTO'),
     status: text('status').notNull().default('ACTIVE'), // ACTIVE, SUSPENDED, INACTIVE
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt').notNull().defaultNow(),

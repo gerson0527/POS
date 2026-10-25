@@ -7,7 +7,13 @@ import { and, eq } from 'drizzle-orm'
 import { cookies, headers } from 'next/headers'
 import { forbiddenError, tenantNotAssignedError, tenantSuspendedError, unauthorizedError } from './errors'
 
-export type TenantRole = 'ADMIN' | 'CASHIER' | 'MANAGER' | 'VIEWER'
+/**
+ * ACCOUNTANT: rol de la contadora. Su alcance es deliberadamente MÍNIMO:
+ * sólo el módulo de facturación (/dashboard/invoices), donde revisa y corrige
+ * el IVA de las facturas pendientes y las transmite a la DIAN. No accede a
+ * POS, caja, inventario, reportes, configuración ni usuarios.
+ */
+export type TenantRole = 'ADMIN' | 'CASHIER' | 'MANAGER' | 'VIEWER' | 'ACCOUNTANT'
 
 export interface TenantMembership {
   tenantId: string

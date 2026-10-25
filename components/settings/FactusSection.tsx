@@ -23,6 +23,8 @@ import {
   getInvoiceProviderStatus,
   getFactusConfigForCurrentTenant,
   updateTenantFactusConfig,
+  getDianTransmissionMode,
+  updateDianTransmissionMode,
 } from '@/app/actions/pos-actions'
 
 const EMPTY_FACTUS_CONFIG = {
@@ -56,6 +58,34 @@ export function FactusSection({ refreshKey = 0, onLoadingChange }: FactusSection
     Array<{ id: number; prefix: string; from: number; to: number; current: number; status: string; document?: string }>
   >([])
   const [factusLoading, setFactusLoading] = useState(false)
+  const [transmissionMode, setTransmissionMode] = useState<'AUTO' | 'MANUAL'>('AUTO')
+  const [savingMode, setSavingMode] = useState(false)
+
+  async function loadTransmissionMode() {
+    try {
+      const mode = await getDianTransmissionMode()
+      setTransmissionMode(mode)
+    } catch (err) {
+      console.error('Error cargando modo de transmisión:', err)
+    }
+  }
+
+  async function handleSaveTransmissionMode(mode: 'AUTO' | 'MANUAL') {
+    setSavingMode(true)
+    try {
+      await updateDianTransmissionMode(mode)
+      setTransmissionMode(mode)
+      toast(
+        mode === 'MANUAL'
+          ? 'Modo MANUAL: las facturas quedan pendientes y la contadora las revisa y transmite.'
+          : 'Modo AUTO: el POS transmite la factura a la DIAN al completar la venta.'
+      )
+    } catch (err: any) {
+      toast(`Error: ${err.message}`, 'error')
+    } finally {
+      setSavingMode(false)
+    }
+  }
 
   async function loadFactusConfigData() {
     try {
@@ -89,6 +119,7 @@ export function FactusSection({ refreshKey = 0, onLoadingChange }: FactusSection
         if (!cancelled) onLoadingChange?.(false)
       }
     })()
+    loadTransmissionMode()
     return () => {
       cancelled = true
     }
@@ -176,6 +207,57 @@ export function FactusSection({ refreshKey = 0, onLoadingChange }: FactusSection
               <strong className="text-success"> CUFE</strong>, el PDF firmado y el XML. Estos datos se guardan
               en este POS. Puedes cambiar de proveedor configurando otro diferente en este mismo formulario.
             </div>
+          </div>
+        </div>
+
+        <div className="bg-surface border border-warn/40 rounded p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 text-warn shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <div className="text-fg font-bold uppercase tracking-wider text-[10px]">
+                MODO DE TRANSMISIÓN A LA DIAN
+              </div>
+              <div className="text-fg-muted text-[11px] leading-relaxed">
+                <strong className="text-fg">AUTO</strong>: el POS transmite la factura a la DIAN al
+                completar la venta. <strong className="text-fg">MANUAL</strong>: la venta queda
+                PENDIENTE; la contadora (rol CONTADORA) revisa y corrige el IVA de cada línea y
+                transmite la factura desde el módulo de Facturas.
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <button
+              type="button"
+              disabled={savingMode}
+              onClick={() => handleSaveTransmissionMode('AUTO')}
+              className={`p-3 rounded border text-left flex items-center gap-3 transition-all disabled:opacity-60 ${
+                transmissionMode === 'AUTO'
+                  ? 'bg-accent/10 border-accent text-fg'
+                  : 'bg-surface border-line text-fg-muted hover:border-line-strong'
+              }`}
+            >
+              <Zap className="w-4 h-4 text-accent" />
+              <div>
+                <div className="font-bold uppercase text-xs">AUTO (POS TRANSMITE)</div>
+                <div className="text-[10px] opacity-80">La factura se envía a la DIAN al cobrar</div>
+              </div>
+            </button>
+            <button
+              type="button"
+              disabled={savingMode}
+              onClick={() => handleSaveTransmissionMode('MANUAL')}
+              className={`p-3 rounded border text-left flex items-center gap-3 transition-all disabled:opacity-60 ${
+                transmissionMode === 'MANUAL'
+                  ? 'bg-warn/10 border-warn text-fg'
+                  : 'bg-surface border-line text-fg-muted hover:border-line-strong'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-warn" />
+              <div>
+                <div className="font-bold uppercase text-xs">MANUAL (CONTADORA TRANSMITE)</div>
+                <div className="text-[10px] opacity-80">La venta queda pendiente de revisión fiscal</div>
+              </div>
+            </button>
           </div>
         </div>
 

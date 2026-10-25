@@ -18,11 +18,13 @@ import {
   toBusinessDateString,
 } from './_shared'
 import { buildSessionZReportData } from './z-report'
+import { ALL_ROLES } from '@/lib/auth/permissions'
 
 const CASH_MOVEMENT_TYPES = ['INGRESO', 'EGRESO', 'RETIRO', 'DEVOLUCION'] as const
 
 export async function getCurrentCashierSessionSummary() {
   const userId = await getUserId()
+  await requireRole(userId, ALL_ROLES)
   const tenantId = await getTenantId(userId)
   const businessDate = getBogotaBusinessDate()
 

@@ -30,6 +30,7 @@ export async function getCompanyInfo() {
       dianUsername: schema.tenant.dianUsername,
       dianTestSetId: schema.tenant.dianTestSetId,
       dianEnvironment: schema.tenant.dianEnvironment,
+      dianTransmissionMode: schema.tenant.dianTransmissionMode,
       hasDianPassword: schema.tenant.dianPassword,
       hasDianSoftwarePin: schema.tenant.dianSoftwarePin,
     })
@@ -61,6 +62,7 @@ export async function getCompanyInfo() {
     dianPassword: '',
     dianTestSetId: '',
     dianEnvironment: '2',
+    dianTransmissionMode: 'AUTO',
     hasDianCredentials: false,
   }
 }
@@ -290,6 +292,48 @@ export async function updateCompanyInfo(input: {
   revalidatePath('/dashboard/settings')
   revalidatePath('/dashboard')
   return { success: true }
+}
+
+/**
+ * Modo de transmisión de facturas a la DIAN.
+ *  AUTO   → el POS transmite al completar la venta.
+ *  MANUAL → la venta queda PENDIENTE; la contadora (rol ACCOUNTANT) revisa el IVA
+ *            y transmite la factura desde /dashboard/invoices.
+ */
+export async function updateDianTransmissionMode(mode: string) {
+  const userId = await getUserId()
+  await requireRole(userId, ['ADMIN'])
+  const tenantId = await getTenantId(userId)
+
+  const normalized = String(mode || '').toUpperCase()
+  if (!['AUTO', 'MANUAL'].includes(normalized)) {
+    throw new Error('Modo de transmisión inválido. Use AUTO o MANUAL.')
+  }
+
+  await db
+    .update(schema.tenant)
+    .set({ dianTransmissionMode: normalized, updatedAt: new Date() })
+    .where(eq(schema.tenant.id, tenantId))
+
+  await logAudit(tenantId, userId, AuditAction.UPDATE, 'tenant', tenantId, {
+    dianTransmissionMode: normalized,
+  })
+
+  revalidatePath('/dashboard/settings')
+  revalidatePath('/dashboard/invoices')
+  return { success: true, mode: normalized }
+}
+
+/** Modo de transmisión vigente (lo consulta el POS antes de auto-transmitir). */
+export async function getDianTransmissionMode(): Promise<'AUTO' | 'MANUAL'> {
+  const userId = await getUserId()
+  const tenantId = await getTenantId(userId)
+  const rows = await db
+    .select({ mode: schema.tenant.dianTransmissionMode })
+    .from(schema.tenant)
+    .where(eq(schema.tenant.id, tenantId))
+    .limit(1)
+  return rows[0]?.mode === 'MANUAL' ? 'MANUAL' : 'AUTO'
 }
 
 /** Actualiza solo la configuración del proveedor de facturación electrónica del tenant.

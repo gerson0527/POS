@@ -5,8 +5,11 @@ import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
 import { and, eq, desc, inArray, gte, lte } from 'drizzle-orm'
 import { getUserId, getTenantId } from './_shared'
+import { requireRole } from './_shared'
+import { ALL_ROLES } from '@/lib/auth/permissions'
 export async function getSalesReports(startDate?: string, endDate?: string) {
   const userId = await getUserId()
+  await requireRole(userId, ALL_ROLES)
   const tenantId = await getTenantId(userId)
 
   const whereConditions: any[] = [
@@ -110,6 +113,7 @@ export async function getSalesReports(startDate?: string, endDate?: string) {
 
 export async function getTelemetryLogs() {
   const userId = await getUserId()
+  await requireRole(userId, ALL_ROLES)
   const tenantId = await getTenantId(userId)
 
   const logs = await db

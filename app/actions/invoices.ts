@@ -3,9 +3,13 @@
 // El barrel pos-actions.ts re-exporta todo este módulo.
 import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
-import { eq, desc, inArray } from 'drizzle-orm'
-import { getUserId, getTenantId, formatBogotaDateTime } from './_shared'
+import { eq, desc, inArray, and } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
+import { getUserId, getTenantId, formatBogotaDateTime, logAudit, requireRole } from './_shared'
 import { dianQrUrl } from '@/lib/fiscal/cufe'
+import { calculateSaleTotals } from '@/lib/utils/pos-utils'
+import { isAllowedIvaRate } from '@/lib/auth/permissions'
+import { AuditAction, SaleStatus } from '@/lib/types'
 export async function getAllInvoices() {
   const userId = await getUserId()
   const tenantId = await getTenantId(userId)
@@ -155,3 +159,159 @@ export async function getAllInvoices() {
 /**
  * Emite una Factura Electrónica de Venta oficial ante la DIAN utilizando la API V2 de Factus
  */
+
+/**
+ * AJUSTE FISCAL DE IVA sobre una factura PENDIENTE.
+ *
+ * Cuando el vendedor carga el producto con una tarifa de IVA equivocada, la
+ * factura queda pendiente y la contadora (rol ACCOUNTANT) corrige la tarifa
+ * antes de transmitirla a la DIAN. Reglas:
+ *  - Sólo facturas NO transmitidas (sin CUFE): un documento con CUFE ya es
+ *    un documento fiscal y requiere nota de crédito, no edición.
+ *  - Sólo ventas completadas.
+ *  - Recalcula IVA de la línea, total de la línea y totales de la venta.
+ *  - Devuelve la diferencia entre el nuevo total y lo efectivamente cobrado,
+ *    para que la contadora gestione la diferencia en caja.
+ */
+export async function updateSaleItemTax(input: {
+  saleId: string
+  saleItemId: string
+  ivaRate: number
+}): Promise<{
+  success: boolean
+  message: string
+  totals?: { subtotal: number; taxAmount: number; total: number; discountAmount: number }
+  paymentDelta?: number
+}> {
+  try {
+    const userId = await getUserId()
+    await requireRole(userId, ['ADMIN', 'MANAGER', 'ACCOUNTANT'])
+    const tenantId = await getTenantId(userId)
+
+    const rate = Number(input.ivaRate)
+    if (!isAllowedIvaRate(rate)) {
+      return { success: false, message: 'Tarifa de IVA no permitida. Use 0, 5, 8 o 19.' }
+    }
+
+    const saleRows = await db
+      .select()
+      .from(schema.sale)
+      .where(and(eq(schema.sale.id, input.saleId), eq(schema.sale.tenantId, tenantId)))
+      .limit(1)
+    const sale = saleRows[0]
+    if (!sale) return { success: false, message: 'La venta no existe.' }
+    if (sale.status !== SaleStatus.COMPLETED) {
+      return { success: false, message: 'Sólo se puede ajustar el IVA de ventas completadas.' }
+    }
+
+    // Si ya tiene CUFE el documento ya es fiscal: no se edita (exige nota crédito).
+    const docRows = await db
+      .select()
+      .from(schema.fiscalDocument)
+      .where(
+        and(
+          eq(schema.fiscalDocument.saleId, sale.id),
+          eq(schema.fiscalDocument.tenantId, tenantId)
+        )
+      )
+      .orderBy(desc(schema.fiscalDocument.createdAt))
+      .limit(1)
+    if (docRows[0]?.uniqueCode) {
+      return {
+        success: false,
+        message:
+          'La factura ya fue transmitida a la DIAN (tiene CUFE). No se puede modificar: requiere nota de crédito.',
+      }
+    }
+
+    const itemRows = await db
+      .select()
+      .from(schema.saleItem)
+      .where(
+        and(eq(schema.saleItem.id, input.saleItemId), eq(schema.saleItem.saleId, sale.id))
+      )
+      .limit(1)
+    const item = itemRows[0]
+    if (!item) return { success: false, message: 'El ítem de la venta no existe.' }
+
+    const oldRate = Number(item.ivaRate || 0)
+    if (oldRate === rate) {
+      return { success: true, message: 'La tarifa de IVA ya era la misma.' }
+    }
+
+    const quantity = Number(item.quantity)
+    const unitPrice = Number(item.unitPrice)
+    const lineSubtotal = quantity * unitPrice
+    const ivaAmount = lineSubtotal * (rate / 100)
+    const lineTotal = lineSubtotal + ivaAmount
+
+    await db
+      .update(schema.saleItem)
+      .set({
+        ivaRate: rate.toFixed(2),
+        ivaAmount: ivaAmount.toFixed(2),
+        lineTotal: lineTotal.toFixed(2),
+      })
+      .where(eq(schema.saleItem.id, item.id))
+
+    // Recalcular totales de la venta con la tarifa ya aplicada.
+    const allItems = await db
+      .select()
+      .from(schema.saleItem)
+      .where(eq(schema.saleItem.saleId, sale.id))
+    const totals = calculateSaleTotals(
+      allItems.map((i) => ({
+        quantity: Number(i.quantity),
+        unitPrice: Number(i.unitPrice),
+        ivaRate: Number(i.ivaRate),
+      })),
+      Number(sale.discountPercentage || 0)
+    )
+
+    await db
+      .update(schema.sale)
+      .set({
+        subtotal: totals.subtotal.toString(),
+        taxAmount: totals.taxAmount.toString(),
+        total: totals.total.toString(),
+        discountAmount: totals.discountAmount.toString(),
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.sale.id, sale.id))
+
+    // Diferencia contra lo cobrado: queda visible para la contadora.
+    const payments = await db
+      .select()
+      .from(schema.payment)
+      .where(eq(schema.payment.saleId, sale.id))
+    const paidTotal = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+    const paymentDelta = Number((totals.total - paidTotal).toFixed(2))
+
+    await logAudit(tenantId, userId, AuditAction.UPDATE, 'sale_item_tax', item.id, {
+      saleId: sale.id,
+      productId: item.productId,
+      ivaRateAnterior: oldRate,
+      ivaRateNuevo: rate,
+      totalAnterior: Number(sale.total || 0),
+      totalNuevo: totals.total,
+      diferenciaCobro: paymentDelta,
+    })
+
+    revalidatePath('/dashboard/invoices')
+
+    return {
+      success: true,
+      message:
+        paymentDelta === 0
+          ? `IVA ajustado a ${rate}%.`
+          : `IVA ajustado a ${rate}%. El total de la factura cambió en $${Math.abs(paymentDelta).toLocaleString('es-CO')}: la diferencia debe gestionarse en caja.`,
+      totals,
+      paymentDelta,
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err?.message || 'No se pudo ajustar el IVA de la factura.',
+    }
+  }
+}

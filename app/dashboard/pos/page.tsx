@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { AnimatePresence } from 'motion/react'
-import { createSale, getProducts, completeSale, generateInvoice, emitFactusElectronicInvoice, getCustomers, createCustomer, getCurrentCashierSessionSummary } from '@/app/actions/pos-actions'
+import { createSale, getProducts, completeSale, generateInvoice, emitFactusElectronicInvoice, getCustomers, createCustomer, getCurrentCashierSessionSummary, getDianTransmissionMode } from '@/app/actions/pos-actions'
 import { isSessionError, redirectToLogin } from '@/lib/hooks/use-protected-query'
 import { useCart } from '@/lib/hooks/use-cart'
 import { calculateSaleTotals } from '@/lib/utils/pos-utils'
@@ -267,7 +267,26 @@ export default function DashboardPOSPage() {
 
       // 2) Auto-transmitir a Factus → DIAN. Si falla, la factura queda como PENDIENTE
       //    y el usuario puede reintentar desde /dashboard/invoices.
+      //    En modo MANUAL la venta NO se transmite: la contadora revisa el IVA y
+      //    transmite la factura desde /dashboard/invoices.
       let factusResult: { success: boolean; message: string; cufe?: string } | null = null
+      let transmissionMode: 'AUTO' | 'MANUAL' = 'AUTO'
+      try {
+        transmissionMode = await getDianTransmissionMode()
+      } catch {
+        transmissionMode = 'AUTO'
+      }
+
+      if (transmissionMode === 'MANUAL') {
+        setSaleSuccess({ total: totals.total, dianStatus: 'pending', cufe: undefined })
+        setStep('complete')
+        toast(
+          'Venta completada. La factura quedó PENDIENTE: contabilidad la revisa y la transmite a la DIAN.',
+          'info'
+        )
+        return
+      }
+
       try {
         factusResult = await emitFactusElectronicInvoice(saleId)
       } catch (factusErr: any) {

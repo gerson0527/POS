@@ -13,6 +13,7 @@ import {
   EventType
 } from '@/lib/types'
 import { calculateSaleTotals, formatInvoiceNumber, roundToNearest100 } from '@/lib/utils/pos-utils'
+import { ALL_ROLES } from '@/lib/auth/permissions'
 import { INTERNAL_NUMERATION } from '@/lib/fiscal/numeration'
 import { and, eq, lt, sql, desc } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
@@ -212,6 +213,7 @@ async function createSaleInternal(input: CreateSaleDTO) {
 
 export async function getSale(saleId: string) {
   const userId = await getUserId()
+  await requireRole(userId, ALL_ROLES)
   const tenantId = await getTenantId(userId)
 
   const sale = await db

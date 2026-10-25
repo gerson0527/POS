@@ -3,6 +3,8 @@ import * as schema from '@/lib/db/schema'
 import { and, asc, eq, inArray } from 'drizzle-orm'
 import { SaleStatus } from '@/lib/types'
 import { calculateExpectedCash } from '@/lib/cash/reconcile'
+import { requireUser, requireRole } from '@/lib/auth/session-context'
+import { ALL_ROLES } from '@/lib/auth/permissions'
 import {
   formatBogotaDateTime,
   getBogotaBusinessDate,
@@ -87,6 +89,8 @@ export interface ZReportData {
  * (antes devolvía `any`).
  */
 export async function buildSessionZReportData(sess: CashierSessionRow): Promise<ZReportData> {
+  const userId = await requireUser()
+  await requireRole(userId, ALL_ROLES)
   const completedSales = await db
     .select()
     .from(schema.sale)
