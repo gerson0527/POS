@@ -130,6 +130,12 @@ export interface InvoiceResult {
   providerId?: string
   /** Respuesta cruda del proveedor (solo debug). */
   rawResponse?: unknown
+  /** Id de correlación de la emisión (UUID) para auditoría y soporte. */
+  correlationId?: string
+  /** El resultado externo no se pudo determinar (timeout, red, 5xx). */
+  uncertain?: boolean
+  /** El outbox debe reconciliar por reference_code antes de reenviar. */
+  needsReconciliation?: boolean
 }
 
 export interface InvoiceProviderConfig {
@@ -162,6 +168,8 @@ export interface InvoiceProvider {
   testConnection(): Promise<{ ok: boolean; message: string }>
   /** Emite la factura electrónica según el payload. */
   sendInvoice(payload: InvoicePayload): Promise<InvoiceResult>
+  /** Busca una factura ya emitida por reference_code (reconciliación). */
+  lookupBillByReference?(referenceCode: string): Promise<InvoiceResult | null>
   /** Lista los rangos de numeración disponibles (útil durante la configuración). */
   listNumberingRanges(): Promise<
     Array<{

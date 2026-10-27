@@ -55,6 +55,10 @@ export const fiscalDocument = pgTable(
     customerSnapshot: jsonb('customerSnapshot'),
     totalsSnapshot: jsonb('totalsSnapshot'),
     paymentSnapshot: jsonb('paymentSnapshot'),
+    // Snapshot de los ítems efectivamente enviados a Factus/DIAN. Evita que un
+    // cambio posterior de nombre/SKU/precio en el catálogo altere la
+    // reconstrucción local de la factura.
+    itemsSnapshot: jsonb('itemsSnapshot'),
     qrCodeContent: text('qrCodeContent'),
     pdfStorageKey: text('pdfStorageKey'),
     xmlSignedStorageKey: text('xmlSignedStorageKey'),

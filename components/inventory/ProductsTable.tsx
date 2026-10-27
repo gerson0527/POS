@@ -111,8 +111,19 @@ export function ProductsTable({
               header: 'IMPUESTO / IVA',
               thClassName: 'px-4 py-3.5',
               cellClassName: 'px-4 py-3.5 text-fg font-medium',
-              render: (p: any) =>
-                p.ivaRate == 0 ? '0% (Exento)' : p.ivaRate == 8 ? '8% (Impoconsumo)' : p.ivaRate == 5 ? '5% (Reducido)' : `${p.ivaRate || 19}% (IVA)`,
+              render: (p: any) => {
+                const rate = Number(p.ivaRate ?? 19)
+                const treatment =
+                  p.taxTreatment === 'EXEMPT'
+                    ? 'Exento'
+                    : p.taxTreatment === 'EXCLUDED'
+                    ? 'Excluido'
+                    : null
+                if (rate === 0) return `0% (${treatment || 'Excluido'})`
+                if (rate === 8) return '8% (Impoconsumo)'
+                if (rate === 5) return '5% (Reducido)'
+                return `${rate}% (${treatment || 'IVA'})`
+              },
             },
             {
               key: 'stock',

@@ -85,6 +85,7 @@ export default function InventoryPage() {
     cost: '',
     margin: '0',
     ivaRate: '19',
+    taxTreatment: 'TAXED',
     initialStock: '10',
   }
 
@@ -176,6 +177,7 @@ export default function InventoryPage() {
       cost: p.cost ? String(p.cost) : '',
       margin: calcMargin,
       ivaRate: p.ivaRate ? String(p.ivaRate) : '19',
+      taxTreatment: p.taxTreatment || 'TAXED',
       status: p.status || 'ACTIVE',
     })
     setEditingProduct(p)
@@ -203,6 +205,7 @@ export default function InventoryPage() {
           cost: productForm.cost ? parseFloat(productForm.cost) : undefined,
           margin: productForm.margin ? parseFloat(productForm.margin) : undefined,
           ivaRate: parseFloat(productForm.ivaRate) || 0,
+          taxTreatment: productForm.taxTreatment,
           status: productForm.status,
         })
 
@@ -234,6 +237,7 @@ export default function InventoryPage() {
         cost: productForm.cost ? parseFloat(productForm.cost) : undefined,
         margin: productForm.margin ? parseFloat(productForm.margin) : undefined,
         ivaRate: parseFloat(productForm.ivaRate) || 19,
+        taxTreatment: productForm.taxTreatment,
         initialStock: parseInt(productForm.initialStock || '') || 0,
       } as any)
 

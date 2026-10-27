@@ -19,6 +19,7 @@ export interface ProductFormValues {
   cost: string
   margin: string
   ivaRate: string
+  taxTreatment: 'TAXED' | 'EXEMPT' | 'EXCLUDED'
   status?: string
   initialStock?: string
 }
@@ -200,6 +201,26 @@ export function ProductFormModal({
                 <option value="0">0% — Exento / Excluido de IVA</option>
                 <option value="8">8% — Impoconsumo (Licores / Restaurantes)</option>
               </Select>
+            </div>
+
+            <div>
+              <Label>Tratamiento fiscal *</Label>
+              <Select
+                value={form.taxTreatment}
+                onChange={(e) =>
+                  onChange({
+                    ...form,
+                    taxTreatment: e.target.value as ProductFormValues['taxTreatment'],
+                  })
+                }
+              >
+                <option value="TAXED">Gravado (IVA)</option>
+                <option value="EXEMPT">Exento (tarifa 0%)</option>
+                <option value="EXCLUDED">Excluido de IVA</option>
+              </Select>
+              <p className="text-[10px] text-fg-muted mt-1">
+                Exento y excluido no son lo mismo: seleccione el tratamiento informado por DIAN.
+              </p>
             </div>
 
             <div className="bg-input border border-line-dim rounded p-3 text-[10px] text-fg-muted space-y-1">

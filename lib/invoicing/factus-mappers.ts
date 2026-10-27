@@ -7,6 +7,7 @@ import {
   InvoicePaymentDetailPayload,
   InvoiceResult,
 } from './types'
+import { FACTUS_HTTP_TIMEOUT_MS } from './factus-http'
 import { factusPaymentCode } from '@/lib/catalogs/payment-methods'
 
 // Mapeo de tipos de documento POS a códigos DIAN
@@ -51,11 +52,42 @@ export function mapDocumentType(posDocType: string): string {
   return POS_TO_FACTUS_DOCUMENT_TYPE[posDocType.toUpperCase()] || '13'
 }
 
-/** Mapea ivaRate (19,5,8,0) → (code, rate, excluded). */
-export function mapTax(rate: number | string): { code: string; rate: string; is_excluded: boolean } {
+/**
+ * Mapea ivaRate + tratamiento tributario → (code, rate, excluded).
+ * `EXEMPT` (exento) mantiene base gravable y NO se marca excluido; `EXCLUDED`
+ * (excluido/no causa) sí se marca. El valor por defecto conserva el
+ * comportamiento histórico para tasas 0 (excluido).
+ */
+export function mapTax(
+  rate: number | string,
+  treatment: string = 'TAXED'
+): { code: string; rate: string; is_excluded: boolean } {
   const r = Number(rate)
-  if (!r || r === 0) return { code: '01', rate: '0.00', is_excluded: true }
+  const normalized = String(treatment || 'TAXED').trim().toUpperCase()
+  if (!Number.isFinite(r) || r <= 0) {
+    return {
+      code: '01',
+      rate: '0.00',
+      is_excluded: normalized !== 'EXEMPT',
+    }
+  }
   return { code: '01', rate: r.toFixed(2), is_excluded: false }
+}
+
+/**
+ * Separa prefijo y consecutivo del número fiscal asignado por Factus
+ * (p. ej. `SETP990012345` → prefijo SETP, consecutivo 990012345).
+ * El consecutivo fiscal NUNCA debe tomarse del ticket interno del POS.
+ */
+export function parseFiscalBillNumber(
+  billNumber: string | number | null | undefined
+): { prefix?: string; consecutive?: string } {
+  const raw = String(billNumber ?? '').trim()
+  if (!raw) return {}
+  const match = raw.match(/^([A-Za-z]*)[-\s]?0*(\d+)$/)
+  if (!match) return {}
+  const prefix = match[1] ? match[1].toUpperCase() : undefined
+  return { prefix, consecutive: match[2] }
 }
 
 /** Normaliza cualquier número a string con 2 decimales (estándar DIAN). */
@@ -142,6 +174,13 @@ export function parseFactusBody(text: string): FactusRawResponse {
 /** Extrae el bill de la respuesta (algunos errores traen `data` directo). */
 export function extractBill(json: FactusRawResponse): any {
   return (json as any)?.data?.bill ?? (json as any)?.data
+}
+
+/** Normaliza la lista paginada de /v2/bills a un array de facturas. */
+export function extractBillList(json: unknown): any[] {
+  const data = (json as any)?.data
+  const list = data?.data ?? data
+  return Array.isArray(list) ? list : []
 }
 
 // `/v2/bills/validate` responde `status: "Created"` / `"OK"` a nivel raíz: es el
@@ -231,6 +270,7 @@ export async function fetchBillLinks(
     try {
       const detRes = await fetch(`${baseUrl}/v2/bills/${bill.number}`, {
         headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(FACTUS_HTTP_TIMEOUT_MS),
       })
       if (detRes.ok) {
         const detJson: any = await detRes.json().catch(() => null)

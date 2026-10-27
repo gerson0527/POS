@@ -102,6 +102,9 @@ export const saleItem = pgTable(
     quantity: decimal('quantity', { precision: 12, scale: 2 }).notNull(),
     unitPrice: decimal('unitPrice', { precision: 12, scale: 4 }).notNull(),
     ivaRate: decimal('ivaRate', { precision: 5, scale: 2 }).notNull(),
+    // Tratamiento fiscal al momento de la venta (no se debe releer del catálogo
+    // al transmitir en modo MANUAL, porque el producto pudo cambiar).
+    taxTreatment: text('taxTreatment').notNull().default('TAXED'),
     ivaAmount: decimal('ivaAmount', { precision: 12, scale: 2 }).notNull(),
     lineTotal: decimal('lineTotal', { precision: 12, scale: 2 }).notNull(),
     createdAt: timestamp('createdAt').notNull().defaultNow(),

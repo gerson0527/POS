@@ -35,6 +35,10 @@ export async function createCustomer(input: {
   address?: string
   city?: string
   department?: string
+  municipalityCode?: string
+  tributeCode?: string
+  legalOrganizationCode?: string
+  identificationDocumentCode?: string
   taxRegime?: string
   notes?: string
 }) {
@@ -73,6 +77,10 @@ export async function createCustomer(input: {
     address: input.address?.trim() || null,
     city: input.city?.trim() || null,
     department: input.department?.trim() || null,
+    municipalityCode: input.municipalityCode?.trim() || '11001',
+    tributeCode: input.tributeCode?.trim() || 'ZZ',
+    legalOrganizationCode: input.legalOrganizationCode || null,
+    identificationDocumentCode: input.identificationDocumentCode || null,
     taxRegime: input.taxRegime || null,
     notes: input.notes?.trim() || null,
     status: 'ACTIVE',
@@ -97,6 +105,10 @@ export async function updateCustomer(
     address?: string
     city?: string
     department?: string
+    municipalityCode?: string
+    tributeCode?: string
+    legalOrganizationCode?: string
+    identificationDocumentCode?: string
     taxRegime?: string
     notes?: string
   }
@@ -116,6 +128,16 @@ export async function updateCustomer(
   if (input.address !== undefined) updateData.address = input.address?.trim() || null
   if (input.city !== undefined) updateData.city = input.city?.trim() || null
   if (input.department !== undefined) updateData.department = input.department?.trim() || null
+  if (input.municipalityCode !== undefined) {
+    updateData.municipalityCode = input.municipalityCode?.trim() || '11001'
+  }
+  if (input.tributeCode !== undefined) updateData.tributeCode = input.tributeCode?.trim() || 'ZZ'
+  if (input.legalOrganizationCode !== undefined) {
+    updateData.legalOrganizationCode = input.legalOrganizationCode || null
+  }
+  if (input.identificationDocumentCode !== undefined) {
+    updateData.identificationDocumentCode = input.identificationDocumentCode || null
+  }
   if (input.taxRegime !== undefined) updateData.taxRegime = input.taxRegime || null
   if (input.notes !== undefined) updateData.notes = input.notes?.trim() || null
 

@@ -85,6 +85,13 @@ export default function InvoicesPage() {
   const itemsPerPage = 10
 
   const handleEmitFactus = async (saleId: string) => {
+    if (
+      !window.confirm(
+        '¿Transmitir esta factura a la DIAN ahora? Esta acción envía datos reales al proveedor de facturación.'
+      )
+    ) {
+      return
+    }
     setEmittingId(saleId)
     try {
       const res = await emitFactusElectronicInvoice(saleId)

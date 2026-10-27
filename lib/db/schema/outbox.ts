@@ -3,6 +3,7 @@ import {
   text,
   timestamp,
   integer,
+  boolean,
   index,
   uniqueIndex } from 'drizzle-orm/pg-core'
 
@@ -23,6 +24,12 @@ export const fiscalOutbox = pgTable(
     nextAttemptAt: timestamp('nextAttemptAt').notNull().defaultNow(),
     lockedAt: timestamp('lockedAt'),
     lastError: text('lastError'),
+    // MANUAL: el cron automático NO reclama el evento; solo se procesa desde
+    // /dashboard/invoices (transmisión explícita de la contadora).
+    requiresManualApproval: boolean('requiresManualApproval').notNull().default(false),
+    // El resultado externo es incierto (timeout/red/fallo local tras emitir):
+    // el siguiente intento debe reconciliar por reference_code antes de reenviar.
+    needsReconciliation: boolean('needsReconciliation').notNull().default(false),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt').notNull().defaultNow(),
   },

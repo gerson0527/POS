@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { AnimatePresence } from 'motion/react'
-import { createSale, getProducts, completeSale, generateInvoice, emitFactusElectronicInvoice, getCustomers, createCustomer, getCurrentCashierSessionSummary, getDianTransmissionMode } from '@/app/actions/pos-actions'
+import { createSale, getProducts, completeSale, generateInvoice, getCustomers, createCustomer, getCurrentCashierSessionSummary } from '@/app/actions/pos-actions'
 import { isSessionError, redirectToLogin } from '@/lib/hooks/use-protected-query'
 import { useCart } from '@/lib/hooks/use-cart'
 import { calculateSaleTotals } from '@/lib/utils/pos-utils'
@@ -265,17 +265,11 @@ export default function DashboardPOSPage() {
         console.warn('Facturación local / Ticket interno:', invErr)
       }
 
-      // 2) Auto-transmitir a Factus → DIAN. Si falla, la factura queda como PENDIENTE
-      //    y el usuario puede reintentar desde /dashboard/invoices.
-      //    En modo MANUAL la venta NO se transmite: la contadora revisa el IVA y
-      //    transmite la factura desde /dashboard/invoices.
-      let factusResult: { success: boolean; message: string; cufe?: string } | null = null
-      let transmissionMode: 'AUTO' | 'MANUAL' = 'AUTO'
-      try {
-        transmissionMode = await getDianTransmissionMode()
-      } catch {
-        transmissionMode = 'AUTO'
-      }
+      // 2) La transmisión a Factus/DIAN la decide el SERVIDOR dentro de completeSale
+      //    según tenant.dianTransmissionMode. En MANUAL el evento queda retenido;
+      //    la contadora lo transmite desde /dashboard/invoices. No se vuelve a
+      //    llamar la emisión desde el cliente (evita POST duplicados y carreras).
+      const transmissionMode = completion.transmissionMode ?? 'AUTO'
 
       if (transmissionMode === 'MANUAL') {
         setSaleSuccess({ total: totals.total, dianStatus: 'pending', cufe: undefined })
@@ -287,11 +281,7 @@ export default function DashboardPOSPage() {
         return
       }
 
-      try {
-        factusResult = await emitFactusElectronicInvoice(saleId)
-      } catch (factusErr: any) {
-        factusResult = { success: false, message: factusErr?.message ?? 'Error desconocido' }
-      }
+      const factusResult = completion.fiscal
 
       setSaleSuccess({
         total: totals.total,

@@ -306,6 +306,7 @@ export async function createProduct(input: CreateProductDTO & { initialStock?: n
     cost: input.cost !== undefined && input.cost !== null ? String(input.cost) : null,
     margin: String(calculatedMargin),
     ivaRate: String(input.ivaRate ?? 19),
+    taxTreatment: input.taxTreatment || 'TAXED',
     status: 'ACTIVE',
   })
 
@@ -353,6 +354,7 @@ export async function getProducts(includeInactive = true) {
       cost: schema.product.cost,
       margin: schema.product.margin,
       ivaRate: schema.product.ivaRate,
+      taxTreatment: schema.product.taxTreatment,
       status: schema.product.status,
       createdAt: schema.product.createdAt,
       updatedAt: schema.product.updatedAt,
@@ -399,6 +401,7 @@ export async function updateProduct(
   if (input.cost !== undefined) updateData.cost = input.cost !== null ? String(input.cost) : null
   if (input.margin !== undefined) updateData.margin = String(input.margin)
   if (input.ivaRate !== undefined) updateData.ivaRate = String(input.ivaRate)
+  if (input.taxTreatment !== undefined) updateData.taxTreatment = input.taxTreatment
   if (input.status !== undefined) updateData.status = input.status
 
   await db

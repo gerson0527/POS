@@ -21,6 +21,19 @@ import { mapDocumentType, mapTax, toMoneyString, toPaymentDetail } from './factu
 const DEFAULT_UMA_CODE = '94'
 const DEFAULT_STANDARD_CODE = '999'
 const DEFAULT_SCHEME_ID = '0'
+const DEFAULT_MUNICIPALITY_CODE = '11001'
+const DEFAULT_TRIBUTE_CODE = 'ZZ'
+
+/** Cliente genérico explícito para ventas sin identificación (consumidor final). */
+export const FINAL_CONSUMER = {
+  documentType: 'CC',
+  documentNumber: '222222222222',
+  personType: 'NATURAL',
+  name: 'Consumidor Final',
+  address: 'Calle 100 # 15-20',
+  email: 'no-email@posretail.local',
+  phone: '3000000000',
+} as const
 
 interface BuildContext {
   tenant: {
@@ -86,10 +99,8 @@ export function buildItems(items: any[], discountPercentage = 0): InvoiceItemPay
     const it = row.item ?? {}
     const product = row.product ?? {}
     const ivaRate = it.ivaRate ?? product.ivaRate ?? 19
-    const iva = mapTax(ivaRate)
-    const taxes: InvoiceItemTaxPayload[] = []
-    if (Number(ivaRate ?? 0) > 0) taxes.push(iva)
-    else taxes.push({ code: '01', rate: '0.00', is_excluded: true })
+    const taxTreatment = it.taxTreatment ?? product.taxTreatment ?? 'TAXED'
+    const taxes: InvoiceItemTaxPayload[] = [mapTax(ivaRate, taxTreatment)]
 
     return {
       code_reference:
@@ -186,6 +197,7 @@ export async function loadInvoiceContext(
 ): Promise<{
   sale: any
   tenant: any
+  customerRow: any | null
   ctx: BuildContext
   itemsRows: any[]
   paymentsRows: any[]
@@ -212,9 +224,26 @@ export async function loadInvoiceContext(
       nit: tenant.nit || '',
       numberingRangeId: Number(numberingRangeId ?? tenant.factusNumberingRangeId ?? 0),
       numberingPrefix: 'FACT',
-      municipalityCode: '11001',
-      tributeCode: 'ZZ',
+      municipalityCode: tenant.fiscalMunicipalityCode || DEFAULT_MUNICIPALITY_CODE,
+      tributeCode: tenant.fiscalTributeCode || DEFAULT_TRIBUTE_CODE,
     },
+  }
+
+  // Vincular el cliente real (si existe) para usar municipio, tributo y tipo de
+  // persona configurados en vez de defaults genéricos.
+  let customerRow: any | null = null
+  if (sale.customerDocNumber) {
+    const customerRows = await db
+      .select()
+      .from(schema.customer)
+      .where(
+        and(
+          eq(schema.customer.tenantId, sale.tenantId),
+          eq(schema.customer.documentNumber, sale.customerDocNumber)
+        )
+      )
+      .limit(1)
+    customerRow = customerRows[0] ?? null
   }
 
   // Cargar ítems + producto (necesitamos unit_measure_code, etc.)
@@ -239,7 +268,86 @@ export async function loadInvoiceContext(
     .from(schema.payment)
     .where(eq(schema.payment.saleId, saleId))
 
-  return { sale, tenant, ctx, itemsRows, paymentsRows }
+  return { sale, tenant, customerRow, ctx, itemsRows, paymentsRows }
+}
+
+/**
+ * Validaciones previas a llamar a Factus. Devuelve una lista de errores
+ * accionables (vacía si todo está correcto). No inventa datos: si la venta
+ * tiene cliente identificado, exige los campos que el proveedor necesita.
+ */
+export function validateInvoiceContext(input: {
+  sale: any
+  itemsRows: any[]
+  paymentsRows: any[]
+  customerRow: any | null
+  ctx: BuildContext
+}): string[] {
+  const errors: string[] = []
+  const { sale, itemsRows, paymentsRows, customerRow, ctx } = input
+
+  if (String(sale?.status || '').toUpperCase() !== 'COMPLETED') {
+    errors.push('La venta debe estar COMPLETADA para emitir factura electrónica.')
+  }
+  if (!itemsRows.length) {
+    errors.push('La venta no tiene ítems para facturar.')
+  }
+  if (!Number.isInteger(ctx.tenant.numberingRangeId) || ctx.tenant.numberingRangeId <= 0) {
+    errors.push(
+      'No hay rango de numeración electrónica configurado. Configúrelo en /dashboard/settings → Facturación electrónica.'
+    )
+  }
+
+  itemsRows.forEach((row, index) => {
+    const it = row.item ?? {}
+    const quantity = Number(it.quantity)
+    const unitPrice = Number(it.unitPrice)
+    const ivaRate = Number(it.ivaRate ?? row.product?.ivaRate ?? 0)
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      errors.push(`Ítem ${index + 1}: cantidad inválida (${it.quantity ?? 'vacía'}).`)
+    }
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      errors.push(`Ítem ${index + 1}: precio unitario inválido (${it.unitPrice ?? 'vacío'}).`)
+    }
+    if (!Number.isFinite(ivaRate) || ivaRate < 0) {
+      errors.push(`Ítem ${index + 1}: tarifa de IVA inválida (${it.ivaRate ?? 'vacía'}).`)
+    }
+  })
+
+  if (!paymentsRows.length) {
+    errors.push('La venta no tiene pagos registrados; no se puede emitir la factura.')
+  }
+  paymentsRows.forEach((payment, index) => {
+    const amount = Number(payment.amount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      errors.push(`Pago ${index + 1}: monto inválido (${payment.amount ?? 'vacío'}).`)
+    }
+  })
+
+  const municipalityCode = String(
+    customerRow?.municipalityCode || ctx.tenant.municipalityCode || ''
+  )
+  if (!/^\d{5}$/.test(municipalityCode)) {
+    errors.push(
+      'Falta un código DANE de municipio válido (5 dígitos) para el cliente o el emisor.'
+    )
+  }
+
+  // Consumidor final: se usa el registro genérico explícito (no se inventan datos
+  // por cliente). Cliente identificado: se exigen los datos mínimos de Factus.
+  if (sale?.customerDocNumber) {
+    const name = customerRow?.name || sale.customerName
+    const email = customerRow?.email || sale.customerEmail
+    const address = customerRow?.address || sale.customerAddress
+    if (!name) errors.push('El cliente no tiene nombre o razón social.')
+    if (!email) errors.push('El cliente no tiene email para la factura electrónica.')
+    if (!address) errors.push('El cliente no tiene dirección registrada.')
+    if (!customerRow?.documentType && !sale.customerDocType) {
+      errors.push('El cliente no tiene tipo de documento.')
+    }
+  }
+
+  return errors
 }
 
 /**
@@ -262,15 +370,24 @@ export async function buildInvoicePayload(input: {
   operationType?: string
   numberingRangeId?: number
 }): Promise<InvoicePayload> {
-  const { sale, ctx, itemsRows, paymentsRows } = await loadInvoiceContext(
+  const { sale, ctx, customerRow, itemsRows, paymentsRows } = await loadInvoiceContext(
     input.saleId,
     input.numberingRangeId,
     input.tenantId
   )
 
-  if (!Number.isInteger(ctx.tenant.numberingRangeId) || ctx.tenant.numberingRangeId <= 0) {
+  const validationErrors = validateInvoiceContext({
+    sale,
+    itemsRows,
+    paymentsRows,
+    customerRow,
+    ctx,
+  })
+  if (validationErrors.length) {
     throw new Error(
-      'No hay rango de numeración electrónica configurado. Configúrelo en /dashboard/settings → Facturación electrónica.'
+      `No se puede emitir la factura electrónica:\n${validationErrors
+        .map((error) => `- ${error}`)
+        .join('\n')}`
     )
   }
 
@@ -282,47 +399,40 @@ export async function buildInvoicePayload(input: {
   )
   const invoiceTotal = Number((exactInvoiceTotal + cashRoundingAmount).toFixed(2))
 
-  // Cargar cliente (puede venir del sale o ser "consumidor final")
+  // Cliente identificado: se combina el registro `customer` (fuente fiscal) con
+  // el snapshot de la venta (datos históricos). Sin documento → consumidor final
+  // explícito, sin inventar datos de un cliente real.
   const customer = sale.customerDocNumber
     ? {
-        documentType: sale.customerDocType || 'CC',
-        documentNumber: sale.customerDocNumber || '',
-        personType: 'NATURAL',
-        name: sale.customerName || 'Consumidor Final',
-        email: sale.customerEmail || null,
-        phone: sale.customerPhone || null,
-        address: sale.customerAddress || null,
-        tributeCode: 'ZZ',
-        legalOrganizationCode: '2',
-        municipalityCode: '11001',
-        identificationDocumentCode: null,
+        documentType: customerRow?.documentType || sale.customerDocType || 'CC',
+        documentNumber: customerRow?.documentNumber || sale.customerDocNumber || '',
+        personType: customerRow?.personType || 'NATURAL',
+        name: customerRow?.name || sale.customerName || '',
+        tradeName: customerRow?.tradeName || null,
+        email: customerRow?.email || sale.customerEmail || null,
+        phone: customerRow?.phone || sale.customerPhone || null,
+        address: customerRow?.address || sale.customerAddress || null,
+        tributeCode: customerRow?.tributeCode || ctx.tenant.tributeCode || DEFAULT_TRIBUTE_CODE,
+        legalOrganizationCode: customerRow?.legalOrganizationCode || null,
+        municipalityCode:
+          customerRow?.municipalityCode || ctx.tenant.municipalityCode || DEFAULT_MUNICIPALITY_CODE,
+        identificationDocumentCode: customerRow?.identificationDocumentCode || null,
       }
-    : null
+    : FINAL_CONSUMER
+
+  const tenantMunicipality = ctx.tenant.municipalityCode || DEFAULT_MUNICIPALITY_CODE
+  const tenantTribute = ctx.tenant.tributeCode || DEFAULT_TRIBUTE_CODE
 
   return {
     numbering_range_id: ctx.tenant.numberingRangeId,
     reference_code: buildInvoiceReference(sale.id),
     document: '01',
     operation_type: input.operationType ?? '10',
-    send_email: Boolean(sale.customerEmail),
+    send_email: Boolean(customer.email),
     observation: 'Factura emitida automáticamente desde POS Retail',
     cash_rounding_amount: cashRoundingAmount,
     payment_details: buildPayments(paymentsRows, invoiceTotal),
-    customer: customer
-      ? buildCustomerPayload(customer, ctx.tenant.municipalityCode || '11001', ctx.tenant.tributeCode || 'ZZ')
-      : buildCustomerPayload(
-          {
-            documentType: 'CC',
-            documentNumber: '222222222222',
-            personType: 'NATURAL',
-            name: 'Consumidor Final',
-            address: 'Calle 100 # 15-20',
-            email: 'no-email@posretail.local',
-            phone: '3000000000',
-          },
-          '11001',
-          'ZZ'
-        ),
+    customer: buildCustomerPayload(customer, tenantMunicipality, tenantTribute),
     items: buildItems(itemsRows, discountPercentage),
   } as InvoicePayload
 }

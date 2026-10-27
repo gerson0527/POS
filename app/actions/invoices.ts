@@ -75,6 +75,11 @@ export async function getAllInvoices() {
     .from(schema.fiscalDocument)
     .where(inArray(schema.fiscalDocument.saleId, saleIds))
 
+  const allOutbox = await db
+    .select()
+    .from(schema.fiscalOutbox)
+    .where(inArray(schema.fiscalOutbox.saleId, saleIds))
+
   const paymentsBySale = new Map<string, typeof allPayments>()
   for (const p of allPayments) {
     const arr = paymentsBySale.get(p.saleId)
@@ -89,9 +94,22 @@ export async function getAllInvoices() {
     else itemsBySale.set(it.saleId, [it])
   }
 
+  // Puede haber dos filas por venta: el comprobante interno REC y la factura
+  // electrónica. La UI debe mostrar SIEMPRE el documento electrónico.
+  const isElectronicDoc = (fd: (typeof allFiscalDocs)[number]) =>
+    fd.documentType === 'FACTURA_ELECTRONICA_VENTA' || Boolean(fd.uniqueCode)
   const fiscalBySale = new Map<string, (typeof allFiscalDocs)[number]>()
   for (const fd of allFiscalDocs) {
-    if (fd.saleId && !fiscalBySale.has(fd.saleId)) fiscalBySale.set(fd.saleId, fd)
+    if (!fd.saleId) continue
+    const current = fiscalBySale.get(fd.saleId)
+    if (!current || (isElectronicDoc(fd) && !isElectronicDoc(current))) {
+      fiscalBySale.set(fd.saleId, fd)
+    }
+  }
+
+  const outboxBySale = new Map<string, (typeof allOutbox)[number]>()
+  for (const ob of allOutbox) {
+    if (ob.eventType === 'EMIT_INVOICE') outboxBySale.set(ob.saleId, ob)
   }
 
   const mapMethodName = (m: string) => {
@@ -122,6 +140,31 @@ export async function getAllInvoices() {
       primaryPayment?.reference ? primaryPayment.reference : ''
 
     const fiscalDoc = fiscalBySale.get(s.id) || null
+    const outbox = outboxBySale.get(s.id) || null
+
+    // Snapshot fiscal: reconstruye la factura con los datos EXACTOS enviados a
+    // DIAN (nombre/SKU/precio de ese momento), no con el catálogo actual.
+    const snapshotItems = Array.isArray(fiscalDoc?.itemsSnapshot)
+      ? (fiscalDoc.itemsSnapshot as any[]).map((item, index) => {
+          const quantity = Number(item.quantity ?? 0)
+          const price = Number(item.price ?? 0)
+          const rate = Number(item.taxes?.[0]?.rate ?? 0)
+          const base = quantity * price
+          const ivaAmount = base * (rate / 100)
+          return {
+            id: `snapshot_${s.id}_${index}`,
+            saleId: s.id,
+            productId: item.code_reference || null,
+            productName: item.name || 'Producto POS',
+            productSku: item.code_reference || null,
+            quantity,
+            unitPrice: price,
+            ivaRate: rate,
+            ivaAmount,
+            lineTotal: base + ivaAmount,
+          }
+        })
+      : null
 
     return {
       ...s,
@@ -133,7 +176,7 @@ export async function getAllInvoices() {
       paymentMethodsList,
       paymentReference: paymentReferenceLabel,
       payments,
-      items,
+      items: snapshotItems?.length ? snapshotItems : items,
       fiscalDocument: fiscalDoc,
       isElectronicSent: Boolean(fiscalDoc?.uniqueCode),
       dianStatus: fiscalDoc?.status || null,
@@ -146,6 +189,9 @@ export async function getAllInvoices() {
         fiscalDoc?.qrCodeContent ||
         (fiscalDoc?.uniqueCode ? dianQrUrl(fiscalDoc.uniqueCode, dianEnvironment) : null),
       fullNumber: fiscalDoc?.fullNumber || null,
+      outboxStatus: outbox?.status || null,
+      requiresManualApproval: outbox?.requiresManualApproval ?? false,
+      needsReconciliation: outbox?.needsReconciliation ?? false,
     }
   })
 

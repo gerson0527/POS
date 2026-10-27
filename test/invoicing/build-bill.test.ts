@@ -6,6 +6,7 @@ import {
   computeCashRoundingAmount,
   computeExactInvoiceTotal,
   splitNit,
+  validateInvoiceContext,
 } from '@/lib/invoicing/build-bill'
 
 describe('splitNit', () => {
@@ -118,6 +119,57 @@ describe('buildPayments', () => {
     )
     expect(details[0].amount).toBe('59000.00')
     expect(details[1].amount).toBe('60000.00')
+  })
+})
+
+describe('validateInvoiceContext', () => {
+  const base = {
+    sale: {
+      status: 'COMPLETED',
+      customerDocNumber: null,
+      customerName: null,
+      customerEmail: null,
+      customerAddress: null,
+    },
+    itemsRows: [
+      { item: { quantity: 1, unitPrice: 10000, ivaRate: 19 }, product: {} },
+    ],
+    paymentsRows: [{ method: 'CASH', amount: 11900 }],
+    customerRow: null,
+    ctx: {
+      tenant: {
+        id: 'tenant_1',
+        nit: '900123456',
+        numberingRangeId: 1,
+        numberingPrefix: 'FACT',
+        municipalityCode: '11001',
+        tributeCode: 'ZZ',
+      },
+    },
+  }
+
+  it('acepta una venta completada con consumidor final', () => {
+    expect(validateInvoiceContext(base)).toEqual([])
+  })
+
+  it('rechaza ventas que no están COMPLETED (F-05)', () => {
+    const errors = validateInvoiceContext({
+      ...base,
+      sale: { ...base.sale, status: 'DRAFT' },
+    })
+    expect(errors.join(' ')).toContain('COMPLETADA')
+  })
+
+  it('exige rango de numeración y datos mínimos del cliente identificado (F-11)', () => {
+    const errors = validateInvoiceContext({
+      ...base,
+      sale: { ...base.sale, customerDocNumber: '123' },
+      customerRow: { documentNumber: '123', name: 'Cliente', municipalityCode: '11001' },
+      ctx: { tenant: { ...base.ctx.tenant, numberingRangeId: 0 } },
+    })
+    expect(errors.join(' ')).toContain('rango de numeración')
+    expect(errors.join(' ')).toContain('email')
+    expect(errors.join(' ')).toContain('dirección')
   })
 })
 

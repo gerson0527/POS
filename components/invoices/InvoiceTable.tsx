@@ -266,6 +266,14 @@ export function InvoiceTable({
                   </span>
                 )
               }
+              if (!fiscal.canTransmit) {
+                return (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-night-mid border border-line text-fg-muted">
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    {fiscal.label}
+                  </span>
+                )
+              }
               return (
                 <TacticalButton
                   variant="secondary"
@@ -274,7 +282,13 @@ export function InvoiceTable({
                   loading={emittingId === inv.id}
                   icon={<Zap className="w-3 h-3 text-accent" />}
                 >
-                  TRANSMITIR DIAN
+                  {fiscal.needsReconciliation
+                    ? 'RECONCILIAR'
+                    : fiscal.isManualPending
+                    ? 'TRANSMITIR (MANUAL)'
+                    : fiscal.isOutboxFailed
+                    ? 'REINTENTAR'
+                    : 'TRANSMITIR DIAN'}
                 </TacticalButton>
               )
             },

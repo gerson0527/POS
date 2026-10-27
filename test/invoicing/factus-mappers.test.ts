@@ -7,6 +7,7 @@ import {
   mapPaymentMethod,
   mapTax,
   parseFactusBody,
+  parseFiscalBillNumber,
   toFactusPayload,
   toInvoiceResult,
   toMoneyString,
@@ -59,9 +60,38 @@ describe('mapTax', () => {
     expect(mapTax('8')).toEqual({ code: '01', rate: '8.00', is_excluded: false })
   })
 
-  it('tasa 0 o vacía queda excluida', () => {
+  it('tasa 0 TAXED o vacía queda excluida', () => {
     expect(mapTax(0)).toEqual({ code: '01', rate: '0.00', is_excluded: true })
     expect(mapTax('')).toEqual({ code: '01', rate: '0.00', is_excluded: true })
+    expect(mapTax(0, 'TAXED')).toEqual({ code: '01', rate: '0.00', is_excluded: true })
+  })
+
+  it('EXEMPT no es lo mismo que EXCLUDED (F-12)', () => {
+    expect(mapTax(0, 'EXEMPT')).toEqual({ code: '01', rate: '0.00', is_excluded: false })
+    expect(mapTax(0, 'EXCLUDED')).toEqual({ code: '01', rate: '0.00', is_excluded: true })
+  })
+})
+
+describe('parseFiscalBillNumber', () => {
+  it('separa prefijo y consecutivo del billNumber de Factus', () => {
+    expect(parseFiscalBillNumber('SETP990012345')).toEqual({
+      prefix: 'SETP',
+      consecutive: '990012345',
+    })
+    expect(parseFiscalBillNumber('FE-00042')).toEqual({ prefix: 'FE', consecutive: '42' })
+  })
+
+  it('sin prefijo usa solo el consecutivo', () => {
+    expect(parseFiscalBillNumber('900123456')).toEqual({
+      prefix: undefined,
+      consecutive: '900123456',
+    })
+  })
+
+  it('valores vacíos o inválidos no rompen la emisión', () => {
+    expect(parseFiscalBillNumber(null)).toEqual({})
+    expect(parseFiscalBillNumber('')).toEqual({})
+    expect(parseFiscalBillNumber('SIN-NUMERO')).toEqual({})
   })
 })
 

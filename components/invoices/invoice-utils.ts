@@ -30,17 +30,44 @@ export function fiscalUiStatus(inv: any) {
     inv?.fiscalDocument?.status || inv?.dianStatus || inv?.status || ''
   ).toUpperCase()
   const cufe = inv?.cufe || inv?.fiscalDocument?.uniqueCode || null
+  const outboxStatus = String(inv?.outboxStatus || '').toUpperCase()
+  const requiresManualApproval = Boolean(inv?.requiresManualApproval)
+  const needsReconciliation = Boolean(inv?.needsReconciliation)
   const isAccepted = status === 'ACCEPTED'
   const isRejected = status === 'REJECTED' || status === 'TECHNICAL_FAILURE'
   const isTransmitted = Boolean(cufe) && !isRejected
-  const canTransmit = !cufe && !isRejected && status !== 'QUEUED' && status !== 'SUBMITTED'
+
+  const isManualPending =
+    !cufe && !isRejected && requiresManualApproval && outboxStatus !== 'DONE'
+  const isQueued =
+    !cufe && !isRejected && !requiresManualApproval &&
+    (outboxStatus === 'PENDING' || outboxStatus === 'PROCESSING')
+  const needsReconciliationUi = !cufe && needsReconciliation && !isRejected
+  const isOutboxFailed = !cufe && outboxStatus === 'FAILED' && !isRejected
+
+  let label = FISCAL_STATUS_LABELS[status] || (cufe ? 'TRANSMITIDA' : 'PENDIENTE')
+  if (!cufe && !isRejected) {
+    if (needsReconciliationUi) label = 'RECONCILIAR'
+    else if (isManualPending) label = 'PENDIENTE MANUAL'
+    else if (isOutboxFailed) label = 'ERROR (REINTENTAR)'
+    else if (isQueued) label = 'EN COLA'
+  }
+
+  // MANUAL se puede transmitir desde /dashboard/invoices; AUTO en cola espera al
+  // cron. Un rechazo requiere corrección, no un simple reintento.
+  const canTransmit = !cufe && !isRejected && (!isQueued || requiresManualApproval)
+
   return {
     status,
-    label: FISCAL_STATUS_LABELS[status] || (cufe ? 'TRANSMITIDA' : 'PENDIENTE'),
+    label,
     cufe,
     isAccepted,
     isRejected,
     isTransmitted,
+    isManualPending,
+    isQueued,
+    isOutboxFailed,
+    needsReconciliation: needsReconciliationUi,
     canTransmit,
   }
 }

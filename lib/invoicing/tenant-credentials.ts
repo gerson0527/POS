@@ -97,6 +97,8 @@ export interface FactusConfigInput {
   factusPassword?: string
   factusEnvironment?: 'sandbox' | 'production'
   factusNumberingRangeId?: number
+  fiscalMunicipalityCode?: string
+  fiscalTributeCode?: string
 }
 
 /**
@@ -117,6 +119,12 @@ export function buildFactusConfigUpdate(input: FactusConfigInput): Record<string
   if (input.factusEnvironment !== undefined) update.factusEnvironment = input.factusEnvironment
   if (input.factusNumberingRangeId !== undefined)
     update.factusNumberingRangeId = input.factusNumberingRangeId
+  if (input.fiscalMunicipalityCode !== undefined) {
+    update.fiscalMunicipalityCode = input.fiscalMunicipalityCode || '11001'
+  }
+  if (input.fiscalTributeCode !== undefined) {
+    update.fiscalTributeCode = input.fiscalTributeCode || 'ZZ'
+  }
   return update
 }
 

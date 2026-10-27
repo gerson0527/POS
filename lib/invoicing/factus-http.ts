@@ -3,6 +3,21 @@
 
 import { InvoiceProviderConfig, InvoiceProviderError } from './types'
 
+/** Timeout por llamada HTTP a Factus (evita bloquear caja/outbox indefinidamente). */
+export const FACTUS_HTTP_TIMEOUT_MS = Math.max(
+  1_000,
+  Number(process.env.FACTUS_HTTP_TIMEOUT_MS ?? 20_000)
+)
+
+/** fetch con AbortSignal.timeout uniforme para todas las llamadas a Factus. */
+export async function fetchFactus(
+  url: string,
+  init: RequestInit = {},
+  timeoutMs = FACTUS_HTTP_TIMEOUT_MS
+): Promise<Response> {
+  return fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) })
+}
+
 /** Cache de token OAuth con vencimiento (se refresca 5 min antes del real). */
 export class TokenCache {
   private entry: { token: string; expiresAt: number } | null = null
@@ -18,6 +33,11 @@ export class TokenCache {
   store(token: string, expiresInMs: number): void {
     // expiresInMs debe venir de expires_in*1000; restamos 5 min de holgura.
     this.entry = { token, expiresAt: Date.now() + expiresInMs - 5 * 60 * 1000 }
+  }
+
+  /** Fuerza re-autenticación (p. ej. tras un 401 del recurso). */
+  invalidate(): void {
+    this.entry = null
   }
 }
 
@@ -51,8 +71,10 @@ export function parseOAuthError(errText: string): {
 export async function requestFactusToken(
   config: InvoiceProviderConfig,
   cache: TokenCache,
-  providerId = 'factus-v2'
+  providerId = 'factus-v2',
+  force = false
 ): Promise<string> {
+  if (force) cache.invalidate()
   const cached = cache.token
   if (cached) return cached
 
@@ -74,7 +96,7 @@ export async function requestFactusToken(
 
   let res: Response
   try {
-    res = await fetch(url, {
+    res = await fetchFactus(url, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -83,9 +105,12 @@ export async function requestFactusToken(
       body: form.toString(),
     })
   } catch (err: any) {
+    const timedOut = err?.name === 'TimeoutError' || err?.name === 'AbortError'
     throw new InvoiceProviderError(
-      `No se pudo conectar a ${url}: ${err?.message ?? 'network error'}`,
-      { providerId, code: 'NETWORK_ERROR' }
+      timedOut
+        ? `Autenticación Factus V2 agotó el tiempo de espera (${FACTUS_HTTP_TIMEOUT_MS} ms).`
+        : `No se pudo conectar a ${url}: ${err?.message ?? 'network error'}`,
+      { providerId, code: timedOut ? 'TIMEOUT' : 'NETWORK_ERROR' }
     )
   }
 

@@ -31,6 +31,8 @@ export async function getCompanyInfo() {
       dianTestSetId: schema.tenant.dianTestSetId,
       dianEnvironment: schema.tenant.dianEnvironment,
       dianTransmissionMode: schema.tenant.dianTransmissionMode,
+      fiscalMunicipalityCode: schema.tenant.fiscalMunicipalityCode,
+      fiscalTributeCode: schema.tenant.fiscalTributeCode,
       hasDianPassword: schema.tenant.dianPassword,
       hasDianSoftwarePin: schema.tenant.dianSoftwarePin,
     })
@@ -63,6 +65,8 @@ export async function getCompanyInfo() {
     dianTestSetId: '',
     dianEnvironment: '2',
     dianTransmissionMode: 'AUTO',
+    fiscalMunicipalityCode: '11001',
+    fiscalTributeCode: 'ZZ',
     hasDianCredentials: false,
   }
 }
@@ -228,6 +232,8 @@ export async function updateCompanyInfo(input: {
   dianPassword?: string
   dianTestSetId?: string
   dianEnvironment?: string
+  fiscalMunicipalityCode?: string
+  fiscalTributeCode?: string
 }) {
   const userId = await getUserId()
   await requireRole(userId, ['ADMIN'])
@@ -262,6 +268,12 @@ export async function updateCompanyInfo(input: {
         dianUsername: input.dianUsername || null,
         dianTestSetId: input.dianTestSetId || null,
         dianEnvironment: input.dianEnvironment || '2',
+        ...(input.fiscalMunicipalityCode !== undefined
+          ? { fiscalMunicipalityCode: input.fiscalMunicipalityCode || '11001' }
+          : {}),
+        ...(input.fiscalTributeCode !== undefined
+          ? { fiscalTributeCode: input.fiscalTributeCode || 'ZZ' }
+          : {}),
         ...secretUpdate,
         updatedAt: new Date(),
       })
@@ -279,6 +291,8 @@ export async function updateCompanyInfo(input: {
       dianUsername: input.dianUsername || null,
       dianTestSetId: input.dianTestSetId || null,
       dianEnvironment: input.dianEnvironment || '2',
+      fiscalMunicipalityCode: input.fiscalMunicipalityCode || '11001',
+      fiscalTributeCode: input.fiscalTributeCode || 'ZZ',
       ...secretUpdate,
       status: 'ACTIVE',
     })
@@ -314,6 +328,26 @@ export async function updateDianTransmissionMode(mode: string) {
     .update(schema.tenant)
     .set({ dianTransmissionMode: normalized, updatedAt: new Date() })
     .where(eq(schema.tenant.id, tenantId))
+
+  // Al volver a AUTO se liberan los eventos retenidos por MANUAL que aún están
+  // pendientes, para que el cron los procese sin intervención adicional.
+  if (normalized === 'AUTO') {
+    await db
+      .update(schema.fiscalOutbox)
+      .set({
+        requiresManualApproval: false,
+        nextAttemptAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(schema.fiscalOutbox.tenantId, tenantId),
+          eq(schema.fiscalOutbox.eventType, 'EMIT_INVOICE'),
+          eq(schema.fiscalOutbox.status, 'PENDING'),
+          eq(schema.fiscalOutbox.requiresManualApproval, true)
+        )
+      )
+  }
 
   await logAudit(tenantId, userId, AuditAction.UPDATE, 'tenant', tenantId, {
     dianTransmissionMode: normalized,

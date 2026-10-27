@@ -34,6 +34,8 @@ const EMPTY_FACTUS_CONFIG = {
   factusPassword: '',
   factusEnvironment: 'sandbox' as 'sandbox' | 'production',
   factusNumberingRangeId: 0,
+  fiscalMunicipalityCode: '11001',
+  fiscalTributeCode: 'ZZ',
   hasClientSecret: false,
   hasPassword: false,
 }
@@ -138,6 +140,8 @@ export function FactusSection({ refreshKey = 0, onLoadingChange }: FactusSection
         factusPassword: factusConfig.factusPassword,
         factusEnvironment: factusConfig.factusEnvironment,
         factusNumberingRangeId: Number(factusConfig.factusNumberingRangeId) || 0,
+        fiscalMunicipalityCode: factusConfig.fiscalMunicipalityCode,
+        fiscalTributeCode: factusConfig.fiscalTributeCode,
       }
       console.log('[DEBUG] Enviando payload a updateTenantFactusConfig:', {
         ...payload,
@@ -432,6 +436,48 @@ export function FactusSection({ refreshKey = 0, onLoadingChange }: FactusSection
                   tbodyClassName="divide-y divide-line-soft"
                 />
               )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-line-soft">
+            <div className="space-y-1.5">
+              <Label>CÓDIGO DANE DEL MUNICIPIO DEL EMISOR *</Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                maxLength={5}
+                placeholder="11001"
+                value={factusConfig.fiscalMunicipalityCode || ''}
+                onChange={(e) =>
+                  setFactusConfig({
+                    ...factusConfig,
+                    fiscalMunicipalityCode: e.target.value.replace(/\D/g, ''),
+                  })
+                }
+                className="bg-surface text-fg px-4 py-2.5 font-mono text-xs outline-none"
+              />
+              <p className="text-[10px] text-fg-muted">
+                Código DANE de 5 dígitos (ej. 11001 Bogotá). Se usa si el cliente no tiene uno.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>CÓDIGO DE TRIBUTO DEL EMISOR *</Label>
+              <Input
+                type="text"
+                maxLength={4}
+                placeholder="ZZ"
+                value={factusConfig.fiscalTributeCode || ''}
+                onChange={(e) =>
+                  setFactusConfig({
+                    ...factusConfig,
+                    fiscalTributeCode: e.target.value.toUpperCase(),
+                  })
+                }
+                className="bg-surface text-fg px-4 py-2.5 font-mono text-xs outline-none"
+              />
+              <p className="text-[10px] text-fg-muted">
+                ZZ = no aplica; 01 = IVA. Debe coincidir con la responsabilidad DIAN del emisor.
+              </p>
             </div>
           </div>
 

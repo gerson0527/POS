@@ -23,6 +23,9 @@ export const product = pgTable(
     cost: decimal('cost', { precision: 12, scale: 4 }),
     margin: decimal('margin', { precision: 5, scale: 2 }).default('0.00'),
     ivaRate: decimal('ivaRate', { precision: 5, scale: 2 }).notNull().default('19.00'),
+    // Tratamiento tributario del IVA: TAXED (grava), EXEMPT (exento 0%, base
+    // gravable) o EXCLUDED (excluido, no causa IVA). Solo aplica con tasas 0.
+    taxTreatment: text('taxTreatment').notNull().default('TAXED'),
     unitMeasureCode: text('unitMeasureCode').default('94'), // 94=Unidad/EA
     standardCode: text('standardCode').default('999'), // 999=Estándar adopción
     schemeId: text('schemeId').default('0'), // 0=Ninguno

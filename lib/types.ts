@@ -106,6 +106,7 @@ export interface CreateProductDTO {
   cost?: number
   margin?: number
   ivaRate?: number
+  taxTreatment?: 'TAXED' | 'EXEMPT' | 'EXCLUDED'
   initialStock?: number
 }
 
@@ -120,6 +121,7 @@ export interface UpdateProductDTO {
   cost?: number
   margin?: number
   ivaRate?: number
+  taxTreatment?: 'TAXED' | 'EXEMPT' | 'EXCLUDED'
   status?: ProductStatus
 }
 

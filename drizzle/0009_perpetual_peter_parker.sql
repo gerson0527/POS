@@ -1,0 +1,1 @@
+ALTER TABLE "sale_item" ADD COLUMN "taxTreatment" text DEFAULT 'TAXED' NOT NULL;

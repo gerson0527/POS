@@ -54,6 +54,10 @@ const EMPTY_FORM = {
   address: '',
   city: '',
   department: '',
+  municipalityCode: '11001',
+  tributeCode: 'ZZ',
+  legalOrganizationCode: '2',
+  identificationDocumentCode: '',
   taxRegime: '',
   notes: '',
 }
@@ -181,6 +185,11 @@ export default function CustomersPage() {
       address: customer.address || '',
       city: customer.city || '',
       department: customer.department || '',
+      municipalityCode: customer.municipalityCode || '11001',
+      tributeCode: customer.tributeCode || 'ZZ',
+      legalOrganizationCode:
+        customer.legalOrganizationCode || (customer.personType === 'JURIDICA' ? '1' : '2'),
+      identificationDocumentCode: customer.identificationDocumentCode || '',
       taxRegime: customer.taxRegime || '',
       notes: customer.notes || '',
     })

@@ -170,6 +170,7 @@ async function createSaleInternal(input: CreateSaleDTO) {
         quantity: item.quantity.toString(),
         unitPrice: product.unitPrice,
         ivaRate: product.ivaRate,
+        taxTreatment: product.taxTreatment || 'TAXED',
         ivaAmount: ivaAmount.toString(),
         lineTotal: (lineSubtotal + ivaAmount).toString(),
       })
@@ -255,6 +256,16 @@ async function completeSaleInternal(input: CompleteSaleDTO) {
   )
 
   const completed = await db.transaction(async (tx) => {
+    // Modo de transmisión configurado por la empresa. Se lee en el servidor
+    // (no se confía en el cliente): MANUAL deja el evento retenido para revisión.
+    const tenantRows = await tx
+      .select({ dianTransmissionMode: schema.tenant.dianTransmissionMode })
+      .from(schema.tenant)
+      .where(eq(schema.tenant.id, tenantId))
+      .limit(1)
+    const transmissionMode =
+      tenantRows[0]?.dianTransmissionMode === 'MANUAL' ? 'MANUAL' : 'AUTO'
+
     // Bloquea la venta para que dos clics concurrentes no la completen dos veces.
     const saleRows = await tx
       .select()
@@ -490,11 +501,16 @@ async function completeSaleInternal(input: CompleteSaleDTO) {
       })
     }
 
-    await enqueueFiscalEmission(tx, tenantId, input.saleId)
+    // El outbox se encola SIEMPRE (durabilidad). En MANUAL queda retenido y el
+    // cron no lo procesa; solo la transmisión explícita desde /dashboard/invoices.
+    await enqueueFiscalEmission(tx, tenantId, input.saleId, {
+      requiresManualApproval: transmissionMode === 'MANUAL',
+    })
 
     return {
       ticketNumber: updatedSale[0].ticketNumber,
       total: totals.total,
+      transmissionMode,
     }
   })
 
@@ -506,12 +522,17 @@ async function completeSaleInternal(input: CompleteSaleDTO) {
 
   // La venta ya está confirmada. La emisión fiscal es durable (outbox): si
   // Factus/DIAN falla, queda pendiente para reintento sin duplicar la factura.
+  // En modo MANUAL NO se transmite: el evento queda retenido para la contadora.
   let fiscal: { success: boolean; message: string; cufe?: string } | null = null
-  try {
-    fiscal = await retryFiscalEmission(tenantId, input.saleId)
-  } catch (outboxErr: any) {
-    console.error('[fiscal outbox] No se pudo procesar la emisión:', outboxErr)
-    fiscal = { success: false, message: 'La factura electrónica quedó pendiente de reintento.' }
+  if (completed.transmissionMode === 'AUTO') {
+    try {
+      fiscal = await retryFiscalEmission(tenantId, input.saleId, {
+        requestedBy: userId,
+      })
+    } catch (outboxErr: any) {
+      console.error('[fiscal outbox] No se pudo procesar la emisión:', outboxErr)
+      fiscal = { success: false, message: 'La factura electrónica quedó pendiente de reintento.' }
+    }
   }
 
   revalidatePath('/pos')
@@ -520,6 +541,7 @@ async function completeSaleInternal(input: CompleteSaleDTO) {
     saleId: input.saleId,
     ticketNumber: completed.ticketNumber,
     total: completed.total,
+    transmissionMode: completed.transmissionMode,
     fiscal,
   }
 }
@@ -589,19 +611,26 @@ export async function generateInvoice(input: GenerateInvoiceDTO) {
     .select()
     .from(schema.fiscalDocument)
     .where(and(eq(schema.fiscalDocument.saleId, input.saleId), eq(schema.fiscalDocument.tenantId, tenantId)))
-    .limit(1)
-  const existingDoc = existingDocs[0]
 
   // La numeración electrónica la asigna Factus: si ya hay CUFE, no se consume
   // ningún consecutivo interno ni se reescribe el documento oficial.
-  if (existingDoc?.uniqueCode) {
+  const existingElectronic = existingDocs.find((doc) => doc.uniqueCode)
+  if (existingElectronic?.uniqueCode) {
     return {
-      invoiceId: existingDoc.id,
-      cufe: existingDoc.uniqueCode,
-      invoiceNumber: existingDoc.fullNumber,
+      invoiceId: existingElectronic.id,
+      cufe: existingElectronic.uniqueCode,
+      invoiceNumber: existingElectronic.fullNumber,
       success: true,
     }
   }
+
+  // El comprobante interno REC es un documento SEPARADO de la factura
+  // electrónica: nunca se sobrescribe con el número fiscal de Factus.
+  const existingDoc = existingDocs.find(
+    (doc) =>
+      doc.documentType === INTERNAL_NUMERATION.documentType &&
+      doc.prefix === INTERNAL_NUMERATION.prefix
+  )
 
   // Idempotencia del comprobante interno: si ya existe uno pendiente, se reutiliza.
   if (existingDoc?.fullNumber && existingDoc.prefix === INTERNAL_NUMERATION.prefix) {

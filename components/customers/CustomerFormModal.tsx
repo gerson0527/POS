@@ -18,6 +18,10 @@ export interface CustomerFormValues {
   department?: string
   tradeName?: string
   personType?: string
+  municipalityCode?: string
+  tributeCode?: string
+  legalOrganizationCode?: string
+  identificationDocumentCode?: string
   taxRegime?: string
   notes?: string
 }
@@ -182,7 +186,13 @@ export function CustomerFormModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select
               value={form.personType ?? ''}
-              onChange={(e) => onChange({ ...form, personType: e.target.value })}
+              onChange={(e) =>
+                onChange({
+                  ...form,
+                  personType: e.target.value,
+                  legalOrganizationCode: e.target.value === 'JURIDICA' ? '1' : '2',
+                })
+              }
               className="font-normal"
             >
               <option value="NATURAL">Persona Natural</option>
@@ -199,6 +209,53 @@ export function CustomerFormModal({
                   {r.label}
                 </option>
               ))}
+            </Select>
+            <Input
+              type="text"
+              inputMode="numeric"
+              maxLength={5}
+              placeholder="Código DANE municipio (ej. 11001)"
+              value={form.municipalityCode ?? ''}
+              onChange={(e) =>
+                onChange({ ...form, municipalityCode: e.target.value.replace(/\D/g, '') })
+              }
+            />
+            <Select
+              value={form.tributeCode ?? 'ZZ'}
+              onChange={(e) => onChange({ ...form, tributeCode: e.target.value })}
+              className="font-normal"
+            >
+              <option value="ZZ">Tributo: No aplica (ZZ)</option>
+              <option value="01">Tributo: IVA (01)</option>
+              <option value="04">Tributo: INC (04)</option>
+              <option value="05">Tributo: ReteIVA (05)</option>
+              <option value="06">Tributo: ReteFuente (06)</option>
+              <option value="07">Tributo: ReteICA (07)</option>
+            </Select>
+            <Select
+              value={form.legalOrganizationCode ?? '2'}
+              onChange={(e) => onChange({ ...form, legalOrganizationCode: e.target.value })}
+              className="font-normal"
+            >
+              <option value="1">Organización legal: Persona jurídica</option>
+              <option value="2">Organización legal: Persona natural</option>
+            </Select>
+            <Select
+              value={form.identificationDocumentCode ?? ''}
+              onChange={(e) =>
+                onChange({ ...form, identificationDocumentCode: e.target.value })
+              }
+              className="font-normal"
+            >
+              <option value="">Código de documento (automático)</option>
+              <option value="11">11 — Registro civil</option>
+              <option value="12">12 — Tarjeta de identidad</option>
+              <option value="13">13 — Cédula de ciudadanía</option>
+              <option value="21">21 — Tarjeta de extranjería</option>
+              <option value="22">22 — Cédula de extranjería</option>
+              <option value="31">31 — NIT</option>
+              <option value="41">41 — Pasaporte</option>
+              <option value="42">42 — Documento de identificación extranjero</option>
             </Select>
           </div>
         </div>

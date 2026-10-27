@@ -56,6 +56,11 @@ export const tenant = pgTable(
     // MANUAL: la venta queda PENDIENTE y la contadora (rol ACCOUNTANT) revisa
     // el IVA y transmite la factura desde /dashboard/invoices.
     dianTransmissionMode: text('dianTransmissionMode').notNull().default('AUTO'),
+    // Datos fiscales del emisor usados en el payload de Factus/DIAN.
+    // municipalityCode: código DANE del municipio (5 dígitos).
+    // tributeCode: 'ZZ' = no aplica, '01' = IVA, etc.
+    fiscalMunicipalityCode: text('fiscalMunicipalityCode').default('11001'),
+    fiscalTributeCode: text('fiscalTributeCode').default('ZZ'),
     status: text('status').notNull().default('ACTIVE'), // ACTIVE, SUSPENDED, INACTIVE
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt').notNull().defaultNow(),
