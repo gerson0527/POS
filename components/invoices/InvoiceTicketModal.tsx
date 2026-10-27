@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { Printer, ShieldAlert } from 'lucide-react'
+import { Printer } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Modal } from '@/components/ui/Modal'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
@@ -16,44 +15,15 @@ import {
 interface InvoiceTicketModalProps {
   invoice: any
   onClose: () => void
-  /** Habilita el ajuste de IVA (contadora / admin / supervisor). */
-  canEditTax?: boolean
-  /** Guarda la nueva tarifa de IVA de una línea. */
-  onSaveTax?: (itemId: string, ivaRate: number) => Promise<void>
 }
 
-const IVA_OPTIONS = [
-  { value: 19, label: '19% — IVA general' },
-  { value: 5, label: '5% — Tarifa reducida' },
-  { value: 0, label: '0% — Exento / Excluido' },
-  { value: 8, label: '8% — Impoconsumo' },
-]
-
-export function InvoiceTicketModal({
-  invoice,
-  onClose,
-  canEditTax = false,
-  onSaveTax,
-}: InvoiceTicketModalProps) {
+export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps) {
   const fiscal = fiscalUiStatus(invoice)
   // Un CUFE indica que el documento fue transmitido; solo ACCEPTED tiene valor
   // fiscal pleno. Un rechazo o falla técnica nunca se presenta como aceptado.
   const isElectronicSent = Boolean(fiscal.cufe || fiscal.isAccepted)
   const isFiscalValid = fiscal.isAccepted
   const cufe = fiscal.cufe
-  // El IVA sólo se puede corregir mientras el documento NO tiene CUFE.
-  const canAdjustTax = canEditTax && !fiscal.cufe && typeof onSaveTax === 'function'
-  const [savingItemId, setSavingItemId] = useState<string | null>(null)
-
-  async function handleRateChange(itemId: string, rate: number) {
-    if (!onSaveTax) return
-    setSavingItemId(itemId)
-    try {
-      await onSaveTax(itemId, rate)
-    } finally {
-      setSavingItemId(null)
-    }
-  }
 
   return (
     <Modal
@@ -68,52 +38,6 @@ export function InvoiceTicketModal({
         </TacticalButton>
       }
     >
-      {/* AJUSTE FISCAL DE IVA (sólo facturas pendientes, no se imprime) */}
-      {canAdjustTax && invoice.items && invoice.items.length > 0 && (
-        <div className="no-print mb-3 rounded border border-warn-line bg-warn-dim/40 p-3 space-y-2">
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-warn">
-            <ShieldAlert className="w-4 h-4" />
-            <span>Ajuste fiscal de IVA — factura pendiente de transmisión</span>
-          </div>
-          <p className="text-[10px] text-fg-muted">
-            Corrija la tarifa de IVA de cada línea antes de transmitir a la DIAN. El total de la
-            factura y los impuestos se recalculan automáticamente. Si el total cambia, la
-            diferencia queda pendiente de manejo en caja.
-          </p>
-          <div className="space-y-1.5">
-            {invoice.items.map((item: any) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between gap-3 rounded border border-line bg-input px-2.5 py-1.5"
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-[11px] font-bold uppercase text-fg">
-                    {item.productName || item.productId}
-                  </div>
-                  <div className="text-[9px] text-fg-muted">
-                    SKU {item.productSku || item.productId} • {Number(item.quantity)} und •
-                    IVA actual {Number(item.ivaRate || 0)}%
-                  </div>
-                </div>
-                <select
-                  aria-label={`Tarifa IVA de ${item.productName || item.productId}`}
-                  disabled={savingItemId === item.id}
-                  value={String(Number(item.ivaRate || 0))}
-                  onChange={(e) => handleRateChange(item.id, Number(e.target.value))}
-                  className="bg-night-mid border border-line text-fg font-mono text-[11px] px-2 py-1 rounded outline-none focus:border-accent disabled:opacity-50"
-                >
-                  {IVA_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* FORMATO IMPRESO POS DIAN */}
       <div id="invoice-printable" className="bg-white text-black p-6 font-mono text-xs space-y-3 rounded shadow border border-gray-200">
         <div className="text-center space-y-0.5 border-b-2 border-black pb-2">
