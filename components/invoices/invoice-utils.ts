@@ -77,7 +77,7 @@ export function fiscalUiStatus(inv: any) {
 
   let label = FISCAL_STATUS_LABELS[status] || (cufe ? 'TRANSMITIDA' : 'PENDIENTE')
   if (!cufe && !isRejected) {
-    if (noProviderConfigured) label = 'SIN FE'
+    if (noProviderConfigured) label = ''
     else if (needsReconciliationUi) label = 'RECONCILIAR'
     else if (isManualPending) label = 'PENDIENTE MANUAL'
     else if (isOutboxFailed) label = 'ERROR (REINTENTAR)'
