@@ -264,9 +264,21 @@ export function InvoiceTable({
                   </div>
                 )
               }
-              // Sin Factus configurado: no es error ni acción — columna vacía.
+              // Sin Factus: se muestra REINTENTAR por si configuran FE después,
+              // pero sin mensaje de error (es configuración, no fallo DIAN).
               if (fiscal.noProviderConfigured) {
-                return <span className="text-fg-faint">—</span>
+                return (
+                  <TacticalButton
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onEmit(inv.id)}
+                    loading={emittingId === inv.id}
+                    title="Transmitir a DIAN (requiere Factus en Configuración)"
+                    icon={<RefreshCw className="w-3 h-3 text-accent" />}
+                  >
+                    REINTENTAR
+                  </TacticalButton>
+                )
               }
               if (fiscal.isRejected) {
                 return (
