@@ -16,6 +16,7 @@ import { MetricCard } from '@/components/tactical/MetricCard'
 import { Pagination } from '@/components/tactical/Pagination'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/ui/ToastProvider'
+import { useConfirm } from '@/components/ui/ConfirmProvider'
 import { formatCOP } from '@/lib/utils/pos-utils'
 import { categorizeInvoicePayment } from '@/lib/utils/payment-splits'
 import { getAllInvoices, emitFactusElectronicInvoice } from '@/app/actions/pos-actions'
@@ -69,6 +70,7 @@ function useAnimatedNumber(target: number, duration = 550) {
 
 export default function InvoicesPage() {
   const { toast } = useToast()
+  const confirmAction = useConfirm()
   const [invoices, setInvoices] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -85,13 +87,15 @@ export default function InvoicesPage() {
   const itemsPerPage = 10
 
   const handleEmitFactus = async (saleId: string) => {
-    if (
-      !window.confirm(
-        '¿Transmitir SOLO esta factura a la DIAN ahora? No se enviarán las demás del listado.'
-      )
-    ) {
-      return
-    }
+    const ok = await confirmAction({
+      title: 'TRANSMITIR A DIAN',
+      message:
+        '¿Transmitir SOLO esta factura a la DIAN ahora? No se enviarán las demás del listado.',
+      confirmLabel: 'TRANSMITIR',
+      cancelLabel: 'CANCELAR',
+      tone: 'default',
+    })
+    if (!ok) return
     setEmittingId(saleId)
     try {
       const res = await emitFactusElectronicInvoice(saleId)
