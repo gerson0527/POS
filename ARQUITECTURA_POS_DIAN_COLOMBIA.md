@@ -166,7 +166,7 @@ Smoke: dev server en :3000; rutas públicas 200/307; `/api/v1/invoices` sin sesi
 
 ## 12. Operación
 
-- **Scripts npm**: `dev`, `build`, `typecheck`, `test`, `db:generate`, `db:migrate`, `db:push`, `db:studio`, `db:seed`, `tauri:dev`, `tauri:build`.
+- **Scripts npm**: `dev` (corre `predev` → `db:doctor --soft`), `build`, `typecheck`, `test`, `db:generate`, `db:migrate`, `db:push`, `db:studio`, `db:seed`, `db:doctor`, `tauri:dev`, `tauri:build`.
 - **Variables**: `DATABASE_URL` (o `POSTGRES_*`), `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`; credenciales Factus NO van en env: van por tenant en BD (con cifrado).
 - **Docker**: `docker-compose.yml` (Postgres) + Dockerfiles de app; `start.bat` / `stop.bat` locales.
 - **Usuario admin semilla**: `admin@posdian.com` / `Admin123456!` (cambiar en producción).

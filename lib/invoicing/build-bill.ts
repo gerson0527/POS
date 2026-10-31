@@ -43,6 +43,7 @@ interface BuildContext {
     numberingPrefix: string
     municipalityCode?: string
     tributeCode?: string
+    address?: string
   }
 }
 
@@ -226,6 +227,7 @@ export async function loadInvoiceContext(
       numberingPrefix: 'FACT',
       municipalityCode: tenant.fiscalMunicipalityCode || DEFAULT_MUNICIPALITY_CODE,
       tributeCode: tenant.fiscalTributeCode || DEFAULT_TRIBUTE_CODE,
+      address: tenant.address || undefined,
     },
   }
 
@@ -333,17 +335,29 @@ export function validateInvoiceContext(input: {
     )
   }
 
-  // Consumidor final: se usa el registro genérico explícito (no se inventan datos
-  // por cliente). Cliente identificado: se exigen los datos mínimos de Factus.
+  // Consumidor final: registro genérico explícito.
+  // Cliente identificado en mostrador: nombre + documento bastan para persona
+  // natural (email/dirección suelen no pedirse en el POS). Persona jurídica
+  // (NIT) sí exige email y dirección fiscales.
   if (sale?.customerDocNumber) {
     const name = customerRow?.name || sale.customerName
     const email = customerRow?.email || sale.customerEmail
-    const address = customerRow?.address || sale.customerAddress
+    const address =
+      customerRow?.address || sale.customerAddress || ctx.tenant.address || null
+    const docType = String(
+      customerRow?.documentType || sale.customerDocType || ''
+    ).toUpperCase()
+    const personType = String(customerRow?.personType || 'NATURAL').toUpperCase()
+    const isCompany = personType === 'JURIDICA' || docType === 'NIT'
     if (!name) errors.push('El cliente no tiene nombre o razón social.')
-    if (!email) errors.push('El cliente no tiene email para la factura electrónica.')
-    if (!address) errors.push('El cliente no tiene dirección registrada.')
-    if (!customerRow?.documentType && !sale.customerDocType) {
+    if (!docType && !customerRow?.identificationDocumentCode) {
       errors.push('El cliente no tiene tipo de documento.')
+    }
+    if (isCompany && !email) {
+      errors.push('La persona jurídica necesita email para la factura electrónica.')
+    }
+    if (isCompany && !address) {
+      errors.push('La persona jurídica necesita dirección fiscal registrada.')
     }
   }
 
@@ -411,7 +425,11 @@ export async function buildInvoicePayload(input: {
         tradeName: customerRow?.tradeName || null,
         email: customerRow?.email || sale.customerEmail || null,
         phone: customerRow?.phone || sale.customerPhone || null,
-        address: customerRow?.address || sale.customerAddress || null,
+        address:
+          customerRow?.address ||
+          sale.customerAddress ||
+          ctx.tenant.address ||
+          null,
         tributeCode: customerRow?.tributeCode || ctx.tenant.tributeCode || DEFAULT_TRIBUTE_CODE,
         legalOrganizationCode: customerRow?.legalOrganizationCode || null,
         municipalityCode:

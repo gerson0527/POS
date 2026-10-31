@@ -1,8 +1,8 @@
 // Helpers compartidos extraídos de pos-actions.ts (Fase 3: partición por dominios).
 // NO forman parte de la API pública: no se re-exportan desde el barrel pos-actions.
-import { db } from '@/lib/db'
-import * as schema from '@/lib/db/schema'
-import { randomUUID } from 'node:crypto'
+import type { ActorContext } from '@/lib/auth/actor'
+import type { TenantRole } from '@/lib/auth/session-context'
+import { requireUser, requireRole as requireRoleInternal } from '@/lib/auth/session-context'
 
 // Sesión/tenant: la implementación vive en lib/auth/session-context (Fase 3.19);
 // se re-exportan los nombres históricos para no tocar los 17 módulos consumidores.
@@ -11,41 +11,20 @@ export { requireUser as getUserId, requireTenantId as getTenantId } from '@/lib/
 // del usuario no está entre los permitidos.
 export { requireRole } from '@/lib/auth/session-context'
 
-// AUDIT & EVENTS
-export async function logAudit(
-  tenantId: string,
-  userId: string,
-  action: string,
-  entity: string,
-  entityId: string,
-  changes: unknown
-) {
-  await db.insert(schema.auditLog).values({
-    id: `audit_${randomUUID()}`,
-    tenantId,
-    userId,
-    action,
-    entity,
-    entityId,
-    changes: changes as any
-  })
-}
+// Auditoría/eventos y fechas de negocio viven en lib/ (sin dependencia de sesión
+// HTTP) para que los servicios de dominio los usen desde cualquier canal.
+export { logAudit, publishEvent } from '@/lib/audit/log'
+export {
+  getBogotaBusinessDate,
+  toBusinessDateString,
+  businessDateDaysBetween,
+} from '@/lib/utils/business-date'
 
-export async function publishEvent(
-  tenantId: string,
-  eventType: string,
-  aggregateType: string,
-  aggregateId: string,
-  payload: unknown
-) {
-  await db.insert(schema.event).values({
-    id: `evt_${randomUUID()}`,
-    tenantId,
-    eventType,
-    aggregateType,
-    aggregateId,
-    payload: payload as any
-  })
+/** Construye el contexto del actor desde la sesión web y valida el rol. */
+export async function requireActor(allowed: TenantRole[]): Promise<ActorContext> {
+  const userId = await requireUser()
+  const membership = await requireRoleInternal(userId, allowed)
+  return { userId, tenantId: membership.tenantId, role: membership.role }
 }
 
 /**
@@ -69,44 +48,6 @@ export function formatBogotaDateTime(d: Date | string | null | undefined): strin
   } catch {
     return null
   }
-}
-
-/** Fecha de negocio (YYYY-MM-DD) en la zona horaria de Colombia. */
-export function getBogotaBusinessDate(d: Date = new Date()): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Bogota',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(d)
-  const value = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value || ''
-  return `${value('year')}-${value('month')}-${value('day')}`
-}
-
-/**
- * Normaliza una columna `date` a YYYY-MM-DD. node-postgres entrega DATE como
- * Date a medianoche local, por lo que se leen sus componentes locales.
- */
-export function toBusinessDateString(value: Date | string | null | undefined): string {
-  if (!value) return ''
-  if (value instanceof Date) {
-    const year = value.getFullYear()
-    const month = String(value.getMonth() + 1).padStart(2, '0')
-    const day = String(value.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-  return value.slice(0, 10)
-}
-
-/** Diferencia en días calendario entre dos fechas YYYY-MM-DD. */
-export function businessDateDaysBetween(from: string, to: string): number {
-  const [fromYear, fromMonth, fromDay] = from.split('-').map(Number)
-  const [toYear, toMonth, toDay] = to.split('-').map(Number)
-  return Math.floor(
-    (Date.UTC(toYear, toMonth - 1, toDay) - Date.UTC(fromYear, fromMonth - 1, fromDay)) /
-      86_400_000
-  )
 }
 
 /**

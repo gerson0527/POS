@@ -121,7 +121,9 @@ async function markFailed(
 ): Promise<void> {
   const attempts = row.attempts + 1
   const exhausted = attempts >= row.maxAttempts
-  const backoffMs = Math.min(60, 2 ** Math.min(attempts, 6)) * 60_000
+  // Backoff en minutos usando now() de Postgres: evita el desfase de
+  // timestamp without time zone vs Date de Node (UTC vs America/Bogota).
+  const backoffMinutes = Math.min(60, 2 ** Math.min(attempts, 6))
   await db
     .update(schema.fiscalOutbox)
     .set({
@@ -129,7 +131,7 @@ async function markFailed(
       attempts,
       lockedAt: null,
       lastError: error.slice(0, 2000),
-      nextAttemptAt: new Date(Date.now() + backoffMs),
+      nextAttemptAt: sql`now() + (${backoffMinutes} * interval '1 minute')`,
       needsReconciliation: row.needsReconciliation || needsReconciliation,
       updatedAt: new Date(),
     })
@@ -155,9 +157,19 @@ export async function processFiscalOutbox(limit = 5): Promise<{
       const result = await emitSaleElectronicInvoice(row.saleId, row.tenantId, {
         reconcileFirst: row.needsReconciliation,
       })
-      if (result.success) {
+      // Solo DONE con CUFE persistido: success sin uniqueCode dejaría la venta
+      // "en cola" eternamente como transmitida cuando en realidad no hay documento.
+      if (result.success && result.cufe) {
         await markDone(row)
         succeeded++
+      } else if (result.success && !result.cufe) {
+        await markFailed(
+          row,
+          result.message ||
+            'Factus respondió OK pero no hay CUFE persistido localmente; se reintentará.',
+          true
+        )
+        failed++
       } else {
         await markFailed(
           row,
@@ -277,21 +289,28 @@ export async function retryFiscalEmission(
     }
   }
 
-  if (result.success) {
+  if (result.success && result.cufe) {
     await markDone(row)
   } else {
     const attempts = row.attempts + 1
     const exhausted = attempts >= row.maxAttempts
+    const message =
+      result.success && !result.cufe
+        ? result.message ||
+          'Factus respondió OK pero no hay CUFE persistido localmente; se reintentará.'
+        : result.message
     await db
       .update(schema.fiscalOutbox)
       .set({
         status: exhausted ? 'FAILED' : 'PENDING',
         attempts: sql`${schema.fiscalOutbox.attempts} + 1`,
-        nextAttemptAt: new Date(Date.now() + 60_000),
+        nextAttemptAt: sql`now() + interval '1 minute'`,
         lockedAt: null,
-        lastError: result.message.slice(0, 2000),
+        lastError: message.slice(0, 2000),
         needsReconciliation:
-          row.needsReconciliation || (result.needsReconciliation ?? false),
+          row.needsReconciliation ||
+          (result.needsReconciliation ?? false) ||
+          Boolean(result.success && !result.cufe),
         // Si la empresa está en MANUAL, un fallo manual no debe pasar al cron:
         // la contadora decide cuándo reintentar.
         requiresManualApproval: manualMode,

@@ -153,6 +153,23 @@ export default function ReportsPage() {
     reportPage * itemsPerPage
   )
 
+  const totalSalesPages = Math.ceil((salesReport.salesList || []).length / itemsPerPage) || 1
+  const paginatedSales = (salesReport.salesList || []).slice(
+    (reportPage - 1) * itemsPerPage,
+    reportPage * itemsPerPage
+  )
+
+  const totalProductPages = Math.ceil(products.length / itemsPerPage) || 1
+  const paginatedProducts = products.slice(
+    (reportPage - 1) * itemsPerPage,
+    reportPage * itemsPerPage
+  )
+
+  function selectReport(id: string) {
+    setSelectedReport(id)
+    setReportPage(1)
+  }
+
   const handleDownloadPDF = () => {
     window.open('/api/reports/inventory-pdf', '_blank')
   }
@@ -324,7 +341,7 @@ export default function ReportsPage() {
               return (
                 <button
                   key={report.id}
-                  onClick={() => setSelectedReport(report.id)}
+                  onClick={() => selectReport(report.id)}
                   className={`w-full text-left p-3.5 rounded border transition-all flex items-start gap-3 cursor-pointer ${
                     isSelected
                       ? 'bg-accent text-white border-accent shadow-sm'
@@ -517,19 +534,40 @@ export default function ReportsPage() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {salesReport.salesList.map((sale) => (
+                    {paginatedSales.map((sale) => (
                       <div key={sale.id} className="flex justify-between items-center text-fg-muted p-2 bg-panel rounded border border-line-soft">
                         <div>
                           <div className="text-fg font-semibold">
                             Ticket #{sale.ticketNumber ? String(sale.ticketNumber).padStart(4, '0') : sale.id.substring(0, 8)}
                           </div>
                           <div className="text-[10px] text-fg-muted">
-                            Sesión de caja: <span className="text-accent font-mono">{sale.cashierSessionId || 'N/A'}</span>
+                            Sesión de caja:{' '}
+                            <span className="text-accent font-mono">
+                              {sale.cashierSessionLabel &&
+                              sale.cashierSessionLabel !== 'Caja N/A'
+                                ? sale.cashierSessionLabel
+                                : sale.locationCode
+                                  ? `Caja ${sale.locationCode}`
+                                  : sale.locationName
+                                    ? `Caja ${sale.locationName}`
+                                    : 'Caja N/A'}
+                            </span>
+                            {sale.businessDate ? (
+                              <span className="text-fg-faint"> · {sale.businessDate}</span>
+                            ) : null}
                           </div>
                         </div>
                         <span className="text-success font-semibold">{formatCOP(sale.total)}</span>
                       </div>
                     ))}
+                    <Pagination
+                      currentPage={reportPage}
+                      totalPages={totalSalesPages}
+                      totalItems={salesReport.salesList.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={(page) => setReportPage(page)}
+                      className="mt-2"
+                    />
                     <div className="flex justify-between font-semibold border-t border-line pt-2 text-fg">
                       <span>Total acumulado</span>
                       <span className="text-accent font-mono">{formatCOP(salesReport.totalRevenue)}</span>
@@ -594,7 +632,7 @@ export default function ReportsPage() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {products.slice(0, 10).map((p) => (
+                    {paginatedProducts.map((p) => (
                       <div
                         key={p.id}
                         className="flex justify-between items-center p-3 bg-panel rounded border border-line-soft"
@@ -609,6 +647,14 @@ export default function ReportsPage() {
                         </div>
                       </div>
                     ))}
+                    <Pagination
+                      currentPage={reportPage}
+                      totalPages={totalProductPages}
+                      totalItems={products.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={(page) => setReportPage(page)}
+                      className="mt-2"
+                    />
                   </div>
                 )}
               </div>

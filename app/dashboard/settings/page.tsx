@@ -9,6 +9,7 @@ import {
   Zap,
   RefreshCw,
   KeyRound,
+  Bot,
 } from 'lucide-react'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -18,6 +19,7 @@ import { LocationsSection } from '@/components/settings/LocationsSection'
 import { NumerationsSection } from '@/components/settings/NumerationsSection'
 import { FactusSection } from '@/components/settings/FactusSection'
 import { ApiKeysSection } from '@/components/settings/ApiKeysSection'
+import { AssistantSection } from '@/components/settings/AssistantSection'
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general')
@@ -30,6 +32,7 @@ export default function SettingsPage() {
     { id: 'numeration', label: 'RESOLUCIONES DIAN', icon: Hash },
     { id: 'factus', label: 'FACTURACIÓN ELECTRÓNICA (PROVEEDOR)', icon: Zap },
     { id: 'api-keys', label: 'API PÚBLICA', icon: KeyRound },
+    { id: 'assistant', label: 'ASISTENTE TELEGRAM', icon: Bot },
   ]
 
   return (
@@ -83,6 +86,10 @@ export default function SettingsPage() {
 
         {activeTab === 'api-keys' && (
           <ApiKeysSection refreshKey={refreshKey} onLoadingChange={setLoading} />
+        )}
+
+        {activeTab === 'assistant' && (
+          <AssistantSection refreshKey={refreshKey} onLoadingChange={setLoading} />
         )}
       </div>
     </div>

@@ -80,6 +80,50 @@ export async function getAllInvoices() {
     .from(schema.fiscalOutbox)
     .where(inArray(schema.fiscalOutbox.saleId, saleIds))
 
+  const userIds = Array.from(new Set(sales.map((s) => s.userId).filter(Boolean)))
+  const locationIds = Array.from(new Set(sales.map((s) => s.locationId).filter(Boolean)))
+  const sessionIds = Array.from(
+    new Set(sales.map((s) => s.cashierSessionId).filter(Boolean))
+  )
+
+  const [allUsers, allLocations, allSessions] = await Promise.all([
+    userIds.length
+      ? db
+          .select({ id: schema.user.id, name: schema.user.name })
+          .from(schema.user)
+          .where(inArray(schema.user.id, userIds))
+      : Promise.resolve([] as Array<{ id: string; name: string }>),
+    locationIds.length
+      ? db
+          .select({
+            id: schema.location.id,
+            name: schema.location.name,
+            city: schema.location.city,
+            code: schema.location.code,
+          })
+          .from(schema.location)
+          .where(inArray(schema.location.id, locationIds))
+      : Promise.resolve(
+          [] as Array<{ id: string; name: string; city: string | null; code: string }>
+        ),
+    sessionIds.length
+      ? db
+          .select({
+            id: schema.cashierSession.id,
+            businessDate: schema.cashierSession.businessDate,
+            status: schema.cashierSession.status,
+          })
+          .from(schema.cashierSession)
+          .where(inArray(schema.cashierSession.id, sessionIds))
+      : Promise.resolve(
+          [] as Array<{ id: string; businessDate: string | Date; status: string }>
+        ),
+  ])
+
+  const userById = new Map(allUsers.map((u) => [u.id, u]))
+  const locationById = new Map(allLocations.map((l) => [l.id, l]))
+  const sessionById = new Map(allSessions.map((s) => [s.id, s]))
+
   const paymentsBySale = new Map<string, typeof allPayments>()
   for (const p of allPayments) {
     const arr = paymentsBySale.get(p.saleId)
@@ -95,14 +139,17 @@ export async function getAllInvoices() {
   }
 
   // Puede haber dos filas por venta: el comprobante interno REC y la factura
-  // electrónica. La UI debe mostrar SIEMPRE el documento electrónico.
-  const isElectronicDoc = (fd: (typeof allFiscalDocs)[number]) =>
-    fd.documentType === 'FACTURA_ELECTRONICA_VENTA' || Boolean(fd.uniqueCode)
+  // electrónica. La UI debe mostrar SIEMPRE el documento electrónico (CUFE).
+  const fiscalRank = (fd: (typeof allFiscalDocs)[number]) => {
+    if (fd.uniqueCode) return 3
+    if (fd.documentType === 'FACTURA_ELECTRONICA_VENTA') return 2
+    return 1
+  }
   const fiscalBySale = new Map<string, (typeof allFiscalDocs)[number]>()
   for (const fd of allFiscalDocs) {
     if (!fd.saleId) continue
     const current = fiscalBySale.get(fd.saleId)
-    if (!current || (isElectronicDoc(fd) && !isElectronicDoc(current))) {
+    if (!current || fiscalRank(fd) > fiscalRank(current)) {
       fiscalBySale.set(fd.saleId, fd)
     }
   }
@@ -141,6 +188,16 @@ export async function getAllInvoices() {
 
     const fiscalDoc = fiscalBySale.get(s.id) || null
     const outbox = outboxBySale.get(s.id) || null
+    const cashier = userById.get(s.userId)
+    const loc = locationById.get(s.locationId)
+    const cashSession = sessionById.get(s.cashierSessionId)
+    const businessDateRaw = cashSession?.businessDate
+    const businessDate =
+      businessDateRaw instanceof Date
+        ? businessDateRaw.toISOString().slice(0, 10)
+        : businessDateRaw
+          ? String(businessDateRaw).slice(0, 10)
+          : null
 
     // Snapshot fiscal: reconstruye la factura con los datos EXACTOS enviados a
     // DIAN (nombre/SKU/precio de ese momento), no con el catálogo actual.
@@ -166,6 +223,10 @@ export async function getAllInvoices() {
         })
       : null
 
+    const qrUrl =
+      fiscalDoc?.qrCodeContent ||
+      (fiscalDoc?.uniqueCode ? dianQrUrl(fiscalDoc.uniqueCode, dianEnvironment) : null)
+
     return {
       ...s,
       createdAtDisplay: fmtDateTime(s.createdAt),
@@ -185,11 +246,18 @@ export async function getAllInvoices() {
       pdfUrl: fiscalDoc?.pdfStorageKey || null,
       // Fallback: si el QR no quedó guardado (facturas anteriores al fix de
       // qrCodeUrl), se deriva desde el CUFE — documentkey del catálogo DIAN es el CUFE.
-      qrUrl:
-        fiscalDoc?.qrCodeContent ||
-        (fiscalDoc?.uniqueCode ? dianQrUrl(fiscalDoc.uniqueCode, dianEnvironment) : null),
+      qrUrl,
       fullNumber: fiscalDoc?.fullNumber || null,
+      hasPdf: Boolean(fiscalDoc?.pdfStorageKey),
+      hasXml: Boolean(fiscalDoc?.xmlSignedStorageKey),
+      hasQr: Boolean(qrUrl),
+      cashierName: cashier?.name || null,
+      locationName: loc?.name || loc?.city || loc?.code || null,
+      locationCity: loc?.city || null,
+      cashSessionBusinessDate: businessDate,
+      cashSessionStatus: cashSession?.status || null,
       outboxStatus: outbox?.status || null,
+      outboxLastError: outbox?.lastError || null,
       requiresManualApproval: outbox?.requiresManualApproval ?? false,
       needsReconciliation: outbox?.needsReconciliation ?? false,
     }

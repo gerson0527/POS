@@ -42,7 +42,7 @@ function tokenCacheKey(config: InvoiceProviderConfig): string {
 
 export class FactusProvider implements InvoiceProvider {
   readonly providerId = 'factus-v2'
-  readonly displayName = 'Factus V2 (Sandbox / Producción)'
+  readonly displayName = '(Sandbox / Producción)'
 
   private readonly tokenCache: TokenCache
 
@@ -124,7 +124,7 @@ export class FactusProvider implements InvoiceProvider {
       const token = await this.authenticate()
       return {
         ok: !!token,
-        message: `Conectado a Factus V2 (${this.config.environment}) correctamente.`,
+        message: `Conectado a (${this.config.environment}) correctamente.`,
       }
     } catch (err: any) {
       return {

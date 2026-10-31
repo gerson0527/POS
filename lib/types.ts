@@ -72,7 +72,8 @@ export enum AuditAction {
   DELETE = 'DELETE',
   CANCEL = 'CANCEL',
   PRINT = 'PRINT',
-  SEND_DIAN = 'SEND_DIAN'
+  SEND_DIAN = 'SEND_DIAN',
+  ASSISTANT_EXECUTE = 'ASSISTANT_EXECUTE',
 }
 
 export enum EventType {

@@ -71,6 +71,34 @@
       "when": 1793074730065,
       "tag": "0009_perpetual_peter_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793120000000,
+      "tag": "0010_drop_fiscal_document_saleid_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793200000000,
+      "tag": "0011_inventory_movement_idempotency",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793300000000,
+      "tag": "0012_assistant_channel",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793400000000,
+      "tag": "0013_tenant_assistant_config",
+      "breakpoints": true
     }
   ]
 }

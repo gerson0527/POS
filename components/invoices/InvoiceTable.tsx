@@ -11,12 +11,12 @@ import {
   RefreshCw,
   Zap,
   Layers,
-  ShoppingBag,
   Smartphone,
   Banknote,
   CreditCard,
   ShieldCheck,
   X,
+  UserRound,
 } from 'lucide-react'
 import { SectionPanel } from '@/components/tactical/SectionPanel'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
@@ -69,7 +69,7 @@ export function InvoiceTable({
           <SearchInput
             size="sm"
             inputClassName="bg-input font-mono w-64"
-            placeholder="BUSCAR FACTURA / CLIENTE / CUFE..."
+            placeholder="BUSCAR FACTURA / CLIENTE"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
           />
@@ -164,24 +164,35 @@ export function InvoiceTable({
               inv.customerName ? (
                 <div>
                   <div className="font-bold text-fg uppercase text-[11px]">{inv.customerName}</div>
-                  <div className="text-[10px] text-fg-muted">
-                    {inv.customerDocType || 'CC'}: {inv.customerDocNumber}
-                  </div>
                 </div>
               ) : (
                 <span className="text-fg-muted italic text-[11px]">CONSUMIDOR FINAL</span>
               ),
           },
           {
-            key: 'items',
-            header: 'ÍTEMS',
-            align: 'center',
+            key: 'fiscalNumber',
+            header: 'NÚMERO FISCAL',
+            cellClassName: 'whitespace-nowrap',
+            render: (inv: any) =>
+              inv.fullNumber && inv.cufe ? (
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-mono text-[11px] font-bold text-accent">{inv.fullNumber}</span>
+                </div>
+              ) : (
+                <span className="text-[11px] text-fg-muted italic">Sin emitir</span>
+              ),
+          },
+          {
+            key: 'cashier',
+            header: 'CAJERO / TURNO',
             cellClassName: 'whitespace-nowrap',
             render: (inv: any) => (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-ash border border-line-hover text-fg text-[11px]">
-                <ShoppingBag className="w-3 h-3 text-accent" />
-                <span>{invoiceFlags(inv).totalItemsCount} prod.</span>
-              </span>
+              <div className="flex flex-col gap-0.5 text-[11px]">
+                <span className="inline-flex items-center gap-1 font-bold text-fg uppercase">
+                  <UserRound className="w-3 h-3 text-accent shrink-0" />
+                  {inv.cashierName || '—'}
+                </span>
+              </div>
             ),
           },
           {
@@ -230,12 +241,20 @@ export function InvoiceTable({
             cellClassName: 'whitespace-nowrap',
             render: (inv: any) => {
               const { fiscal } = invoiceFlags(inv)
-              if (fiscal.isAccepted) {
+              // Con CUFE ya emitida: nunca botón de transmitir (aunque el listado
+              // estuviera desactualizado). Un clic no debe parecer que “manda todas”.
+              if (fiscal.isAccepted || fiscal.isTransmitted) {
                 return (
                   <div className="flex flex-col items-center gap-1">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-ok-dim border border-ok-line text-ok shadow">
-                      <ShieldCheck className="w-3.5 h-3.5 text-ok" />
-                      <span>ACEPTADA (DIAN)</span>
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase shadow ${
+                        fiscal.isAccepted
+                          ? 'bg-ok-dim border border-ok-line text-ok'
+                          : 'bg-warn-dim border border-warn-line text-warn'
+                      }`}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>{fiscal.isAccepted ? 'ACEPTADA (DIAN)' : fiscal.label}</span>
                     </span>
                     {fiscal.cufe && (
                       <span className="text-[9px] text-fg-muted font-mono">
@@ -258,38 +277,39 @@ export function InvoiceTable({
                   </TacticalButton>
                 )
               }
-              if (fiscal.isTransmitted) {
-                return (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-warn-dim border border-warn-line text-warn">
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    {fiscal.label}
-                  </span>
-                )
-              }
-              if (!fiscal.canTransmit) {
-                return (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-night-mid border border-line text-fg-muted">
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    {fiscal.label}
-                  </span>
-                )
-              }
               return (
-                <TacticalButton
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => onEmit(inv.id)}
-                  loading={emittingId === inv.id}
-                  icon={<Zap className="w-3 h-3 text-accent" />}
-                >
-                  {fiscal.needsReconciliation
-                    ? 'RECONCILIAR'
-                    : fiscal.isManualPending
-                    ? 'TRANSMITIR (MANUAL)'
-                    : fiscal.isOutboxFailed
-                    ? 'REINTENTAR'
-                    : 'TRANSMITIR DIAN'}
-                </TacticalButton>
+                <div className="flex flex-col items-center gap-1 max-w-[220px]">
+                  <TacticalButton
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onEmit(inv.id)}
+                    loading={emittingId === inv.id}
+                    title={fiscal.outboxLastError || undefined}
+                    icon={
+                      fiscal.isQueued || fiscal.isOutboxFailed ? (
+                        <RefreshCw className="w-3 h-3 text-accent" />
+                      ) : (
+                        <Zap className="w-3 h-3 text-accent" />
+                      )
+                    }
+                  >
+                    {fiscal.needsReconciliation
+                      ? 'RECONCILIAR'
+                      : fiscal.isManualPending
+                      ? 'TRANSMITIR (MANUAL)'
+                      : fiscal.isQueued || fiscal.isOutboxFailed
+                      ? 'REINTENTAR'
+                      : 'TRANSMITIR DIAN'}
+                  </TacticalButton>
+                  {fiscal.outboxLastError && (
+                    <span
+                      className="text-[9px] text-danger text-center leading-tight line-clamp-2"
+                      title={fiscal.outboxLastError}
+                    >
+                      {fiscal.outboxLastError.replace(/^No se puede emitir la factura electrónica:\s*/i, '')}
+                    </span>
+                  )}
+                </div>
               )
             },
           },

@@ -12,9 +12,13 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { Tabs } from '@/components/ui/Tabs'
 import { CreateUserModal } from '@/components/users/CreateUserModal'
+import { EditUserModal, type EditableUser } from '@/components/users/EditUserModal'
 import { TenantsTable } from '@/components/users/TenantsTable'
 import { UsersTable } from '@/components/users/UsersTable'
+import { useToast } from '@/components/ui/ToastProvider'
 import {
+  deactivateUserAction,
+  getMyAccess,
   getUsersList,
   listAllTenants,
 } from '@/app/actions/pos-actions'
@@ -22,16 +26,19 @@ import {
 type Tab = 'users' | 'companies'
 
 export default function UsersPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('companies')
+  const { toast } = useToast()
+  const [activeTab, setActiveTab] = useState<Tab>('users')
   const [users, setUsers] = useState<any[]>([])
   const [tenants, setTenants] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [canManage, setCanManage] = useState(false)
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const itemsPerPage = 8
 
-  // Modal "Crear operador" (dentro del tenant actual)
   const [isUserModalOpen, setIsUserModalOpen] = useState(false)
+  const [editUser, setEditUser] = useState<EditableUser | null>(null)
 
   useEffect(() => {
     loadData()
@@ -40,9 +47,22 @@ export default function UsersPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const [u, t] = await Promise.all([getUsersList().catch(() => []), listAllTenants().catch(() => [])])
+      const access = await getMyAccess().catch(() => null)
+      const platform = Boolean(access?.isPlatformAdmin)
+      setCanManage(Boolean(access?.canManageUsers))
+      setIsPlatformAdmin(platform)
+      if (!platform) setActiveTab('users')
+
+      const u = await getUsersList().catch(() => [])
       setUsers(u || [])
-      setTenants(t || [])
+
+      // Solo el admin de plataforma lista todas las empresas (evita 500 en tenant ADMIN).
+      if (platform) {
+        const t = await listAllTenants().catch(() => [])
+        setTenants(t || [])
+      } else {
+        setTenants([])
+      }
     } catch (error) {
       console.error('Error al cargar datos:', error)
     } finally {
@@ -50,7 +70,6 @@ export default function UsersPage() {
     }
   }
 
-  // ---------- Filtros y paginación ----------
   const filteredUsers = users.filter(
     (u) =>
       u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -86,14 +105,24 @@ export default function UsersPage() {
     setCurrentPage(1)
   }
 
+  const tabItems = isPlatformAdmin
+    ? [
+        { id: 'companies' as const, label: 'EMPRESAS', icon: Building2, count: totalTenants },
+        { id: 'users' as const, label: 'OPERADORES / USUARIOS', icon: Users, count: totalUsers },
+      ]
+    : [{ id: 'users' as const, label: 'OPERADORES / USUARIOS', icon: Users, count: totalUsers }]
+
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
       <PageHeader
         icon={<Users className="w-4 h-4" />}
-        kicker="IDENTITY & ACCESS MANAGEMENT (IAM) // TENANT REGISTRY"
-        title="CONTROL DE USUARIOS, ROLES Y EMPRESAS"
-        description="Administra las empresas (SAS) registradas y los usuarios asignados a cada una."
+        kicker="IDENTITY & ACCESS MANAGEMENT (IAM)"
+        title={isPlatformAdmin ? 'CONTROL DE USUARIOS, ROLES Y EMPRESAS' : 'CONTROL DE USUARIOS Y ROLES'}
+        description={
+          isPlatformAdmin
+            ? 'Administra las empresas (SAS) registradas y los usuarios asignados a cada una.'
+            : 'Administra los operadores de esta empresa. Solo el administrador puede crear o cambiar usuarios.'
+        }
         actions={
           <>
             <TacticalButton
@@ -105,7 +134,7 @@ export default function UsersPage() {
             >
               RECARGAR
             </TacticalButton>
-            {activeTab === 'users' && (
+            {activeTab === 'users' && canManage && (
               <TacticalButton
                 variant="primary"
                 size="sm"
@@ -119,22 +148,19 @@ export default function UsersPage() {
         }
       />
 
-      {/* Tabs */}
-      <Tabs
-        variant="underline"
-        items={[
-          { id: 'companies', label: 'EMPRESAS', icon: Building2, count: totalTenants },
-          { id: 'users', label: 'OPERADORES / USUARIOS', icon: Users, count: totalUsers },
-        ]}
-        value={activeTab}
-        onChange={(id) => {
-          setActiveTab(id as Tab)
-          setSearchQuery('')
-          setCurrentPage(1)
-        }}
-      />
+      {tabItems.length > 1 && (
+        <Tabs
+          variant="underline"
+          items={tabItems}
+          value={activeTab}
+          onChange={(id) => {
+            setActiveTab(id as Tab)
+            setSearchQuery('')
+            setCurrentPage(1)
+          }}
+        />
+      )}
 
-      {/* Search */}
       <div className="flex items-center gap-3">
         <SearchInput
           placeholder={
@@ -148,8 +174,7 @@ export default function UsersPage() {
         />
       </div>
 
-      {/* TAB: EMPRESAS */}
-      {activeTab === 'companies' && (
+      {isPlatformAdmin && activeTab === 'companies' && (
         <TenantsTable
           rows={paginatedTenants}
           filteredCount={filteredTenants.length}
@@ -161,7 +186,6 @@ export default function UsersPage() {
         />
       )}
 
-      {/* TAB: USUARIOS / OPERADORES */}
       {activeTab === 'users' && (
         <UsersTable
           rows={paginatedUsers}
@@ -172,11 +196,36 @@ export default function UsersPage() {
           onPageChange={(page) => setCurrentPage(page)}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
+          canManage={canManage}
+          onEdit={(u) =>
+            setEditUser({
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              role: u.role,
+              isCurrent: u.isCurrent,
+            })
+          }
+          onDeactivate={async (u) => {
+            if (
+              !window.confirm(
+                `¿Desactivar a ${u.name} (${u.email})? Dejará de poder iniciar sesión en esta empresa.`
+              )
+            ) {
+              return
+            }
+            try {
+              await deactivateUserAction(u.id)
+              toast(`Usuario "${u.name}" desactivado.`)
+              await loadData()
+            } catch (err: any) {
+              toast(err?.message || 'No se pudo desactivar', 'error')
+            }
+          }}
         />
       )}
 
-      {/* MODAL: NUEVO OPERADOR (dentro del tenant actual) */}
-      {isUserModalOpen && (
+      {canManage && isUserModalOpen && (
         <CreateUserModal
           open={isUserModalOpen}
           onClose={() => setIsUserModalOpen(false)}
@@ -184,6 +233,14 @@ export default function UsersPage() {
         />
       )}
 
+      {canManage && editUser && (
+        <EditUserModal
+          open={Boolean(editUser)}
+          user={editUser}
+          onClose={() => setEditUser(null)}
+          onSubmitted={loadData}
+        />
+      )}
     </div>
   )
 }

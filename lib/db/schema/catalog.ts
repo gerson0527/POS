@@ -5,7 +5,9 @@ import {
   integer,
   decimal,
   index,
-  unique } from 'drizzle-orm/pg-core'
+  unique,
+  uniqueIndex } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 // PRODUCT: Catálogo de productos
 export const product = pgTable(
@@ -96,6 +98,8 @@ export const inventoryMovement = pgTable(
     reference: text('reference'),
     referenceId: text('referenceId'),
     notes: text('notes'),
+    reason: text('reason'),
+    idempotencyKey: text('idempotencyKey'),
     userId: text('userId'),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
   },
@@ -103,5 +107,8 @@ export const inventoryMovement = pgTable(
     tenantIdx: index('inventory_movement_tenant_idx').on(table.tenantId),
     productIdx: index('inventory_movement_product_idx').on(table.productId),
     typeIdx: index('inventory_movement_type_idx').on(table.movementType),
+    idempotencyIdx: uniqueIndex('inventory_movement_idempotency_idx')
+      .on(table.tenantId, table.idempotencyKey)
+      .where(sql`"idempotencyKey" IS NOT NULL`),
   })
 )

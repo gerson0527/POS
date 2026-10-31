@@ -33,8 +33,10 @@ export function fiscalUiStatus(inv: any) {
   const outboxStatus = String(inv?.outboxStatus || '').toUpperCase()
   const requiresManualApproval = Boolean(inv?.requiresManualApproval)
   const needsReconciliation = Boolean(inv?.needsReconciliation)
-  const isAccepted = status === 'ACCEPTED'
   const isRejected = status === 'REJECTED' || status === 'TECHNICAL_FAILURE'
+  // Si hay CUFE y no está rechazada, ya no se muestra TRANSMITIR/REINTENTAR.
+  // "ACEPTADA" solo cuando el estado fiscal lo confirma; si no, "TRANSMITIDA".
+  const isAccepted = Boolean(cufe) && !isRejected && status === 'ACCEPTED'
   const isTransmitted = Boolean(cufe) && !isRejected
 
   const isManualPending =
@@ -53,9 +55,15 @@ export function fiscalUiStatus(inv: any) {
     else if (isQueued) label = 'EN COLA'
   }
 
-  // MANUAL se puede transmitir desde /dashboard/invoices; AUTO en cola espera al
-  // cron. Un rechazo requiere corrección, no un simple reintento.
-  const canTransmit = !cufe && !isRejected && (!isQueued || requiresManualApproval)
+  // Sin cron local las ventas EN COLA se quedan eternamente: el usuario debe
+  // poder reintentar desde /dashboard/invoices. Un rechazo DIAN no se reintenta
+  // con el mismo payload (requiere corrección / nota crédito).
+  const canTransmit = !cufe && !isRejected
+  // No mostrar errores viejos del outbox si la factura ya tiene CUFE o el
+  // evento quedó DONE (p. ej. cliente se completó después del primer fallo).
+  const rawOutboxError = String(inv?.outboxLastError || '').trim() || null
+  const outboxLastError =
+    !cufe && outboxStatus !== 'DONE' ? rawOutboxError : null
 
   return {
     status,
@@ -69,6 +77,7 @@ export function fiscalUiStatus(inv: any) {
     isOutboxFailed,
     needsReconciliation: needsReconciliationUi,
     canTransmit,
+    outboxLastError,
   }
 }
 

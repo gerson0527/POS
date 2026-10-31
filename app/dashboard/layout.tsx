@@ -24,7 +24,7 @@ import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { StatusBadge } from '@/components/tactical/StatusBadge'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getMyAccess } from '@/app/actions/pos-actions'
-import { isPathAllowedForRole } from '@/lib/auth/permissions'
+import { homePathForRole, isPathAllowedForRole } from '@/lib/auth/permissions'
 import type { TenantRole } from '@/lib/auth/session-context'
 
 export default function DashboardLayout({
@@ -62,6 +62,14 @@ export default function DashboardLayout({
     // Solo al montar: el rol no cambia durante la sesión.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Revalidar ruta al navegar (p. ej. cajero no debe entrar a /dashboard/users).
+  useEffect(() => {
+    if (!accessLoaded || !role) return
+    if (!isPathAllowedForRole(role, pathname)) {
+      router.replace(homePathForRole(role))
+    }
+  }, [pathname, role, accessLoaded, router])
 
   // Guard de onboarding: si el usuario es admin y el tenant aún no completó
   // el wizard de primera vez, redirigir a /dashboard/onboarding.
@@ -125,7 +133,10 @@ export default function DashboardLayout({
     : role === 'ACCOUNTANT'
       ? // La contadora sólo trabaja el módulo de facturación.
         standardNavItems.filter((item) => item.href === '/dashboard/invoices')
-      : standardNavItems
+      : role === 'ADMIN'
+        ? standardNavItems
+        : // Solo ADMIN gestiona usuarios/empresas.
+          standardNavItems.filter((item) => item.href !== '/dashboard/users')
 
   // Breadcrumb text based on current path
   const getBreadcrumb = () => {

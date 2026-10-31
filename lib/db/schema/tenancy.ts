@@ -61,6 +61,19 @@ export const tenant = pgTable(
     // tributeCode: 'ZZ' = no aplica, '01' = IVA, etc.
     fiscalMunicipalityCode: text('fiscalMunicipalityCode').default('11001'),
     fiscalTributeCode: text('fiscalTributeCode').default('ZZ'),
+    // Asistente por canal: credenciales POR TENANT (como Factus). Secretos cifrados.
+    assistantEnabled: text('assistantEnabled').notNull().default('NO'), // SI | NO
+    assistantTelegramBotToken: text('assistantTelegramBotToken'),
+    assistantTelegramBotUsername: text('assistantTelegramBotUsername'),
+    assistantTelegramWebhookSecret: text('assistantTelegramWebhookSecret'),
+    assistantLlmBaseUrl: text('assistantLlmBaseUrl'),
+    assistantLlmApiKey: text('assistantLlmApiKey'),
+    assistantLlmModel: text('assistantLlmModel'),
+    assistantSttProvider: text('assistantSttProvider').default('none'),
+    assistantSttApiKey: text('assistantSttApiKey'),
+    assistantSttModel: text('assistantSttModel'),
+    assistantSttBaseUrl: text('assistantSttBaseUrl'),
+    assistantDraftTtlMinutes: integer('assistantDraftTtlMinutes').default(10),
     status: text('status').notNull().default('ACTIVE'), // ACTIVE, SUSPENDED, INACTIVE
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt').notNull().defaultNow(),

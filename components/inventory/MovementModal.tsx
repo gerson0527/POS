@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { History } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/Select'
 import { Label } from '@/components/ui/Label'
 import { useToast } from '@/components/ui/ToastProvider'
 import { recordInventoryMovement } from '@/app/actions/pos-actions'
+import { getAllLocations } from '@/app/actions/locations'
 
 interface MovementModalProps {
   open: boolean
@@ -17,33 +18,79 @@ interface MovementModalProps {
   onSubmitted: () => void
 }
 
+type MovementType = 'IN' | 'OUT' | 'ADJUSTMENT'
+
+const EMPTY_FORM = {
+  productId: '',
+  locationId: '',
+  movementType: 'IN' as MovementType,
+  quantity: '1',
+  notes: '',
+}
+
 export function MovementModal({ open, onClose, products, onSubmitted }: MovementModalProps) {
   const { toast } = useToast()
-  const [movementForm, setMovementForm] = useState({
-    productId: '',
-    movementType: 'IN' as 'IN' | 'OUT' | 'ADJUSTMENT',
-    quantity: '1',
-    notes: '',
-  })
+  const [movementForm, setMovementForm] = useState(EMPTY_FORM)
+  const [locations, setLocations] = useState<{ id: string; name: string; city: string | null }[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  // Una clave por formulario: un doble clic o reintento no duplica el movimiento.
+  const idempotencyKey = useRef(crypto.randomUUID())
+
+  useEffect(() => {
+    getAllLocations()
+      .then((rows) => {
+        const active = rows.filter((row) => row.status === 'ACTIVE')
+        setLocations(active)
+        if (active.length === 1) {
+          setMovementForm((form) => ({ ...form, locationId: active[0].id }))
+        }
+      })
+      .catch(() => setLocations([]))
+  }, [])
+
+  const isAdjustment = movementForm.movementType === 'ADJUSTMENT'
 
   async function handleRecordMovement(e: React.FormEvent) {
     e.preventDefault()
-    if (!movementForm.productId || !movementForm.quantity) return
+    if (submitting) return
+    if (!movementForm.productId || !movementForm.locationId || !movementForm.quantity) return
 
+    const quantity = parseFloat(movementForm.quantity)
+    if (!Number.isFinite(quantity) || quantity === 0) {
+      toast('La cantidad no es válida.', 'error')
+      return
+    }
+
+    setSubmitting(true)
     try {
-      await recordInventoryMovement({
+      const result = await recordInventoryMovement({
         productId: movementForm.productId,
+        locationId: movementForm.locationId,
         movementType: movementForm.movementType,
-        quantity: parseFloat(movementForm.quantity) || 1,
+        quantity,
         notes: movementForm.notes,
+        reason: isAdjustment ? movementForm.notes : null,
+        idempotencyKey: idempotencyKey.current,
       })
 
-      toast('¡MOVIMIENTO KARDEX REGISTRADO CORRECTAMENTE!')
+      if (!result.success) {
+        toast(`Error al registrar movimiento: ${result.message}`, 'error')
+        return
+      }
+
+      toast(
+        result.duplicated
+          ? 'Este movimiento ya estaba registrado.'
+          : `¡MOVIMIENTO KARDEX REGISTRADO! Stock resultante: ${result.newQuantity}`
+      )
+      idempotencyKey.current = crypto.randomUUID()
+      setMovementForm({ ...EMPTY_FORM, locationId: movementForm.locationId })
       onClose()
-      setMovementForm({ productId: '', movementType: 'IN', quantity: '1', notes: '' })
       onSubmitted()
     } catch (err: any) {
       toast(`Error al registrar movimiento: ${err.message}`, 'error')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -73,6 +120,24 @@ export function MovementModal({ open, onClose, products, onSubmitted }: Movement
           </Select>
         </div>
 
+        <div>
+          <Label>SEDE *</Label>
+          <Select
+            className="font-normal"
+            required
+            value={movementForm.locationId}
+            onChange={(e) => setMovementForm({ ...movementForm, locationId: e.target.value })}
+          >
+            <option value="">-- Seleccionar Sede --</option>
+            {locations.map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.name}
+                {loc.city ? ` (${loc.city})` : ''}
+              </option>
+            ))}
+          </Select>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>TIPO DE OPERACIÓN *</Label>
@@ -82,15 +147,16 @@ export function MovementModal({ open, onClose, products, onSubmitted }: Movement
             >
               <option value="IN">ENTRADA DE STOCK (COMPRA)</option>
               <option value="OUT">SALIDA DE STOCK (MERMA/VENTA)</option>
-              <option value="ADJUSTMENT">AJUSTE DE INVENTARIO</option>
+              <option value="ADJUSTMENT">AJUSTE DE INVENTARIO (+/-)</option>
             </Select>
           </div>
           <div>
-            <Label>CANTIDAD (UNIDADES) *</Label>
+            <Label>{isAdjustment ? 'AJUSTE (+ SUMA / - RESTA) *' : 'CANTIDAD (UNIDADES) *'}</Label>
             <Input
               type="number"
               required
-              min="1"
+              step="any"
+              min={isAdjustment ? undefined : '0.01'}
               value={movementForm.quantity}
               onChange={(e) => setMovementForm({ ...movementForm, quantity: e.target.value })}
               className="font-bold"
@@ -99,10 +165,11 @@ export function MovementModal({ open, onClose, products, onSubmitted }: Movement
         </div>
 
         <div>
-          <Label>NOTAS / JUSTIFICACIÓN</Label>
+          <Label>{isAdjustment ? 'MOTIVO DEL AJUSTE *' : 'NOTAS / JUSTIFICACIÓN'}</Label>
           <Input
             type="text"
-            placeholder="Ej: Factura de compra proveedor #1092"
+            required={isAdjustment}
+            placeholder={isAdjustment ? 'Ej: Conteo físico, producto vencido' : 'Ej: Factura de compra proveedor #1092'}
             value={movementForm.notes}
             onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })}
           />
@@ -112,8 +179,8 @@ export function MovementModal({ open, onClose, products, onSubmitted }: Movement
           <TacticalButton type="button" variant="secondary" size="sm" onClick={onClose}>
             CANCELAR
           </TacticalButton>
-          <TacticalButton type="submit" variant="primary" size="sm">
-            REGISTRAR EN KARDEX
+          <TacticalButton type="submit" variant="primary" size="sm" disabled={submitting}>
+            {submitting ? 'REGISTRANDO...' : 'REGISTRAR EN KARDEX'}
           </TacticalButton>
         </div>
       </form>

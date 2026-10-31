@@ -18,13 +18,55 @@ export async function emitFactusElectronicInvoice(saleId: string) {
     // pendientes cuando la empresa opera en modo de envío manual.
     await requireRole(userId, ['ADMIN', 'MANAGER', 'CASHIER', 'ACCOUNTANT'])
     const tenantId = await getTenantId(userId)
+
+    // Una sola venta por clic. Si ya hay CUFE local, no se reclama el outbox
+    // ni se vuelve a llamar a Factus (evita la sensación de “se transmitieron todas”).
+    const { and, eq, desc } = await import('drizzle-orm')
+    const existingDocs = await db
+      .select({
+        uniqueCode: schema.fiscalDocument.uniqueCode,
+        status: schema.fiscalDocument.status,
+        fullNumber: schema.fiscalDocument.fullNumber,
+        qrCodeContent: schema.fiscalDocument.qrCodeContent,
+        pdfStorageKey: schema.fiscalDocument.pdfStorageKey,
+        xmlSignedStorageKey: schema.fiscalDocument.xmlSignedStorageKey,
+      })
+      .from(schema.fiscalDocument)
+      .where(
+        and(
+          eq(schema.fiscalDocument.saleId, saleId),
+          eq(schema.fiscalDocument.tenantId, tenantId)
+        )
+      )
+      .orderBy(desc(schema.fiscalDocument.createdAt))
+    const withCufe = existingDocs.find((doc) => doc.uniqueCode)
+    if (withCufe?.uniqueCode) {
+      const rejected =
+        withCufe.status === 'REJECTED' || withCufe.status === 'TECHNICAL_FAILURE'
+      return {
+        success: !rejected,
+        cufe: withCufe.uniqueCode,
+        dianStatus: withCufe.status,
+        billNumber: withCufe.fullNumber || undefined,
+        qrCodeUrl: withCufe.qrCodeContent || undefined,
+        pdfUrl: withCufe.pdfStorageKey || undefined,
+        xmlUrl: withCufe.xmlSignedStorageKey || undefined,
+        message: rejected
+          ? `El documento ${withCufe.fullNumber || withCufe.uniqueCode} está rechazado; no se reenvía automáticamente.`
+          : `Esta venta ya estaba transmitida (documento ${
+              withCufe.fullNumber || withCufe.uniqueCode
+            }). No se envió de nuevo a Factus.`,
+        alreadyTransmitted: true,
+      }
+    }
+
     const { retryFiscalEmission } = await import('@/lib/fiscal/outbox')
-    // La emisión manual pasa por el MISMO claim transaccional del outbox:
-    // dos clics concurrentes no pueden hacer dos POST a Factus. `force` permite
-    // recuperar eventos DONE con CUFE no persistido (datos heredados), sin
-    // reenviar si la factura ya está validada (idempotencia por que la función
-    // de dominio devuelve el documento existente).
-    return await retryFiscalEmission(tenantId, saleId, { requestedBy: userId, force: true })
+    // Solo esta saleId. `force` únicamente si no hay CUFE local (p. ej. outbox DONE
+    // con persistencia fallida) para poder reclamar y reconciliar sin tocar otras ventas.
+    return await retryFiscalEmission(tenantId, saleId, {
+      requestedBy: userId,
+      force: true,
+    })
   } catch (err: any) {
     return {
       success: false,

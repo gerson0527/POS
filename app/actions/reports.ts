@@ -29,11 +29,87 @@ export async function getSalesReports(startDate?: string, endDate?: string) {
     whereConditions.push(lte(schema.sale.createdAt, end))
   }
 
-  const salesList = await db
-    .select()
+  // Join sede + sesión; devolver objetos planos (serializables) con número de caja.
+  const salesRows = await db
+    .select({
+      id: schema.sale.id,
+      tenantId: schema.sale.tenantId,
+      locationId: schema.sale.locationId,
+      cashierSessionId: schema.sale.cashierSessionId,
+      userId: schema.sale.userId,
+      ticketNumber: schema.sale.ticketNumber,
+      status: schema.sale.status,
+      subtotal: schema.sale.subtotal,
+      taxAmount: schema.sale.taxAmount,
+      total: schema.sale.total,
+      createdAt: schema.sale.createdAt,
+      locationCode: schema.location.code,
+      locationName: schema.location.name,
+      sessionLocationId: schema.cashierSession.locationId,
+      businessDate: schema.cashierSession.businessDate,
+    })
     .from(schema.sale)
+    .leftJoin(schema.location, eq(schema.location.id, schema.sale.locationId))
+    .leftJoin(
+      schema.cashierSession,
+      eq(schema.cashierSession.id, schema.sale.cashierSessionId)
+    )
     .where(and(...whereConditions))
     .orderBy(desc(schema.sale.createdAt))
+
+  // Completar sede desde la sesión si la venta no la resolvió.
+  const missingLocIds = Array.from(
+    new Set(
+      salesRows
+        .filter((s) => !s.locationCode && !s.locationName && s.sessionLocationId)
+        .map((s) => s.sessionLocationId as string)
+    )
+  )
+  const sessionLocById = new Map(
+    (
+      missingLocIds.length
+        ? await db
+            .select({
+              id: schema.location.id,
+              code: schema.location.code,
+              name: schema.location.name,
+            })
+            .from(schema.location)
+            .where(inArray(schema.location.id, missingLocIds))
+        : []
+    ).map((l) => [l.id, l] as const)
+  )
+
+  const salesList = salesRows.map((s) => {
+    const fallback = s.sessionLocationId
+      ? sessionLocById.get(s.sessionLocationId)
+      : undefined
+    const cajaCode = String(s.locationCode || fallback?.code || '').trim()
+    const cajaName = String(s.locationName || fallback?.name || '').trim()
+    const cashierSessionLabel = cajaCode
+      ? `Caja ${cajaCode}${cajaName && cajaName !== cajaCode ? ` · ${cajaName}` : ''}`
+      : cajaName
+        ? `Caja ${cajaName}`
+        : 'Caja N/A'
+
+    return {
+      id: s.id,
+      tenantId: s.tenantId,
+      locationId: s.locationId,
+      cashierSessionId: s.cashierSessionId,
+      userId: s.userId,
+      ticketNumber: s.ticketNumber,
+      status: s.status,
+      subtotal: s.subtotal != null ? String(s.subtotal) : '0',
+      taxAmount: s.taxAmount != null ? String(s.taxAmount) : '0',
+      total: s.total != null ? String(s.total) : '0',
+      createdAt: s.createdAt ? new Date(s.createdAt).toISOString() : null,
+      locationCode: cajaCode || null,
+      locationName: cajaName || null,
+      cashierSessionLabel,
+      businessDate: s.businessDate ? String(s.businessDate).slice(0, 10) : null,
+    }
+  })
 
   const completedSaleIds = salesList.map((s) => s.id)
 

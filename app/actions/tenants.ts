@@ -9,6 +9,7 @@ import { revalidatePath } from 'next/cache'
 import { sendWelcomeEmail } from '@/lib/email'
 import { hashPassword } from 'better-auth/crypto'
 import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
+import { isPlatformAdminEmail } from '@/lib/auth/permissions'
 export async function createTenantWithAdmin(input: {
   // Datos del usuario admin
   adminName: string
@@ -40,14 +41,7 @@ export async function createTenantWithAdmin(input: {
     .from(schema.user)
     .where(eq(schema.user.id, currentUserId))
     .limit(1)
-  const platformAdmins = (process.env.PLATFORM_ADMIN_EMAILS || '')
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean)
-  if (
-    !platformUser[0]?.email ||
-    !platformAdmins.includes(platformUser[0].email.toLowerCase())
-  ) {
+  if (!isPlatformAdminEmail(platformUser[0]?.email)) {
     throw new Error('Solo el administrador de plataforma puede crear tenants.')
   }
 
@@ -220,18 +214,13 @@ export async function listAllTenants() {
     throw new Error('No se pudo validar el tenant activo.')
   }
 
-  // El listado global solo lo pueden ver los correos configurados como
-  // administradores de plataforma. Sin lista configurada se deniega.
+  // El listado global solo lo ven administradores de plataforma.
   const userRows = await db
     .select({ email: schema.user.email })
     .from(schema.user)
     .where(eq(schema.user.id, currentUserId))
     .limit(1)
-  const allowedEmails = (process.env.PLATFORM_ADMIN_EMAILS || '')
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean)
-  if (!userRows[0]?.email || !allowedEmails.includes(userRows[0].email.toLowerCase())) {
+  if (!isPlatformAdminEmail(userRows[0]?.email)) {
     throw new Error('Solo el administrador de plataforma puede listar todos los tenants.')
   }
 

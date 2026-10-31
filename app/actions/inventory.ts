@@ -3,10 +3,16 @@
 // El barrel pos-actions.ts re-exporta todo este módulo.
 import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
-import { AuditAction } from '@/lib/types'
 import { and, eq, desc } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
+import { getUserId, getTenantId, requireActor } from './_shared'
+import { safeAction } from './_result'
+import {
+  INVENTORY_MOVEMENT_ROLES,
+  recordInventoryMovement as recordMovementForActor,
+  resolveMovementLocation,
+  type ManualMovementType,
+} from '@/lib/inventory/service'
 export async function getInventoryStats() {
   const userId = await getUserId()
   const tenantId = await getTenantId(userId)
@@ -70,45 +76,25 @@ export async function getInventoryMovementsList() {
   return movs
 }
 
-export async function recordInventoryMovement(input: { productId: string; movementType: 'IN' | 'OUT' | 'ADJUSTMENT'; quantity: number; notes?: string }) {
-  const userId = await getUserId()
-  await requireRole(userId, ['ADMIN', 'MANAGER'])
-  const tenantId = await getTenantId(userId)
-  const id = `mov_${Date.now()}`
-
-  const locations = await db.select().from(schema.location).where(eq(schema.location.tenantId, tenantId)).limit(1)
-  const locationId = locations[0]?.id || 'loc_default'
-
-  await db.insert(schema.inventoryMovement).values({
-    id,
-    tenantId,
-    locationId,
-    productId: input.productId,
-    movementType: input.movementType,
-    quantity: String(input.quantity),
-    notes: input.notes || null,
-    userId,
-  })
-
-  const existingInv = await db.select().from(schema.inventory).where(and(eq(schema.inventory.locationId, locationId), eq(schema.inventory.productId, input.productId))).limit(1)
-  if (existingInv.length) {
-    const currentQty = parseFloat(existingInv[0].quantity) || 0
-    const newQty = input.movementType === 'OUT' ? currentQty - input.quantity : currentQty + input.quantity
-    await db.update(schema.inventory).set({ quantity: String(newQty), available: String(newQty) }).where(eq(schema.inventory.id, existingInv[0].id))
-  } else {
-    const invId = `inv_${Date.now()}`
-    await db.insert(schema.inventory).values({
-      id: invId,
-      tenantId,
+export async function recordInventoryMovement(input: {
+  productId: string
+  movementType: ManualMovementType
+  quantity: number
+  locationId?: string | null
+  reason?: string | null
+  notes?: string | null
+  idempotencyKey?: string | null
+}) {
+  return safeAction(async () => {
+    const actor = await requireActor([...INVENTORY_MOVEMENT_ROLES])
+    const locationId = await resolveMovementLocation(actor, input.locationId)
+    const result = await recordMovementForActor(actor, {
+      ...input,
       locationId,
-      productId: input.productId,
-      quantity: String(input.quantity),
-      available: String(input.quantity),
+      source: 'MANUAL',
     })
-  }
-
-  await logAudit(tenantId, userId, AuditAction.UPDATE, 'inventory', id, input)
-  revalidatePath('/dashboard/inventory')
-  return { id, success: true }
+    revalidatePath('/dashboard/inventory')
+    return { ...result, success: true as const }
+  }, 'No se pudo registrar el movimiento de inventario.')
 }
 

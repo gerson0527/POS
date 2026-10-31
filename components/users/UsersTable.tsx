@@ -1,9 +1,10 @@
 'use client'
 
-import { Mail, ShieldCheck } from 'lucide-react'
+import { Mail, Pencil, ShieldCheck, UserX } from 'lucide-react'
 import { StatusBadge } from '@/components/tactical/StatusBadge'
 import { SectionPanel } from '@/components/tactical/SectionPanel'
 import { Pagination } from '@/components/tactical/Pagination'
+import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { DataTable } from '@/components/ui/DataTable'
 import { SearchInput } from '@/components/ui/SearchInput'
 
@@ -16,6 +17,9 @@ interface UsersTableProps {
   onPageChange: (page: number) => void
   searchQuery: string
   onSearchChange: (value: string) => void
+  canManage?: boolean
+  onEdit?: (user: any) => void
+  onDeactivate?: (user: any) => void
 }
 
 export function UsersTable({
@@ -27,7 +31,101 @@ export function UsersTable({
   onPageChange,
   searchQuery,
   onSearchChange,
+  canManage = false,
+  onEdit,
+  onDeactivate,
 }: UsersTableProps) {
+  const columns = [
+    {
+      key: 'name',
+      header: 'OPERADOR / CORREO',
+      render: (u: any) => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded bg-ash border border-line-hover flex items-center justify-center text-accent font-bold text-xs">
+            {u.name?.substring(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <div className="font-bold text-fg flex items-center gap-2">
+              <span>{u.name}</span>
+              {u.isCurrent && (
+                <span className="text-[10px] bg-accent text-white font-extrabold px-1.5 py-0.5 rounded">
+                  ACTUAL
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-fg-muted flex items-center gap-1 mt-0.5">
+              <Mail className="w-3 h-3 text-fg-faint" />
+              <span>{u.email}</span>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'role',
+      header: 'ROL',
+      render: (u: any) => (
+        <span className="inline-flex items-center gap-1 bg-night-deep border border-line text-accent px-2.5 py-1 rounded text-[11px] font-bold">
+          <ShieldCheck className="w-3.5 h-3.5" /> {u.role}
+        </span>
+      ),
+    },
+    {
+      key: 'tenantName',
+      header: 'EMPRESA',
+      cellClassName: 'text-fg-muted',
+      render: (u: any) => u.tenantName || '—',
+    },
+    {
+      key: 'status',
+      header: 'ESTADO',
+      render: () => <StatusBadge status="online" label="ACTIVO" />,
+    },
+    ...(canManage
+      ? [
+          {
+            key: 'actions',
+            header: 'ACCIONES',
+            render: (u: any) => {
+              // Un ADMIN no puede editar/desactivar a otro ADMIN (sí a sí mismo).
+              const isOtherAdmin = u.role === 'ADMIN' && !u.isCurrent
+              if (isOtherAdmin) {
+                return (
+                  <span className="text-[10px] text-fg-muted uppercase tracking-wider">
+                    Protegido
+                  </span>
+                )
+              }
+              return (
+                <div className="flex items-center gap-1.5">
+                  <TacticalButton
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onEdit?.(u)}
+                    icon={<Pencil className="w-3 h-3" />}
+                  >
+                    EDITAR
+                  </TacticalButton>
+                  {!u.isCurrent && (
+                    <TacticalButton
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onDeactivate?.(u)}
+                      icon={<UserX className="w-3 h-3" />}
+                    >
+                      DESACTIVAR
+                    </TacticalButton>
+                  )}
+                </div>
+              )
+            },
+          },
+        ]
+      : []),
+  ]
+
   return (
     <>
       <SectionPanel
@@ -45,53 +143,7 @@ export function UsersTable({
         noPadding
       >
         <DataTable
-          columns={[
-            {
-              key: 'name',
-              header: 'OPERADOR / CORREO',
-              render: (u: any) => (
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded bg-ash border border-line-hover flex items-center justify-center text-accent font-bold text-xs">
-                    {u.name?.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <div className="font-bold text-fg flex items-center gap-2">
-                      <span>{u.name}</span>
-                      {u.isCurrent && (
-                        <span className="text-[10px] bg-accent text-white font-extrabold px-1.5 py-0.5 rounded">
-                          ACTUAL
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-fg-muted flex items-center gap-1 mt-0.5">
-                      <Mail className="w-3 h-3 text-fg-faint" />
-                      <span>{u.email}</span>
-                    </div>
-                  </div>
-                </div>
-              ),
-            },
-            {
-              key: 'role',
-              header: 'ROL',
-              render: (u: any) => (
-                <span className="inline-flex items-center gap-1 bg-night-deep border border-line text-accent px-2.5 py-1 rounded text-[11px] font-bold">
-                  <ShieldCheck className="w-3.5 h-3.5" /> {u.role}
-                </span>
-              ),
-            },
-            {
-              key: 'tenantName',
-              header: 'EMPRESA',
-              cellClassName: 'text-fg-muted',
-              render: (u: any) => u.tenantName || '—',
-            },
-            {
-              key: 'status',
-              header: 'ESTADO',
-              render: () => <StatusBadge status="online" label="ACTIVO" />,
-            },
-          ]}
+          columns={columns}
           rows={rows}
           rowKey={(u: any) => u.id}
           rowClassName="hover:bg-hover transition-colors"

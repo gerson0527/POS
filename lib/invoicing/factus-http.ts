@@ -108,7 +108,7 @@ export async function requestFactusToken(
     const timedOut = err?.name === 'TimeoutError' || err?.name === 'AbortError'
     throw new InvoiceProviderError(
       timedOut
-        ? `Autenticación Factus V2 agotó el tiempo de espera (${FACTUS_HTTP_TIMEOUT_MS} ms).`
+        ? `Autenticación agotó el tiempo de espera (${FACTUS_HTTP_TIMEOUT_MS} ms).`
         : `No se pudo conectar a ${url}: ${err?.message ?? 'network error'}`,
       { providerId, code: timedOut ? 'TIMEOUT' : 'NETWORK_ERROR' }
     )

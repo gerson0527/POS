@@ -56,7 +56,7 @@ export function InvoiceTicketModal({ invoice, onClose }: InvoiceTicketModalProps
           )}
           <p className="text-[9px] text-gray-600 uppercase">
             {isElectronicSent
-              ? `Facturación electrónica DIAN • Proveedor tecnológico FACTUS V2${
+              ? `Facturación electrónica DIAN${
                   invoice.dianEnvironment === 'production'
                     ? ' • AMBIENTE: PRODUCCIÓN'
                     : ' • AMBIENTE: SANDBOX (HABILITACIÓN)'

@@ -19,12 +19,18 @@ export const ROLE_LABELS: Record<TenantRole, string> = {
 /** Únicas rutas del dashboard accesibles para la contadora. */
 export const ACCOUNTANT_ALLOWED_PATHS = ['/dashboard/invoices'] as const
 
-/** Rutas permitidas por rol. Los roles operativos no quedan restringidos. */
+/** Rutas permitidas por rol. */
 export function isPathAllowedForRole(role: TenantRole, pathname: string): boolean {
-  if (role !== 'ACCOUNTANT') return true
-  return ACCOUNTANT_ALLOWED_PATHS.some(
-    (allowed) => pathname === allowed || pathname.startsWith(`${allowed}/`)
-  )
+  if (role === 'ACCOUNTANT') {
+    return ACCOUNTANT_ALLOWED_PATHS.some(
+      (allowed) => pathname === allowed || pathname.startsWith(`${allowed}/`)
+    )
+  }
+  // IAM: solo ADMIN (crear operadores, ver directorio de usuarios/empresas).
+  if (pathname === '/dashboard/users' || pathname.startsWith('/dashboard/users/')) {
+    return canManageUsers(role)
+  }
+  return true
 }
 
 /** Ruta de inicio tras iniciar sesión, según el rol. */
@@ -35,6 +41,26 @@ export function homePathForRole(role: TenantRole): string {
 /** Quién puede corregir el IVA de una factura pendiente y transmitirla a la DIAN. */
 export function canManageInvoiceTax(role: TenantRole): boolean {
   return role === 'ADMIN' || role === 'MANAGER' || role === 'ACCOUNTANT'
+}
+
+/** Solo el administrador crea/edita operadores y entra a /dashboard/users. */
+export function canManageUsers(role: TenantRole): boolean {
+  return role === 'ADMIN'
+}
+
+/**
+ * Admin de plataforma (multi-tenant): correos en PLATFORM_ADMIN_EMAILS
+ * o dominio @posdian.com (compat con el panel master).
+ */
+export function isPlatformAdminEmail(email: string | null | undefined): boolean {
+  const normalized = (email || '').trim().toLowerCase()
+  if (!normalized) return false
+  const fromEnv = (process.env.PLATFORM_ADMIN_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+  if (fromEnv.includes(normalized)) return true
+  return normalized === 'admin@posdian.com' || normalized.endsWith('@posdian.com')
 }
 
 /** Tarifas de IVA admitidas en el ajuste fiscal. */

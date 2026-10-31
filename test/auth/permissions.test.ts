@@ -3,9 +3,11 @@ import {
   ACCOUNTANT_ALLOWED_PATHS,
   ALL_ROLES,
   canManageInvoiceTax,
+  canManageUsers,
   homePathForRole,
   isAllowedIvaRate,
   isPathAllowedForRole,
+  isPlatformAdminEmail,
 } from '@/lib/auth/permissions'
 
 describe('isPathAllowedForRole', () => {
@@ -24,12 +26,37 @@ describe('isPathAllowedForRole', () => {
     expect(isPathAllowedForRole('ACCOUNTANT', '/dashboard/invoices-hack')).toBe(false)
   })
 
-  it('los demás roles conservan el acceso completo', () => {
+  it('los demás roles conservan el acceso operativo (salvo usuarios)', () => {
     for (const role of ['ADMIN', 'MANAGER', 'CASHIER', 'VIEWER'] as const) {
       expect(isPathAllowedForRole(role, '/dashboard/pos')).toBe(true)
       expect(isPathAllowedForRole(role, '/dashboard/inventory')).toBe(true)
       expect(isPathAllowedForRole(role, '/dashboard/settings')).toBe(true)
     }
+  })
+
+  it('solo ADMIN entra al módulo de usuarios', () => {
+    expect(isPathAllowedForRole('ADMIN', '/dashboard/users')).toBe(true)
+    expect(isPathAllowedForRole('MANAGER', '/dashboard/users')).toBe(false)
+    expect(isPathAllowedForRole('CASHIER', '/dashboard/users')).toBe(false)
+    expect(isPathAllowedForRole('VIEWER', '/dashboard/users')).toBe(false)
+  })
+})
+
+describe('canManageUsers', () => {
+  it('solo el administrador gestiona usuarios', () => {
+    expect(canManageUsers('ADMIN')).toBe(true)
+    expect(canManageUsers('MANAGER')).toBe(false)
+    expect(canManageUsers('CASHIER')).toBe(false)
+    expect(canManageUsers('VIEWER')).toBe(false)
+    expect(canManageUsers('ACCOUNTANT')).toBe(false)
+  })
+})
+
+describe('isPlatformAdminEmail', () => {
+  it('reconoce admin@posdian.com y dominio @posdian.com', () => {
+    expect(isPlatformAdminEmail('admin@posdian.com')).toBe(true)
+    expect(isPlatformAdminEmail('ops@posdian.com')).toBe(true)
+    expect(isPlatformAdminEmail('gerson@gmail.com')).toBe(false)
   })
 })
 

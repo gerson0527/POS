@@ -87,7 +87,7 @@ export default function InvoicesPage() {
   const handleEmitFactus = async (saleId: string) => {
     if (
       !window.confirm(
-        '¿Transmitir esta factura a la DIAN ahora? Esta acción envía datos reales al proveedor de facturación.'
+        '¿Transmitir SOLO esta factura a la DIAN ahora? No se enviarán las demás del listado.'
       )
     ) {
       return
@@ -98,11 +98,17 @@ export default function InvoicesPage() {
       if (res.success) {
         const cufeVal = (res as any).cufe ? (res as any).cufe.substring(0, 10) : 'SIN CUFE'
         const status = (res as any).dianStatus || 'SUBMITTED'
-        toast(
-          status === 'ACCEPTED'
-            ? `FACTURA ACEPTADA POR DIAN. CUFE: ${cufeVal}...`
-            : `FACTURA TRANSMITIDA. ESTADO DIAN: ${status}. CUFE: ${cufeVal}...`
-        )
+        if ((res as any).alreadyTransmitted) {
+          toast(`Esta factura ya estaba transmitida. CUFE: ${cufeVal}...`)
+        } else {
+          toast(
+            status === 'ACCEPTED'
+              ? `FACTURA ACEPTADA POR DIAN. CUFE: ${cufeVal}...`
+              : `FACTURA TRANSMITIDA. ESTADO DIAN: ${status}. CUFE: ${cufeVal}...`
+          )
+        }
+        // Solo refresca el listado: las demás filas que cambien de aspecto ya
+        // tenían CUFE y estaban mal pintadas como pendientes.
         fetchInvoices()
       } else {
         toast(`Error al emitir factura: ${res.message}`, 'error')

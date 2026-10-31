@@ -71,7 +71,7 @@ async function persistFiscalDocument(input: {
   }
 
   if (existingElectronic) {
-    await db
+    const updated = await db
       .update(schema.fiscalDocument)
       .set(fiscalValues)
       .where(
@@ -80,6 +80,10 @@ async function persistFiscalDocument(input: {
           eq(schema.fiscalDocument.tenantId, sale.tenantId)
         )
       )
+      .returning({ id: schema.fiscalDocument.id })
+    if (!updated.length) {
+      throw new Error('No se pudo actualizar el documento fiscal electrónico existente.')
+    }
     return
   }
 
@@ -95,19 +99,41 @@ async function persistFiscalDocument(input: {
     .onConflictDoNothing()
     .returning({ id: schema.fiscalDocument.id })
 
-  if (!inserted.length) {
-    // Otra emisión concurrente insertó el documento primero: se completa ese
-    // registro en lugar de perder los datos de Factus.
-    await db
-      .update(schema.fiscalDocument)
-      .set(fiscalValues)
-      .where(
-        and(
-          eq(schema.fiscalDocument.saleId, sale.id),
-          eq(schema.fiscalDocument.tenantId, sale.tenantId),
-          eq(schema.fiscalDocument.documentType, 'FACTURA_ELECTRONICA_VENTA')
-        )
+  if (inserted.length) return
+
+  // Conflictos posibles:
+  // 1) Emisión concurrente ya creó FACTURA_ELECTRONICA_VENTA → completar esa fila.
+  // 2) Índice legado único por saleId (solo REC existe) → actualizar esa fila a
+  //    factura electrónica para no perder el CUFE de Factus.
+  const updatedElectronic = await db
+    .update(schema.fiscalDocument)
+    .set(fiscalValues)
+    .where(
+      and(
+        eq(schema.fiscalDocument.saleId, sale.id),
+        eq(schema.fiscalDocument.tenantId, sale.tenantId),
+        eq(schema.fiscalDocument.documentType, 'FACTURA_ELECTRONICA_VENTA')
       )
+    )
+    .returning({ id: schema.fiscalDocument.id })
+
+  if (updatedElectronic.length) return
+
+  const upgraded = await db
+    .update(schema.fiscalDocument)
+    .set(fiscalValues)
+    .where(
+      and(
+        eq(schema.fiscalDocument.saleId, sale.id),
+        eq(schema.fiscalDocument.tenantId, sale.tenantId)
+      )
+    )
+    .returning({ id: schema.fiscalDocument.id })
+
+  if (!upgraded.length) {
+    throw new Error(
+      'La factura se emitió en Factus pero no se pudo persistir el documento fiscal local.'
+    )
   }
 }
 

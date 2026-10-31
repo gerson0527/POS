@@ -101,6 +101,7 @@ export function CreateUserModal({ open, onClose, onSubmitted }: CreateUserModalP
               value={userForm.role}
               onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
             >
+              <option value="ADMIN">ADMINISTRADOR</option>
               <option value="CASHIER">CAJERO / CAJA POS</option>
               <option value="MANAGER">SUPERVISOR KARDEX</option>
               <option value="ACCOUNTANT">CONTADORA / CONTADOR (SÓLO FACTURAS)</option>

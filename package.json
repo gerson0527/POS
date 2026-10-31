@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "npm run db:doctor -- --soft",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -17,7 +18,9 @@
     "db:migrate": "npx dotenv -e .env -- npx tsx scripts/db-migrate.ts",
     "db:migrate:deploy": "tsx scripts/db-migrate.ts",
     "db:push": "npx dotenv -e .env -- drizzle-kit push",
-    "db:studio": "npx dotenv -e .env -- drizzle-kit studio"
+    "db:studio": "npx dotenv -e .env -- drizzle-kit studio",
+    "db:doctor": "npx dotenv -e .env -- npx tsx scripts/db-doctor.ts",
+    "assistant:poll": "npx dotenv -e .env.local -e .env -- npx tsx scripts/telegram-poll.ts"
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.10.0",

@@ -160,14 +160,40 @@ describe('validateInvoiceContext', () => {
     expect(errors.join(' ')).toContain('COMPLETADA')
   })
 
-  it('exige rango de numeración y datos mínimos del cliente identificado (F-11)', () => {
+  it('exige rango de numeración; persona natural no requiere email/dirección en mostrador', () => {
     const errors = validateInvoiceContext({
       ...base,
-      sale: { ...base.sale, customerDocNumber: '123' },
-      customerRow: { documentNumber: '123', name: 'Cliente', municipalityCode: '11001' },
+      sale: {
+        ...base.sale,
+        customerDocNumber: '123',
+        customerDocType: 'CC',
+        customerName: 'Cliente',
+      },
+      customerRow: {
+        documentNumber: '123',
+        documentType: 'CC',
+        name: 'Cliente',
+        municipalityCode: '11001',
+      },
       ctx: { tenant: { ...base.ctx.tenant, numberingRangeId: 0 } },
     })
     expect(errors.join(' ')).toContain('rango de numeración')
+    expect(errors.join(' ')).not.toContain('email')
+    expect(errors.join(' ')).not.toContain('dirección')
+  })
+
+  it('exige email y dirección para persona jurídica (NIT)', () => {
+    const errors = validateInvoiceContext({
+      ...base,
+      sale: { ...base.sale, customerDocNumber: '900123456', customerDocType: 'NIT' },
+      customerRow: {
+        documentNumber: '900123456',
+        documentType: 'NIT',
+        personType: 'JURIDICA',
+        name: 'Empresa SAS',
+        municipalityCode: '11001',
+      },
+    })
     expect(errors.join(' ')).toContain('email')
     expect(errors.join(' ')).toContain('dirección')
   })

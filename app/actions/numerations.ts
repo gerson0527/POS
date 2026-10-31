@@ -4,9 +4,10 @@
 import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
 import { AuditAction } from '@/lib/types'
-import { and, eq, desc, gte, lte, ne, type SQL } from 'drizzle-orm'
+import { and, eq, desc, gte, lte, ne, or, type SQL } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import {
+  INTERNAL_NUMERATION,
   isInternalNumeration,
   normalizeNumerationInput,
   type NumerationInput,
@@ -58,10 +59,17 @@ async function assertNoActiveDuplicate(
 ) {
   if (status !== 'ACTIVE') return
 
+  // La numeración interna REC (tickets POS) coexiste con rangos DIAN del mismo
+  // documentType; no entra en la regla "solo una activa por tipo".
   const conditions: SQL[] = [
     eq(schema.numeration.tenantId, tenantId),
     eq(schema.numeration.documentType, documentType),
     eq(schema.numeration.status, 'ACTIVE'),
+    // NOT (resolution=REC AND prefix=REC) ≡ resolution≠… OR prefix≠…
+    or(
+      ne(schema.numeration.resolution, INTERNAL_NUMERATION.resolution),
+      ne(schema.numeration.prefix, INTERNAL_NUMERATION.prefix)
+    )!,
   ]
   if (excludeId) conditions.push(ne(schema.numeration.id, excludeId))
 
@@ -143,17 +151,25 @@ export async function updateNumeration(
     throw new Error('No se puede reducir el consecutivo actual: ya se emitieron documentos con números mayores.')
   }
 
-  if (
-    isInternalNumeration(existing) &&
-    (values.resolution !== existing.resolution ||
+  if (isInternalNumeration(existing)) {
+    if (
+      values.resolution !== existing.resolution ||
       values.prefix !== existing.prefix ||
-      values.documentType !== existing.documentType)
-  ) {
-    throw new Error('La numeración interna del POS no se puede renombrar ni cambiar de tipo.')
+      values.documentType !== existing.documentType
+    ) {
+      throw new Error('La numeración interna del POS no se puede renombrar ni cambiar de tipo.')
+    }
+    if (values.status !== 'ACTIVE') {
+      throw new Error(
+        'La numeración interna del POS es obligatoria para emitir tickets y no se puede desactivar.'
+      )
+    }
   }
 
   await assertNoOverlap(tenantId, values.prefix, values.startRange, values.endRange, id)
-  await assertNoActiveDuplicate(tenantId, values.documentType, values.status, id)
+  if (!isInternalNumeration(values)) {
+    await assertNoActiveDuplicate(tenantId, values.documentType, values.status, id)
+  }
 
   await db
     .update(schema.numeration)

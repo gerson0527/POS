@@ -32,6 +32,8 @@ import { getTelemetryLogs } from '@/app/actions/pos-actions'
 import { formatCOP } from '@/lib/utils/pos-utils'
 import { todayRange } from '@/lib/utils/date-ranges'
 import { formatTrend } from '@/lib/utils/format'
+import { requireMembership } from '@/lib/auth/session-context'
+import { canManageUsers } from '@/lib/auth/permissions'
 
 async function getDashboardSummary(userId: string, tenantId: string) {
   const { start, end } = todayRange()
@@ -174,13 +176,14 @@ export default async function DashboardPage() {
   }
 
   const tenantId = (session.user as any).tenantId || 'tenant_default'
+  const membership = await requireMembership(session.user.id).catch(() => null)
 
   const [stats, telemetryLogs] = await Promise.all([
     getDashboardSummary(session.user.id, tenantId),
     getTelemetryLogs().catch(() => []),
   ])
 
-  const modules = [
+  const allModules = [
     {
       title: 'Punto de Venta',
       short: 'POS',
@@ -254,6 +257,10 @@ export default async function DashboardPage() {
       color: '#FF3B4D',
     },
   ]
+
+  const modules = allModules.filter(
+    (mod) => mod.href !== '/dashboard/users' || (membership && canManageUsers(membership.role))
+  )
 
   return (
     <div className="w-full space-y-6">

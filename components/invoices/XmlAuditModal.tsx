@@ -28,7 +28,7 @@ export function XmlAuditModal({ invoice, onClose }: XmlAuditModalProps) {
     <Modal
       open
       onClose={onClose}
-      title="VISOR Y AUDITORÍA XML DIAN // FACTUS V2"
+      title="VISOR Y AUDITORÍA XML DIAN"
       icon={<Code className="w-4 h-4" />}
       size="2xl"
     >
