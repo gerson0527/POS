@@ -170,6 +170,10 @@ export async function processFiscalOutbox(limit = 5): Promise<{
           true
         )
         failed++
+      } else if (result.code === 'NO_PROVIDER') {
+        // Sin Factus configurado: no es error DIAN; cierra el evento en silencio.
+        await markDone(row)
+        succeeded++
       } else {
         await markFailed(
           row,
@@ -290,6 +294,8 @@ export async function retryFiscalEmission(
   }
 
   if (result.success && result.cufe) {
+    await markDone(row)
+  } else if (result.code === 'NO_PROVIDER') {
     await markDone(row)
   } else {
     const attempts = row.attempts + 1

@@ -6,9 +6,11 @@ import * as schema from '@/lib/db/schema'
 import { eq, desc, inArray } from 'drizzle-orm'
 import { getUserId, getTenantId, formatBogotaDateTime } from './_shared'
 import { dianQrUrl } from '@/lib/fiscal/cufe'
+import { getInvoiceProvider } from '@/lib/invoicing'
 export async function getAllInvoices() {
   const userId = await getUserId()
   const tenantId = await getTenantId(userId)
+  const electronicInvoicingEnabled = Boolean(await getInvoiceProvider(tenantId))
 
   const tenantRows = await db
     .select({
@@ -260,6 +262,7 @@ export async function getAllInvoices() {
       outboxLastError: outbox?.lastError || null,
       requiresManualApproval: outbox?.requiresManualApproval ?? false,
       needsReconciliation: outbox?.needsReconciliation ?? false,
+      electronicInvoicingEnabled,
     }
   })
 

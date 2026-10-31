@@ -25,6 +25,16 @@ const FISCAL_STATUS_LABELS: Record<string, string> = {
   TECHNICAL_FAILURE: 'FALLA TÉCNICA',
 }
 
+/** Errores de "sin proveedor FE" no son fallos DIAN: no mostrar REINTENTAR. */
+export function isNoElectronicProviderError(message?: string | null): boolean {
+  const m = String(message || '')
+  return (
+    /no hay proveedor de facturaci[oó]n electr[oó]nica/i.test(m) ||
+    /facturaci[oó]n electr[oó]nica no configurada/i.test(m) ||
+    /config[uú]relo en \/dashboard\/settings/i.test(m)
+  )
+}
+
 export function fiscalUiStatus(inv: any) {
   const status = String(
     inv?.fiscalDocument?.status || inv?.dianStatus || inv?.status || ''
@@ -39,17 +49,36 @@ export function fiscalUiStatus(inv: any) {
   const isAccepted = Boolean(cufe) && !isRejected && status === 'ACCEPTED'
   const isTransmitted = Boolean(cufe) && !isRejected
 
+  const rawOutboxError = String(inv?.outboxLastError || '').trim() || null
+  const noProviderConfigured =
+    !cufe &&
+    (inv?.electronicInvoicingEnabled === false ||
+      isNoElectronicProviderError(rawOutboxError))
+
   const isManualPending =
-    !cufe && !isRejected && requiresManualApproval && outboxStatus !== 'DONE'
+    !cufe &&
+    !isRejected &&
+    !noProviderConfigured &&
+    requiresManualApproval &&
+    outboxStatus !== 'DONE'
   const isQueued =
-    !cufe && !isRejected && !requiresManualApproval &&
+    !cufe &&
+    !isRejected &&
+    !noProviderConfigured &&
+    !requiresManualApproval &&
     (outboxStatus === 'PENDING' || outboxStatus === 'PROCESSING')
-  const needsReconciliationUi = !cufe && needsReconciliation && !isRejected
-  const isOutboxFailed = !cufe && outboxStatus === 'FAILED' && !isRejected
+  const needsReconciliationUi =
+    !cufe && !noProviderConfigured && needsReconciliation && !isRejected
+  const isOutboxFailed =
+    !cufe &&
+    !noProviderConfigured &&
+    outboxStatus === 'FAILED' &&
+    !isRejected
 
   let label = FISCAL_STATUS_LABELS[status] || (cufe ? 'TRANSMITIDA' : 'PENDIENTE')
   if (!cufe && !isRejected) {
-    if (needsReconciliationUi) label = 'RECONCILIAR'
+    if (noProviderConfigured) label = 'SIN FE'
+    else if (needsReconciliationUi) label = 'RECONCILIAR'
     else if (isManualPending) label = 'PENDIENTE MANUAL'
     else if (isOutboxFailed) label = 'ERROR (REINTENTAR)'
     else if (isQueued) label = 'EN COLA'
@@ -58,12 +87,13 @@ export function fiscalUiStatus(inv: any) {
   // Sin cron local las ventas EN COLA se quedan eternamente: el usuario debe
   // poder reintentar desde /dashboard/invoices. Un rechazo DIAN no se reintenta
   // con el mismo payload (requiere corrección / nota crédito).
-  const canTransmit = !cufe && !isRejected
+  const canTransmit = !cufe && !isRejected && !noProviderConfigured
   // No mostrar errores viejos del outbox si la factura ya tiene CUFE o el
   // evento quedó DONE (p. ej. cliente se completó después del primer fallo).
-  const rawOutboxError = String(inv?.outboxLastError || '').trim() || null
   const outboxLastError =
-    !cufe && outboxStatus !== 'DONE' ? rawOutboxError : null
+    !cufe && outboxStatus !== 'DONE' && !noProviderConfigured
+      ? rawOutboxError
+      : null
 
   return {
     status,
@@ -75,6 +105,7 @@ export function fiscalUiStatus(inv: any) {
     isManualPending,
     isQueued,
     isOutboxFailed,
+    noProviderConfigured,
     needsReconciliation: needsReconciliationUi,
     canTransmit,
     outboxLastError,

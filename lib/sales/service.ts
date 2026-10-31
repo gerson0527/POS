@@ -18,6 +18,7 @@ import { getBogotaBusinessDate, toBusinessDateString } from '@/lib/utils/busines
 import { assertActorRole, type ActorContext } from '@/lib/auth/actor'
 import { logAudit, publishEvent } from '@/lib/audit/log'
 import { enqueueFiscalEmission, retryFiscalEmission } from '@/lib/fiscal/outbox'
+import { getInvoiceProvider } from '@/lib/invoicing'
 
 export const SALE_ROLES = ['ADMIN', 'MANAGER', 'CASHIER'] as const
 
@@ -505,16 +506,20 @@ export async function completeSale(
       })
     }
 
-    // El outbox se encola SIEMPRE (durabilidad). En MANUAL queda retenido y el
-    // cron no lo procesa; solo la transmisión explícita desde /dashboard/invoices.
-    await enqueueFiscalEmission(tx, tenantId, input.saleId, {
-      requiresManualApproval: transmissionMode === 'MANUAL',
-    })
+    // Solo encola FE si hay proveedor (Factus) configurado. Sin config la venta
+    // es comprobante POS y no debe aparecer como ERROR DIAN / REINTENTAR.
+    const hasElectronicProvider = Boolean(await getInvoiceProvider(tenantId))
+    if (hasElectronicProvider) {
+      await enqueueFiscalEmission(tx, tenantId, input.saleId, {
+        requiresManualApproval: transmissionMode === 'MANUAL',
+      })
+    }
 
     return {
       ticketNumber: updatedSale[0].ticketNumber,
       total: totals.total,
       transmissionMode,
+      hasElectronicProvider,
     }
   })
 
@@ -528,7 +533,7 @@ export async function completeSale(
   // Factus/DIAN falla, queda pendiente para reintento sin duplicar la factura.
   // En modo MANUAL NO se transmite: el evento queda retenido para la contadora.
   let fiscal: CompleteSaleResult['fiscal'] = null
-  if (completed.transmissionMode === 'AUTO') {
+  if (completed.hasElectronicProvider && completed.transmissionMode === 'AUTO') {
     try {
       fiscal = await retryFiscalEmission(tenantId, input.saleId, {
         requestedBy: userId,

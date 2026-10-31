@@ -264,6 +264,16 @@ export function InvoiceTable({
                   </div>
                 )
               }
+              if (fiscal.noProviderConfigured) {
+                return (
+                  <span
+                    className="inline-flex items-center px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-panel border border-line text-fg-muted"
+                    title="Esta venta es comprobante POS. Configure Factus en Configuración para emitir a la DIAN."
+                  >
+                    SIN FE
+                  </span>
+                )
+              }
               if (fiscal.isRejected) {
                 return (
                   <TacticalButton

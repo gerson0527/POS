@@ -245,8 +245,9 @@ export async function emitSaleElectronicInvoice(
     if (!provider) {
       return {
         success: false,
+        code: 'NO_PROVIDER',
         message:
-          'No hay proveedor de facturación electrónica configurado para este tenant. Configúrelo en /dashboard/settings.',
+          'Facturación electrónica no configurada. La venta queda como comprobante POS (sin DIAN).',
         correlationId,
       }
     }

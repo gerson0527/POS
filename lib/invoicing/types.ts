@@ -136,6 +136,11 @@ export interface InvoiceResult {
   uncertain?: boolean
   /** El outbox debe reconciliar por reference_code antes de reenviar. */
   needsReconciliation?: boolean
+  /**
+   * NO_PROVIDER: el tenant no tiene Factus/FE configurado.
+   * No es un fallo DIAN: no reintentar ni mostrar REINTENTAR en facturas.
+   */
+  code?: 'NO_PROVIDER'
 }
 
 export interface InvoiceProviderConfig {
