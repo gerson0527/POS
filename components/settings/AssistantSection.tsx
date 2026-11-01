@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Select } from '@/components/ui/Select'
 import { useToast } from '@/components/ui/ToastProvider'
+import { useConfirm } from '@/components/ui/ConfirmProvider'
 import {
   generateTelegramLinkCode,
   getAssistantConfigForCurrentTenant,
@@ -56,6 +57,7 @@ const EMPTY_FORM = {
 
 export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantSectionProps) {
   const { toast } = useToast()
+  const confirmAction = useConfirm()
   const [status, setStatus] = useState<Awaited<ReturnType<typeof getAssistantStatus>> | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [links, setLinks] = useState<LinkRow[]>([])
@@ -154,9 +156,14 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
   }
 
   async function handleRevoke(row: LinkRow) {
-    if (!window.confirm(`¿Revocar el vínculo ${row.channel} / ${row.externalUserId || row.id}?`)) {
-      return
-    }
+    const ok = await confirmAction({
+      title: 'REVOCAR VÍNCULO',
+      message: `¿Revocar el vínculo ${row.channel} / ${row.externalUserId || row.id}?`,
+      confirmLabel: 'REVOCAR',
+      cancelLabel: 'CANCELAR',
+      tone: 'danger',
+    })
+    if (!ok) return
     try {
       const result = await revokeAssistantChannelLink(row.id)
       if (!result.success) {

@@ -16,6 +16,7 @@ import { EditUserModal, type EditableUser } from '@/components/users/EditUserMod
 import { TenantsTable } from '@/components/users/TenantsTable'
 import { UsersTable } from '@/components/users/UsersTable'
 import { useToast } from '@/components/ui/ToastProvider'
+import { useConfirm } from '@/components/ui/ConfirmProvider'
 import {
   deactivateUserAction,
   getMyAccess,
@@ -27,6 +28,7 @@ type Tab = 'users' | 'companies'
 
 export default function UsersPage() {
   const { toast } = useToast()
+  const confirmAction = useConfirm()
   const [activeTab, setActiveTab] = useState<Tab>('users')
   const [users, setUsers] = useState<any[]>([])
   const [tenants, setTenants] = useState<any[]>([])
@@ -207,13 +209,14 @@ export default function UsersPage() {
             })
           }
           onDeactivate={async (u) => {
-            if (
-              !window.confirm(
-                `¿Desactivar a ${u.name} (${u.email})? Dejará de poder iniciar sesión en esta empresa.`
-              )
-            ) {
-              return
-            }
+            const ok = await confirmAction({
+              title: 'DESACTIVAR OPERADOR',
+              message: `¿Desactivar a ${u.name} (${u.email})? Dejará de poder iniciar sesión en esta empresa.`,
+              confirmLabel: 'DESACTIVAR',
+              cancelLabel: 'CANCELAR',
+              tone: 'danger',
+            })
+            if (!ok) return
             try {
               await deactivateUserAction(u.id)
               toast(`Usuario "${u.name}" desactivado.`)
