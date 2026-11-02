@@ -80,7 +80,7 @@ export function ProductsTable({
               cellClassName: 'px-4 py-3.5 font-bold',
               render: (p: any) => (
                 <span className="bg-night-mid text-warn-bright border border-line-mid px-2 py-0.5 rounded text-[10px] tracking-wider uppercase">
-                  {p.category || 'General'}
+                  {p.category || 'Sin categoría'}
                 </span>
               ),
             },

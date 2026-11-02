@@ -274,7 +274,7 @@ export function ProductFormModal({
             <div>
               <Label>Categoría del catálogo</Label>
               <Select value={form.categoryId} onChange={(e) => onChange({ ...form, categoryId: e.target.value })}>
-                <option value="">— Sin categoría asignada —</option>
+                <option value="">— Sin categoría —</option>
                 {categories
                   .filter((c) => c.status === 'ACTIVE')
                   .map((c) => (

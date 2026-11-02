@@ -11,6 +11,7 @@ import {
 import { and, eq, asc, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { getUserId, getTenantId, logAudit, publishEvent, requireRole } from './_shared'
+import { DEFAULT_PRODUCT_CATEGORY_NAME } from '@/lib/catalogs/product-categories'
 import { ALL_ROLES } from '@/lib/auth/permissions'
 function escapeCsv(value: unknown): string {
   if (value === null || value === undefined) return ''
@@ -299,7 +300,7 @@ export async function createProduct(input: CreateProductDTO & { initialStock?: n
     sku: cleanSku,
     barcode: input.barcode || null,
     categoryId: input.categoryId || null,
-    category: input.category || 'General',
+    category: input.category || DEFAULT_PRODUCT_CATEGORY_NAME,
     name: input.name,
     description: input.description || null,
     unitPrice: String(input.unitPrice),
@@ -375,7 +376,7 @@ export async function getProducts(includeInactive = true) {
 
     return {
       ...p,
-      category: p.category || 'General',
+      category: p.category || DEFAULT_PRODUCT_CATEGORY_NAME,
       margin: computedMargin,
       quantity: Number(p.quantity || 0),
     }

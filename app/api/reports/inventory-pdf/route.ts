@@ -115,7 +115,7 @@ async function handleReport(request: Request): Promise<Response> {
       return {
         sku: r.sku,
         name: r.name,
-        category: r.category || 'General',
+        category: r.category || 'Sin categoría',
         quantity: qty,
         cost,
         value: qty * cost,

@@ -39,6 +39,10 @@ import {
   exportProductsToCSV,
   getProductCategories,
 } from '@/app/actions/pos-actions'
+import {
+  DEFAULT_PRODUCT_CATEGORY_NAME,
+  DEFAULT_PRODUCT_CATEGORY_SLUG,
+} from '@/lib/catalogs/product-categories'
 
 export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState('overview')
@@ -79,7 +83,7 @@ export default function InventoryPage() {
     sku: '',
     barcode: '',
     description: '',
-    category: 'General',
+    category: DEFAULT_PRODUCT_CATEGORY_NAME,
     categoryId: '',
     unitPrice: '',
     cost: '',
@@ -151,7 +155,14 @@ export default function InventoryPage() {
 
   // Handlers for Product Modal
   function openCreateProductModal() {
-    setProductForm(defaultProductForm)
+    const defaultCategory = productCategories.find(
+      (c) => c.slug === DEFAULT_PRODUCT_CATEGORY_SLUG && c.status === 'ACTIVE'
+    )
+    setProductForm({
+      ...defaultProductForm,
+      category: defaultCategory?.name || DEFAULT_PRODUCT_CATEGORY_NAME,
+      categoryId: defaultCategory?.id || '',
+    })
     setEditingProduct(null)
     setProductModalTab('general')
     setIsProductModalOpen(true)
@@ -162,8 +173,10 @@ export default function InventoryPage() {
     const c = parseFloat(p.cost) || 0
     const calcMargin = p.margin !== undefined && p.margin !== null ? String(p.margin) : (u > 0 && c >= 0 ? (((u - c) / u) * 100).toFixed(1) : '0')
 
-    // Detectar categoría: si tiene categoryId válido de la lista, usarlo; si no, mantener texto libre
-    const matchedCategory = productCategories.find((c) => c.id === p.categoryId || c.id === p.category || c.name === p.category)
+    // Detectar categoría: si tiene categoryId válido de la lista, usarlo; si no, usar la predeterminada.
+    const matchedCategory =
+      productCategories.find((c) => c.id === p.categoryId || c.id === p.category || c.name === p.category) ||
+      productCategories.find((c) => c.slug === DEFAULT_PRODUCT_CATEGORY_SLUG)
 
     setProductForm({
       id: p.id,
@@ -171,7 +184,7 @@ export default function InventoryPage() {
       sku: p.sku || '',
       barcode: p.barcode || '',
       description: p.description || '',
-      category: p.category || matchedCategory?.name || 'General',
+      category: p.category || matchedCategory?.name || DEFAULT_PRODUCT_CATEGORY_NAME,
       categoryId: matchedCategory?.id || p.categoryId || '',
       unitPrice: p.unitPrice ? String(p.unitPrice) : '',
       cost: p.cost ? String(p.cost) : '',
@@ -199,7 +212,7 @@ export default function InventoryPage() {
           sku: productForm.sku,
           barcode: productForm.barcode || undefined,
           description: productForm.description || undefined,
-          category: matchedCategory?.name || productForm.category || 'General',
+          category: matchedCategory?.name || productForm.category || DEFAULT_PRODUCT_CATEGORY_NAME,
           categoryId: productForm.categoryId || undefined,
           unitPrice: parseFloat(productForm.unitPrice) || 0,
           cost: productForm.cost ? parseFloat(productForm.cost) : undefined,
@@ -231,7 +244,7 @@ export default function InventoryPage() {
         sku: productForm.sku || `SKU-${Date.now().toString().slice(-6)}`,
         barcode: productForm.barcode || undefined,
         description: productForm.description || undefined,
-        category: matchedCategory?.name || productForm.category || 'General',
+        category: matchedCategory?.name || productForm.category || DEFAULT_PRODUCT_CATEGORY_NAME,
         categoryId: productForm.categoryId || undefined,
         unitPrice: parseFloat(productForm.unitPrice) || 0,
         cost: productForm.cost ? parseFloat(productForm.cost) : undefined,

@@ -639,7 +639,7 @@ export default function ReportsPage() {
                       >
                         <div>
                           <div className="text-fg font-semibold">{p.name}</div>
-                          <div className="text-fg-muted text-[10px]">SKU: {p.sku || p.id.substring(0, 6)} • Cat: {p.category || 'General'}</div>
+                          <div className="text-fg-muted text-[10px]">SKU: {p.sku || p.id.substring(0, 6)} • Cat: {p.category || 'Sin categoría'}</div>
                         </div>
                         <div className="text-right">
                           <div className="text-success font-semibold">{formatCOP(p.unitPrice)}</div>

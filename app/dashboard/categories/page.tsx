@@ -322,26 +322,29 @@ export default function CategoriesPage() {
                 <div className="flex items-center justify-end gap-1.5">
                   <button
                     onClick={() => openEditModal(c)}
-                    className="p-1.5 bg-raised border border-line text-fg hover:border-accent hover:text-accent rounded transition-colors"
-                    title="Editar"
+                    disabled={c.slug === 'sin-categoria'}
+                    className="p-1.5 bg-raised border border-line text-fg hover:border-accent hover:text-accent rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={c.slug === 'sin-categoria' ? 'Categoría predeterminada' : 'Editar'}
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => handleToggleStatus(c)}
-                    className={`p-1.5 bg-raised border rounded transition-colors ${
+                    disabled={c.slug === 'sin-categoria'}
+                    className={`p-1.5 bg-raised border rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                       c.status === 'ACTIVE'
                         ? 'border-line text-ok hover:border-alert hover:text-alert'
                         : 'border-danger-line text-alert hover:border-ok hover:text-ok'
                     }`}
-                    title={c.status === 'ACTIVE' ? 'Inactivar' : 'Activar'}
+                    title={c.slug === 'sin-categoria' ? 'Categoría predeterminada' : (c.status === 'ACTIVE' ? 'Inactivar' : 'Activar')}
                   >
                     <Power className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => setDeleteConfirmId(c.id)}
-                    className="p-1.5 bg-raised border border-line text-alert hover:bg-alert hover:text-white rounded transition-colors"
-                    title="Eliminar"
+                    disabled={c.slug === 'sin-categoria'}
+                    className="p-1.5 bg-raised border border-line text-alert hover:bg-alert hover:text-white rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={c.slug === 'sin-categoria' ? 'Categoría predeterminada' : 'Eliminar'}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
