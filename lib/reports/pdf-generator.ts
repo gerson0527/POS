@@ -3,6 +3,21 @@
 
 import { escapeHtml, renderPdf } from './render'
 
+// Formato colombiano: punto (.) como separador de miles y coma (,) para
+// decimales. Ej.: 1.000.000 o 3.710,50. Los enteros no muestran decimales.
+const numberFormatter = new Intl.NumberFormat('es-CO', {
+  maximumFractionDigits: 2,
+})
+
+function formatNumber(value: number): string {
+  const n = Number(value)
+  return numberFormatter.format(Number.isFinite(n) ? n : 0)
+}
+
+function formatMoney(value: number): string {
+  return `$${formatNumber(value)}`
+}
+
 export interface InventoryReportData {
   title: string
   generatedAt: string
@@ -80,18 +95,18 @@ export async function generateInventoryReport(data: InventoryReportData): Promis
                 <td>${escapeHtml(item.sku)}</td>
                 <td>${escapeHtml(item.name)}</td>
                 <td>${escapeHtml(item.category)}</td>
-                <td style="text-align: right;">${item.quantity}</td>
-                <td style="text-align: right;">$${item.cost.toFixed(2)}</td>
-                <td style="text-align: right;">$${item.value.toFixed(2)}</td>
+                <td style="text-align: right;">${formatNumber(item.quantity)}</td>
+                <td style="text-align: right;">${formatMoney(item.cost)}</td>
+                <td style="text-align: right;">${formatMoney(item.value)}</td>
               </tr>
             `
               )
               .join('')}
             <tr class="totals">
               <td colspan="3"></td>
-              <td style="text-align: right;">${data.totals.totalUnits} unidades</td>
+              <td style="text-align: right;">${formatNumber(data.totals.totalUnits)} unidades</td>
               <td></td>
-              <td style="text-align: right;">$${data.totals.totalValue.toFixed(2)}</td>
+              <td style="text-align: right;">${formatMoney(data.totals.totalValue)}</td>
             </tr>
           </tbody>
         </table>
