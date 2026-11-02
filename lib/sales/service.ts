@@ -19,6 +19,7 @@ import { assertActorRole, type ActorContext } from '@/lib/auth/actor'
 import { logAudit, publishEvent } from '@/lib/audit/log'
 import { enqueueFiscalEmission, retryFiscalEmission } from '@/lib/fiscal/outbox'
 import { getInvoiceProvider } from '@/lib/invoicing'
+import { computeCreditDueDate, DEFAULT_CREDIT_TERM_DAYS } from '@/lib/credit/terms'
 
 export const SALE_ROLES = ['ADMIN', 'MANAGER', 'CASHIER'] as const
 
@@ -413,6 +414,13 @@ export async function completeSale(
       }
 
       const newBalance = currentBalance + creditTotal
+      const tenantRows = await tx
+        .select({ creditTermDays: schema.tenant.creditTermDays })
+        .from(schema.tenant)
+        .where(eq(schema.tenant.id, tenantId))
+        .limit(1)
+      const termDays = tenantRows[0]?.creditTermDays ?? DEFAULT_CREDIT_TERM_DAYS
+
       await tx.insert(schema.customerCreditTransaction).values({
         id: `cct_${randomUUID()}`,
         tenantId,
@@ -423,7 +431,7 @@ export async function completeSale(
         balanceAfter: newBalance.toString(),
         saleId: input.saleId,
         note: `Venta POS${sale.ticketNumber ? ` #${sale.ticketNumber}` : ''}`,
-        dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+        dueDate: computeCreditDueDate(termDays),
         status: 'PENDIENTE',
       })
 

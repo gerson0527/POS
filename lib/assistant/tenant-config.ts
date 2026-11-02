@@ -11,7 +11,10 @@ import type { AssistantRuntimeConfig } from './config'
 export interface TenantAssistantPublicStatus {
   enabled: boolean
   hasTelegram: boolean
+  hasWhatsapp: boolean
   botUsername: string | null
+  whatsappPhoneNumberId: string | null
+  whatsappDisplayPhone: string | null
   hasLlm: boolean
   llmModel: string | null
   llmBaseUrl: string | null
@@ -19,6 +22,7 @@ export interface TenantAssistantPublicStatus {
   hasStt: boolean
   draftTtlMinutes: number
   hasWebhookSecret: boolean
+  hasWhatsappVerifyToken: boolean
 }
 
 export interface TenantAssistantFormConfig {
@@ -26,6 +30,10 @@ export interface TenantAssistantFormConfig {
   telegramBotToken: string
   telegramBotUsername: string
   telegramWebhookSecret: string
+  whatsappAccessToken: string
+  whatsappPhoneNumberId: string
+  whatsappVerifyToken: string
+  whatsappDisplayPhone: string
   llmBaseUrl: string
   llmApiKey: string
   llmModel: string
@@ -35,6 +43,8 @@ export interface TenantAssistantFormConfig {
   sttBaseUrl: string
   draftTtlMinutes: number
   hasTelegramBotToken: boolean
+  hasWhatsappAccessToken: boolean
+  hasWhatsappVerifyToken: boolean
   hasLlmApiKey: boolean
   hasSttApiKey: boolean
   hasWebhookSecret: boolean
@@ -45,6 +55,10 @@ export interface TenantAssistantInput {
   telegramBotToken?: string
   telegramBotUsername?: string
   telegramWebhookSecret?: string
+  whatsappAccessToken?: string
+  whatsappPhoneNumberId?: string
+  whatsappVerifyToken?: string
+  whatsappDisplayPhone?: string
   llmBaseUrl?: string
   llmApiKey?: string
   llmModel?: string
@@ -55,6 +69,10 @@ export interface TenantAssistantInput {
   draftTtlMinutes?: number
 }
 
+function normalizeDisplayPhone(raw: string): string {
+  return raw.replace(/[^\d]/g, '')
+}
+
 function asRuntime(row: typeof schema.tenant.$inferSelect): AssistantRuntimeConfig {
   const token = decryptSecretSafe(row.assistantTelegramBotToken) || ''
   const llmKey = decryptSecretSafe(row.assistantLlmApiKey) || ''
@@ -63,6 +81,11 @@ function asRuntime(row: typeof schema.tenant.$inferSelect): AssistantRuntimeConf
   const sttKey = decryptSecretSafe(row.assistantSttApiKey)
   const sttProvider = (row.assistantSttProvider || 'none') as 'none' | 'groq' | 'openai'
   const ttl = Number(row.assistantDraftTtlMinutes ?? 10)
+
+  const waToken = decryptSecretSafe(row.assistantWhatsappAccessToken) || ''
+  const waPhoneId = (row.assistantWhatsappPhoneNumberId || '').trim()
+  const waVerify = decryptSecretSafe(row.assistantWhatsappVerifyToken) || ''
+  const waDisplay = (row.assistantWhatsappDisplayPhone || '').trim() || null
 
   return {
     enabled: row.assistantEnabled === 'SI',
@@ -83,6 +106,15 @@ function asRuntime(row: typeof schema.tenant.$inferSelect): AssistantRuntimeConf
           botUsername: row.assistantTelegramBotUsername?.replace(/^@/, '') || null,
         }
       : null,
+    whatsapp:
+      waToken && waPhoneId && waVerify
+        ? {
+            accessToken: waToken,
+            phoneNumberId: waPhoneId,
+            verifyToken: waVerify,
+            displayPhone: waDisplay,
+          }
+        : null,
     stt: {
       provider: sttProvider,
       apiKey: sttKey,
@@ -105,6 +137,31 @@ export async function getTenantAssistantRuntime(
   return asRuntime(row)
 }
 
+const EMPTY_FORM: TenantAssistantFormConfig = {
+  enabled: false,
+  telegramBotToken: '',
+  telegramBotUsername: '',
+  telegramWebhookSecret: '',
+  whatsappAccessToken: '',
+  whatsappPhoneNumberId: '',
+  whatsappVerifyToken: '',
+  whatsappDisplayPhone: '',
+  llmBaseUrl: 'https://opencode.ai/zen/v1',
+  llmApiKey: '',
+  llmModel: '',
+  sttProvider: 'none',
+  sttApiKey: '',
+  sttModel: 'whisper-large-v3',
+  sttBaseUrl: '',
+  draftTtlMinutes: 10,
+  hasTelegramBotToken: false,
+  hasWhatsappAccessToken: false,
+  hasWhatsappVerifyToken: false,
+  hasLlmApiKey: false,
+  hasSttApiKey: false,
+  hasWebhookSecret: false,
+}
+
 export async function getTenantAssistantForm(tenantId: string): Promise<TenantAssistantFormConfig> {
   const rows = await db
     .select()
@@ -112,32 +169,17 @@ export async function getTenantAssistantForm(tenantId: string): Promise<TenantAs
     .where(eq(schema.tenant.id, tenantId))
     .limit(1)
   const row = rows[0]
-  if (!row) {
-    return {
-      enabled: false,
-      telegramBotToken: '',
-      telegramBotUsername: '',
-      telegramWebhookSecret: '',
-      llmBaseUrl: 'https://opencode.ai/zen/v1',
-      llmApiKey: '',
-      llmModel: '',
-      sttProvider: 'none',
-      sttApiKey: '',
-      sttModel: 'whisper-large-v3',
-      sttBaseUrl: '',
-      draftTtlMinutes: 10,
-      hasTelegramBotToken: false,
-      hasLlmApiKey: false,
-      hasSttApiKey: false,
-      hasWebhookSecret: false,
-    }
-  }
+  if (!row) return { ...EMPTY_FORM }
 
   return {
     enabled: row.assistantEnabled === 'SI',
     telegramBotToken: '',
     telegramBotUsername: row.assistantTelegramBotUsername || '',
     telegramWebhookSecret: '',
+    whatsappAccessToken: '',
+    whatsappPhoneNumberId: row.assistantWhatsappPhoneNumberId || '',
+    whatsappVerifyToken: '',
+    whatsappDisplayPhone: row.assistantWhatsappDisplayPhone || '',
     llmBaseUrl: row.assistantLlmBaseUrl || 'https://opencode.ai/zen/v1',
     llmApiKey: '',
     llmModel: row.assistantLlmModel || '',
@@ -147,6 +189,8 @@ export async function getTenantAssistantForm(tenantId: string): Promise<TenantAs
     sttBaseUrl: row.assistantSttBaseUrl || '',
     draftTtlMinutes: Number(row.assistantDraftTtlMinutes ?? 10) || 10,
     hasTelegramBotToken: Boolean(row.assistantTelegramBotToken),
+    hasWhatsappAccessToken: Boolean(row.assistantWhatsappAccessToken),
+    hasWhatsappVerifyToken: Boolean(row.assistantWhatsappVerifyToken),
     hasLlmApiKey: Boolean(row.assistantLlmApiKey),
     hasSttApiKey: Boolean(row.assistantSttApiKey),
     hasWebhookSecret: Boolean(row.assistantTelegramWebhookSecret),
@@ -165,6 +209,19 @@ export function buildAssistantConfigUpdate(input: TenantAssistantInput): Record<
   }
   if (input.telegramWebhookSecret) {
     update.assistantTelegramWebhookSecret = encryptSecret(input.telegramWebhookSecret)
+  }
+  if (input.whatsappAccessToken) {
+    update.assistantWhatsappAccessToken = encryptSecret(input.whatsappAccessToken)
+  }
+  if (input.whatsappPhoneNumberId !== undefined) {
+    update.assistantWhatsappPhoneNumberId = input.whatsappPhoneNumberId.trim() || null
+  }
+  if (input.whatsappVerifyToken) {
+    update.assistantWhatsappVerifyToken = encryptSecret(input.whatsappVerifyToken)
+  }
+  if (input.whatsappDisplayPhone !== undefined) {
+    const phone = normalizeDisplayPhone(input.whatsappDisplayPhone)
+    update.assistantWhatsappDisplayPhone = phone || null
   }
   if (input.llmBaseUrl !== undefined) {
     update.assistantLlmBaseUrl = input.llmBaseUrl.trim() || null
@@ -194,7 +251,10 @@ export function publicStatusFromRuntime(
   return {
     enabled: Boolean(runtime?.enabled),
     hasTelegram: Boolean(runtime?.telegram),
+    hasWhatsapp: Boolean(runtime?.whatsapp),
     botUsername: botUsername ?? runtime?.telegram?.botUsername ?? null,
+    whatsappPhoneNumberId: runtime?.whatsapp?.phoneNumberId ?? null,
+    whatsappDisplayPhone: runtime?.whatsapp?.displayPhone ?? null,
     hasLlm: Boolean(runtime?.llm),
     llmModel: runtime?.llm
       ? !runtime.llm.model ||
@@ -207,6 +267,7 @@ export function publicStatusFromRuntime(
     hasStt: runtime?.stt.provider !== 'none' && Boolean(runtime?.stt.apiKey),
     draftTtlMinutes: runtime?.draftTtlMinutes ?? 10,
     hasWebhookSecret: Boolean(runtime?.telegram?.webhookSecret),
+    hasWhatsappVerifyToken: Boolean(runtime?.whatsapp?.verifyToken),
   }
 }
 
@@ -249,6 +310,54 @@ export async function findTenantByTelegramWebhookSecret(
     const stored = decryptSecretSafe(row.assistantTelegramWebhookSecret)
     if (stored && stored === secret) {
       return { tenantId: row.id, runtime: asRuntime(row) }
+    }
+  }
+  return null
+}
+
+/** Resuelve tenant por Phone Number ID de WhatsApp Cloud API. */
+export async function findTenantByWhatsappPhoneNumberId(
+  phoneNumberId: string
+): Promise<{ tenantId: string; runtime: AssistantRuntimeConfig } | null> {
+  const id = phoneNumberId.trim()
+  if (!id) return null
+  const rows = await db
+    .select()
+    .from(schema.tenant)
+    .where(
+      and(
+        eq(schema.tenant.assistantEnabled, 'SI'),
+        eq(schema.tenant.assistantWhatsappPhoneNumberId, id)
+      )
+    )
+    .limit(1)
+  const row = rows[0]
+  if (!row) return null
+  const runtime = asRuntime(row)
+  if (!runtime.whatsapp) return null
+  return { tenantId: row.id, runtime }
+}
+
+/** Resuelve tenant por verify token del webhook de Meta (hub.verify_token). */
+export async function findTenantByWhatsappVerifyToken(
+  verifyToken: string
+): Promise<{ tenantId: string; runtime: AssistantRuntimeConfig } | null> {
+  if (!verifyToken) return null
+  const rows = await db
+    .select()
+    .from(schema.tenant)
+    .where(
+      and(
+        eq(schema.tenant.assistantEnabled, 'SI'),
+        isNotNull(schema.tenant.assistantWhatsappVerifyToken)
+      )
+    )
+  for (const row of rows) {
+    const stored = decryptSecretSafe(row.assistantWhatsappVerifyToken)
+    if (stored && stored === verifyToken) {
+      const runtime = asRuntime(row)
+      if (!runtime.whatsapp) continue
+      return { tenantId: row.id, runtime }
     }
   }
   return null

@@ -47,7 +47,8 @@ Separar ítems con `,` o ` y ` delante de cantidad. Pagos: `medio monto` repetid
 
 - Actualizar juntos: `intents.ts` (prompt + schema), `fallback-parse.ts`, `/ayuda`, globito de `AssistantSection`.
 - Pool free: `lib/assistant/llm-models.ts` (OpenCode Gratis).
-- Credenciales por tenant cifradas; no meter tokens en `.env` de producto.
+- Credenciales por tenant cifradas (Telegram y WhatsApp Cloud API); no meter tokens en `.env` de producto.
+- WhatsApp: Access Token + Phone Number ID + Verify Token en panel; webhook `/api/channels/whatsapp?tenantId=…` (también rutea por `phone_number_id`).
 - Tests: `test/assistant/*` al tocar parser, resolve o pagos.
 
 ## Fuera de alcance (rechazar)

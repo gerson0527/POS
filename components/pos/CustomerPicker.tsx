@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { UserPlus, IdCard } from 'lucide-react'
 import { CustomerFormModal, CustomerFormValues } from '@/components/customers/CustomerFormModal'
 import { POS_DOC_TYPES } from '@/lib/catalogs/customers'
@@ -44,9 +44,16 @@ export function CustomerPicker({
 }: CustomerPickerProps) {
   const [docInput, setDocInput] = useState(customer.documentNumber || '')
   const [searched, setSearched] = useState(false)
+  // Evita que el efecto de sincronización borre lo que el cajero está
+  // escribiendo cuando la limpieza del cliente se origina en este mismo input.
+  const suppressSyncRef = useRef(false)
 
   // Sincroniza el input cuando el cliente seleccionado cambia desde afuera
   useEffect(() => {
+    if (suppressSyncRef.current) {
+      suppressSyncRef.current = false
+      return
+    }
     setDocInput(customer.documentNumber || '')
     setSearched(false)
   }, [customer.documentNumber])
@@ -85,8 +92,18 @@ export function CustomerPicker({
           value={docInput}
           placeholder="— CONSUMIDOR FINAL — (cédula + Enter)"
           onChange={(e) => {
-            setDocInput(e.target.value)
+            const next = e.target.value
+            setDocInput(next)
             setSearched(false)
+
+            // Si el documento ya no coincide con el cliente seleccionado,
+            // se quita esa selección de inmediato: así no se factura por
+            // error al cliente anterior mientras se busca otro.
+            const selectedDoc = String(customer.documentNumber || '').trim()
+            if (selectedDoc && next.trim() !== selectedDoc) {
+              suppressSyncRef.current = true
+              onClear()
+            }
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {

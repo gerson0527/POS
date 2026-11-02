@@ -20,11 +20,20 @@ export interface TelegramConfig {
   botUsername: string | null
 }
 
+export interface WhatsAppRuntimeConfig {
+  accessToken: string
+  phoneNumberId: string
+  verifyToken: string
+  /** E.164 sin + (ej. 573001234567) para wa.me al vincular. */
+  displayPhone: string | null
+}
+
 export interface AssistantRuntimeConfig {
   enabled: boolean
   draftTtlMinutes: number
   llm: AssistantLlmConfig | null
   telegram: TelegramConfig | null
+  whatsapp: WhatsAppRuntimeConfig | null
   stt: {
     provider: 'groq' | 'openai' | 'none'
     apiKey: string | null
@@ -76,6 +85,18 @@ export function getAssistantConfig(): AssistantRuntimeConfig {
             process.env.TELEGRAM_BOT_USERNAME?.trim().replace(/^@/, '') || null,
         }
       : null,
+    whatsapp: (() => {
+      const accessToken = process.env.WHATSAPP_ACCESS_TOKEN?.trim() || ''
+      const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() || ''
+      const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN?.trim() || ''
+      if (!accessToken || !phoneNumberId || !verifyToken) return null
+      return {
+        accessToken,
+        phoneNumberId,
+        verifyToken,
+        displayPhone: process.env.WHATSAPP_DISPLAY_PHONE?.trim() || null,
+      }
+    })(),
     stt: {
       provider: sttProvider,
       apiKey: sttKey,

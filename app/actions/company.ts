@@ -7,6 +7,10 @@ import { AuditAction } from '@/lib/types'
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { encryptSecret } from '@/lib/security/encrypt'
+import {
+  DEFAULT_CREDIT_TERM_DAYS,
+  normalizeCreditTermDays,
+} from '@/lib/credit/terms'
 import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
 export async function getCompanyInfo() {
   const userId = await getUserId()
@@ -33,6 +37,7 @@ export async function getCompanyInfo() {
       dianTransmissionMode: schema.tenant.dianTransmissionMode,
       fiscalMunicipalityCode: schema.tenant.fiscalMunicipalityCode,
       fiscalTributeCode: schema.tenant.fiscalTributeCode,
+      creditTermDays: schema.tenant.creditTermDays,
       hasDianPassword: schema.tenant.dianPassword,
       hasDianSoftwarePin: schema.tenant.dianSoftwarePin,
     })
@@ -44,6 +49,7 @@ export async function getCompanyInfo() {
     const { hasDianPassword, hasDianSoftwarePin, ...safe } = tenants[0]
     return {
       ...safe,
+      creditTermDays: normalizeCreditTermDays(safe.creditTermDays),
       dianSoftwarePin: '',
       dianPassword: '',
       hasDianCredentials: Boolean(hasDianPassword || hasDianSoftwarePin),
@@ -67,6 +73,7 @@ export async function getCompanyInfo() {
     dianTransmissionMode: 'AUTO',
     fiscalMunicipalityCode: '11001',
     fiscalTributeCode: 'ZZ',
+    creditTermDays: DEFAULT_CREDIT_TERM_DAYS,
     hasDianCredentials: false,
   }
 }
@@ -234,6 +241,7 @@ export async function updateCompanyInfo(input: {
   dianEnvironment?: string
   fiscalMunicipalityCode?: string
   fiscalTributeCode?: string
+  creditTermDays?: number
 }) {
   const userId = await getUserId()
   await requireRole(userId, ['ADMIN'])
@@ -274,6 +282,9 @@ export async function updateCompanyInfo(input: {
         ...(input.fiscalTributeCode !== undefined
           ? { fiscalTributeCode: input.fiscalTributeCode || 'ZZ' }
           : {}),
+        ...(input.creditTermDays !== undefined
+          ? { creditTermDays: normalizeCreditTermDays(input.creditTermDays) }
+          : {}),
         ...secretUpdate,
         updatedAt: new Date(),
       })
@@ -293,6 +304,10 @@ export async function updateCompanyInfo(input: {
       dianEnvironment: input.dianEnvironment || '2',
       fiscalMunicipalityCode: input.fiscalMunicipalityCode || '11001',
       fiscalTributeCode: input.fiscalTributeCode || 'ZZ',
+      creditTermDays:
+        input.creditTermDays !== undefined
+          ? normalizeCreditTermDays(input.creditTermDays)
+          : DEFAULT_CREDIT_TERM_DAYS,
       ...secretUpdate,
       status: 'ACTIVE',
     })

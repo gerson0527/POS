@@ -26,6 +26,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getMyAccess } from '@/app/actions/pos-actions'
 import { homePathForRole, isPathAllowedForRole } from '@/lib/auth/permissions'
 import type { TenantRole } from '@/lib/auth/session-context'
+import { clearPosDraftStorage } from '@/lib/pos/draft-storage'
 
 export default function DashboardLayout({
   children,
@@ -95,6 +96,8 @@ export default function DashboardLayout({
   }, [pathname, router])
 
   const handleLogout = async () => {
+    // Evita que el siguiente usuario herede carrito/cliente del turno anterior.
+    clearPosDraftStorage()
     await authClient.signOut({
       fetchOptions: {
         onSuccess: () => {

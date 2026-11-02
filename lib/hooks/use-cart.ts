@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { usePersistentState } from './use-persistent-state'
+import { POS_CART_STORAGE_KEY } from '@/lib/pos/draft-storage'
 
 export interface CartItem {
   productId: string
@@ -18,10 +20,15 @@ export interface StockErrorState {
 }
 
 export function useCart(products: any[]) {
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [hasWithoutStockItems, setHasWithoutStockItems] = useState(false)
+  // El carrito se persiste para no perder la venta en curso si el cajero
+  // navega a otra sección, cambia de pestaña o recarga la página.
+  const [cart, setCart] = usePersistentState<CartItem[]>(POS_CART_STORAGE_KEY, [])
   const [approvedWithoutStockProductIds, setApprovedWithoutStockProductIds] = useState<string[]>([])
   const [stockErrorModal, setStockErrorModal] = useState<StockErrorState | null>(null)
+
+  // Derivado del carrito (no estado aparte): así, al rehidratar desde
+  // localStorage, la venta sigue marcada como "sin stock" correctamente.
+  const hasWithoutStockItems = cart.some((item) => item.withoutStock === true)
 
   function addToCart(product: any) {
     const existing = cart.find((item) => item.productId === product.id)
@@ -123,7 +130,6 @@ export function useCart(products: any[]) {
       ]
     })
 
-    setHasWithoutStockItems(true)
     setStockErrorModal(null)
   }
 

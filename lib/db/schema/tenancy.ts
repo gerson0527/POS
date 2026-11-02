@@ -61,11 +61,18 @@ export const tenant = pgTable(
     // tributeCode: 'ZZ' = no aplica, '01' = IVA, etc.
     fiscalMunicipalityCode: text('fiscalMunicipalityCode').default('11001'),
     fiscalTributeCode: text('fiscalTributeCode').default('ZZ'),
+    // Plazo de crédito a clientes (días). Tras vencer, el cargo pasa a mora.
+    creditTermDays: integer('creditTermDays').notNull().default(15),
     // Asistente por canal: credenciales POR TENANT (como Factus). Secretos cifrados.
     assistantEnabled: text('assistantEnabled').notNull().default('NO'), // SI | NO
     assistantTelegramBotToken: text('assistantTelegramBotToken'),
     assistantTelegramBotUsername: text('assistantTelegramBotUsername'),
     assistantTelegramWebhookSecret: text('assistantTelegramWebhookSecret'),
+    // WhatsApp Cloud API por tenant (Meta). Secretos cifrados; phoneNumberId en claro para ruteo.
+    assistantWhatsappAccessToken: text('assistantWhatsappAccessToken'),
+    assistantWhatsappPhoneNumberId: text('assistantWhatsappPhoneNumberId'),
+    assistantWhatsappVerifyToken: text('assistantWhatsappVerifyToken'),
+    assistantWhatsappDisplayPhone: text('assistantWhatsappDisplayPhone'),
     assistantLlmBaseUrl: text('assistantLlmBaseUrl'),
     assistantLlmApiKey: text('assistantLlmApiKey'),
     assistantLlmModel: text('assistantLlmModel'),

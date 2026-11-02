@@ -41,6 +41,10 @@ const EMPTY_FORM = {
   telegramBotToken: '',
   telegramBotUsername: '',
   telegramWebhookSecret: '',
+  whatsappAccessToken: '',
+  whatsappPhoneNumberId: '',
+  whatsappVerifyToken: '',
+  whatsappDisplayPhone: '',
   llmBaseUrl: 'https://opencode.ai/zen/v1',
   llmApiKey: '',
   llmModel: '',
@@ -50,6 +54,8 @@ const EMPTY_FORM = {
   sttBaseUrl: '',
   draftTtlMinutes: 10,
   hasTelegramBotToken: false,
+  hasWhatsappAccessToken: false,
+  hasWhatsappVerifyToken: false,
   hasLlmApiKey: false,
   hasSttApiKey: false,
   hasWebhookSecret: false,
@@ -62,9 +68,10 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
   const [form, setForm] = useState(EMPTY_FORM)
   const [links, setLinks] = useState<LinkRow[]>([])
   const [saving, setSaving] = useState(false)
-  const [generating, setGenerating] = useState(false)
+  const [generating, setGenerating] = useState<'telegram' | 'whatsapp' | null>(null)
   const [freshCode, setFreshCode] = useState<{
     code: string
+    channel: 'telegram' | 'whatsapp'
     instruction: string
     expiresAt: string
     deepLink: string | null
@@ -102,6 +109,10 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
         telegramBotToken: form.telegramBotToken || undefined,
         telegramBotUsername: form.telegramBotUsername,
         telegramWebhookSecret: form.telegramWebhookSecret || undefined,
+        whatsappAccessToken: form.whatsappAccessToken || undefined,
+        whatsappPhoneNumberId: form.whatsappPhoneNumberId,
+        whatsappVerifyToken: form.whatsappVerifyToken || undefined,
+        whatsappDisplayPhone: form.whatsappDisplayPhone,
         llmBaseUrl: form.llmBaseUrl,
         llmApiKey: form.llmApiKey || undefined,
         llmModel: form.llmModel,
@@ -116,7 +127,15 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
         return
       }
       toast('Configuración del asistente guardada (secretos cifrados en BD).')
-      setForm((f) => ({ ...f, telegramBotToken: '', llmApiKey: '', sttApiKey: '', telegramWebhookSecret: '' }))
+      setForm((f) => ({
+        ...f,
+        telegramBotToken: '',
+        telegramWebhookSecret: '',
+        whatsappAccessToken: '',
+        whatsappVerifyToken: '',
+        llmApiKey: '',
+        sttApiKey: '',
+      }))
       await load()
     } catch (err: any) {
       toast(`Error: ${err.message}`, 'error')
@@ -125,11 +144,11 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
     }
   }
 
-  async function handleGenerate() {
-    setGenerating(true)
+  async function handleGenerate(channel: 'telegram' | 'whatsapp') {
+    setGenerating(channel)
     setFreshCode(null)
     try {
-      const result = await generateTelegramLinkCode()
+      const result = await generateTelegramLinkCode(channel)
       if (!result.success) {
         toast(result.message, 'error')
         return
@@ -137,21 +156,30 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
       const deepLink = result.deepLink ?? null
       setFreshCode({
         code: result.code,
+        channel,
         instruction: result.instruction,
         expiresAt: result.expiresAt,
         deepLink,
       })
       if (deepLink) {
         window.open(deepLink, '_blank', 'noopener,noreferrer')
-        toast('Se abrió Telegram. Pulse Iniciar/Start en el bot para vincular.')
+        toast(
+          channel === 'telegram'
+            ? 'Se abrió Telegram. Pulse Iniciar/Start en el bot para vincular.'
+            : 'Se abrió WhatsApp. Envíe el mensaje precargado para vincular.'
+        )
       } else {
-        toast('Código listo. Agregue el username del bot para abrir Telegram en un clic.')
+        toast(
+          channel === 'telegram'
+            ? 'Código listo. Agregue el username del bot para abrir Telegram en un clic.'
+            : 'Código listo. Envíe /vincular CÓDIGO al número de WhatsApp Business.'
+        )
       }
       await load()
     } catch (err: any) {
       toast(`Error: ${err.message}`, 'error')
     } finally {
-      setGenerating(false)
+      setGenerating(null)
     }
   }
 
@@ -180,7 +208,11 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
   async function copyInstruction() {
     if (!freshCode) return
     await navigator.clipboard.writeText(freshCode.deepLink || freshCode.instruction)
-    toast(freshCode.deepLink ? 'Enlace de Telegram copiado' : 'Instrucción copiada')
+    toast(
+      freshCode.deepLink
+        ? `Enlace de ${freshCode.channel === 'telegram' ? 'Telegram' : 'WhatsApp'} copiado`
+        : 'Instrucción copiada'
+    )
   }
 
   return (
@@ -200,8 +232,8 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
         {helpOpen && (
           <div className="px-3 pb-3 pt-0 text-[11px] text-fg-muted space-y-3 border-t border-line-dim">
             <p className="pt-2">
-              En Telegram: <code className="text-fg">/ayuda</code>. Requiere chat vinculado y, para
-              facturar, turno de caja abierto en el POS.
+              En Telegram o WhatsApp: <code className="text-fg">/ayuda</code>. Requiere chat
+              vinculado y, para facturar, turno de caja abierto en el POS.
             </p>
             <HelpBlock
               title="Factura (pide cliente si no lo pone)"
@@ -260,6 +292,17 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
             detail={status?.botUsername ? `@${status.botUsername}` : status?.hasTelegram ? 'Token OK' : 'Sin token'}
           />
           <StatusChip
+            label="WhatsApp"
+            ok={Boolean(status?.hasWhatsapp)}
+            detail={
+              status?.whatsappDisplayPhone
+                ? `+${status.whatsappDisplayPhone}`
+                : status?.hasWhatsapp
+                  ? `ID ${status.whatsappPhoneNumberId}`
+                  : 'Sin Cloud API'
+            }
+          />
+          <StatusChip
             label="LLM"
             ok={Boolean(status?.hasLlm)}
             detail={status?.hasLlm ? String(status.llmModel) : 'Sin modelo/API key'}
@@ -283,7 +326,7 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <Label>TELEGRAM BOT TOKEN *</Label>
+              <Label>TELEGRAM BOT TOKEN</Label>
               <Input
                 type="password"
                 autoComplete="off"
@@ -301,7 +344,7 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
               />
             </div>
             <div>
-              <Label>WEBHOOK SECRET (opcional, prod)</Label>
+              <Label>TELEGRAM WEBHOOK SECRET (opcional, prod)</Label>
               <Input
                 type="password"
                 autoComplete="off"
@@ -318,6 +361,64 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
                 value={form.draftTtlMinutes}
                 onChange={(e) => setForm({ ...form, draftTtlMinutes: Number(e.target.value) || 10 })}
               />
+            </div>
+          </div>
+
+          <div className="border-t border-line-dim pt-3 space-y-3">
+            <p className="text-[10px] uppercase tracking-wider text-fg-muted font-bold">
+              WhatsApp Cloud API (Meta)
+            </p>
+            <p className="text-[11px] text-fg-muted leading-relaxed">
+              En Meta Developers cree una app WhatsApp, copie Access Token y Phone Number ID, y
+              registre el webhook:{' '}
+              <code className="text-fg">
+                /api/channels/whatsapp?tenantId={status?.tenantId || 'SU_TENANT_ID'}
+              </code>
+              . El Verify Token debe coincidir con el de abajo.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label>WHATSAPP ACCESS TOKEN</Label>
+                <Input
+                  type="password"
+                  autoComplete="off"
+                  placeholder={
+                    form.hasWhatsappAccessToken
+                      ? '•••• (guardado — deje vacío para no cambiar)'
+                      : 'EAAG…'
+                  }
+                  value={form.whatsappAccessToken}
+                  onChange={(e) => setForm({ ...form, whatsappAccessToken: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>PHONE NUMBER ID *</Label>
+                <Input
+                  placeholder="ID numérico de Graph API"
+                  value={form.whatsappPhoneNumberId}
+                  onChange={(e) => setForm({ ...form, whatsappPhoneNumberId: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>VERIFY TOKEN *</Label>
+                <Input
+                  type="password"
+                  autoComplete="off"
+                  placeholder={
+                    form.hasWhatsappVerifyToken ? '•••• (guardado)' : 'secreto que pondrá en Meta'
+                  }
+                  value={form.whatsappVerifyToken}
+                  onChange={(e) => setForm({ ...form, whatsappVerifyToken: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>NÚMERO PÚBLICO (wa.me, opcional)</Label>
+                <Input
+                  placeholder="573001234567"
+                  value={form.whatsappDisplayPhone}
+                  onChange={(e) => setForm({ ...form, whatsappDisplayPhone: e.target.value })}
+                />
+              </div>
             </div>
           </div>
 
@@ -404,25 +505,42 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
 
       <SectionPanel
         title="VINCULAR MI USUARIO"
-        subtitle="Tras guardar el bot, genere el enlace: se abre Telegram y al pulsar Iniciar queda vinculado."
+        subtitle="Tras guardar el canal, genere el enlace: se abre Telegram o WhatsApp y queda vinculado al enviar /vincular."
       >
         <p className="text-[11px] text-fg-muted leading-relaxed mb-3">
-          Para facturar necesita turno de caja abierto. Inventario: roles ADMIN/MANAGER.
+          Para facturar necesita turno de caja abierto. Inventario: roles ADMIN/MANAGER. Puede
+          usar Telegram, WhatsApp o ambos.
         </p>
-        <TacticalButton
-          type="button"
-          variant="primary"
-          size="sm"
-          loading={generating}
-          onClick={handleGenerate}
-          icon={<ExternalLink className="w-3.5 h-3.5" />}
-          disabled={!status?.enabled || !status?.hasTelegram}
-        >
-          VINCULAR CON TELEGRAM
-        </TacticalButton>
+        <div className="flex flex-wrap gap-2">
+          <TacticalButton
+            type="button"
+            variant="primary"
+            size="sm"
+            loading={generating === 'telegram'}
+            onClick={() => handleGenerate('telegram')}
+            icon={<ExternalLink className="w-3.5 h-3.5" />}
+            disabled={!status?.enabled || !status?.hasTelegram}
+          >
+            VINCULAR TELEGRAM
+          </TacticalButton>
+          <TacticalButton
+            type="button"
+            variant="secondary"
+            size="sm"
+            loading={generating === 'whatsapp'}
+            onClick={() => handleGenerate('whatsapp')}
+            icon={<ExternalLink className="w-3.5 h-3.5" />}
+            disabled={!status?.enabled || !status?.hasWhatsapp}
+          >
+            VINCULAR WHATSAPP
+          </TacticalButton>
+        </div>
 
         {freshCode && (
           <div className="mt-4 rounded border border-accent/40 bg-accent/5 p-3 text-xs">
+            <div className="text-[10px] uppercase tracking-wider text-fg-muted mb-1">
+              {freshCode.channel}
+            </div>
             <div className="font-mono text-lg font-bold tracking-widest text-accent">{freshCode.code}</div>
             <div className="mt-1 text-fg-muted">{freshCode.instruction}</div>
             <div className="mt-1 text-[10px] text-fg-muted">
@@ -437,7 +555,7 @@ export function AssistantSection({ refreshKey = 0, onLoadingChange }: AssistantS
                   onClick={() => window.open(freshCode.deepLink!, '_blank', 'noopener,noreferrer')}
                   icon={<ExternalLink className="w-3.5 h-3.5" />}
                 >
-                  ABRIR TELEGRAM
+                  {freshCode.channel === 'telegram' ? 'ABRIR TELEGRAM' : 'ABRIR WHATSAPP'}
                 </TacticalButton>
               )}
               <TacticalButton

@@ -7,6 +7,7 @@ import { AuditAction } from '@/lib/types'
 import { and, eq, desc, asc, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
+import { computeCreditDueDate, DEFAULT_CREDIT_TERM_DAYS } from '@/lib/credit/terms'
 export async function getCustomers(includeInactive = true) {
   const userId = await getUserId()
   const tenantId = await getTenantId(userId)
@@ -302,6 +303,18 @@ export async function chargeCustomerCredit(input: {
     const newBalance = Math.round((balance + amount) * 100) / 100
     const txId = `cct_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
 
+    let dueDate: Date
+    if (input.dueDate) {
+      dueDate = new Date(input.dueDate)
+    } else {
+      const tenantRows = await tx
+        .select({ creditTermDays: schema.tenant.creditTermDays })
+        .from(schema.tenant)
+        .where(eq(schema.tenant.id, tenantId))
+        .limit(1)
+      dueDate = computeCreditDueDate(tenantRows[0]?.creditTermDays ?? DEFAULT_CREDIT_TERM_DAYS)
+    }
+
     await tx.insert(schema.customerCreditTransaction).values({
       id: txId,
       tenantId,
@@ -312,9 +325,7 @@ export async function chargeCustomerCredit(input: {
       balanceAfter: String(newBalance),
       saleId: input.saleId || null,
       note: input.note || null,
-      dueDate: input.dueDate
-        ? new Date(input.dueDate)
-        : new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+      dueDate,
       status: 'PENDIENTE',
     })
 

@@ -1,10 +1,45 @@
+import type { WhatsAppRuntimeConfig } from '@/lib/assistant/config'
 import type { ChannelAdapter, IncomingMessage, OutgoingMessage } from './types'
 
-export interface WhatsAppConfig {
-  accessToken: string
-  phoneNumberId: string
-  verifyToken: string
+export type WhatsAppConfig = WhatsAppRuntimeConfig & {
   appSecret?: string
+}
+
+/** Extrae phone_number_id del payload de webhook de Meta. */
+export function extractWhatsappPhoneNumberId(raw: unknown): string | null {
+  const payload = raw as {
+    entry?: Array<{ changes?: Array<{ value?: { metadata?: { phone_number_id?: string } } }> }>
+  }
+  const id = payload?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id
+  return id?.trim() || null
+}
+
+export function verifyWhatsappHubToken(
+  received: string | null | undefined,
+  expected: string
+): boolean {
+  if (!expected) return true
+  return Boolean(received && received === expected)
+}
+
+/** Deep link wa.me con el mensaje /vincular CODE precargado. */
+export function buildWhatsappLinkInstruction(
+  displayPhone: string | null | undefined,
+  code: string
+): { deepLink: string | null; instruction: string } {
+  const phone = (displayPhone || '').replace(/[^\d]/g, '')
+  const text = encodeURIComponent(`/vincular ${code}`)
+  if (phone) {
+    const deepLink = `https://wa.me/${phone}?text=${text}`
+    return {
+      deepLink,
+      instruction: `Abra WhatsApp o envíe al número de la empresa: /vincular ${code}`,
+    }
+  }
+  return {
+    deepLink: null,
+    instruction: `En WhatsApp envíe al número de la empresa: /vincular ${code}`,
+  }
 }
 
 type WaMessage = {
@@ -155,6 +190,7 @@ export function getWhatsAppConfigFromEnv(): WhatsAppConfig | null {
     accessToken,
     phoneNumberId,
     verifyToken,
+    displayPhone: process.env.WHATSAPP_DISPLAY_PHONE?.trim() || null,
     appSecret: process.env.WHATSAPP_APP_SECRET?.trim() || undefined,
   }
 }

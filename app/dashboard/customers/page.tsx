@@ -78,6 +78,10 @@ export default function CustomersPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
 
+  // Paginación del historial de movimientos dentro del detalle de crédito.
+  const [creditHistoryPage, setCreditHistoryPage] = useState(1)
+  const creditHistoryPerPage = 8
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -95,6 +99,7 @@ export default function CustomersPage() {
     defaultValue: string
     hint?: string
     confirmLabel: string
+    min?: number
     onConfirm: (amount: number) => void
   } | null>(null)
 
@@ -120,6 +125,7 @@ export default function CustomersPage() {
 
   async function openCreditDetail(customerId: string) {
     setCreditDetailId(customerId)
+    setCreditHistoryPage(1)
     setLoadingCredit(true)
     setCreditDetail(null)
     try {
@@ -270,6 +276,14 @@ export default function CustomersPage() {
   const paginatedCustomers = filteredCustomers.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
+  )
+
+  const creditHistory: any[] = creditDetail?.transactions ?? []
+  const creditHistoryTotalPages = Math.ceil(creditHistory.length / creditHistoryPerPage) || 1
+  const safeCreditHistoryPage = Math.min(creditHistoryPage, creditHistoryTotalPages)
+  const paginatedCreditHistory = creditHistory.slice(
+    (safeCreditHistoryPage - 1) * creditHistoryPerPage,
+    safeCreditHistoryPage * creditHistoryPerPage
   )
 
   const stats = {
@@ -654,6 +668,7 @@ export default function CustomersPage() {
           defaultValue={amountPrompt.defaultValue}
           hint={amountPrompt.hint}
           confirmLabel={amountPrompt.confirmLabel}
+          min={amountPrompt.min}
           onConfirm={amountPrompt.onConfirm}
         />
       )}
@@ -696,11 +711,16 @@ export default function CustomersPage() {
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => {
-                      const amountStr = prompt('Monto del abono (COP):', '')
-                      if (amountStr) {
-                        const amount = parseInt(amountStr) || 0
-                        if (amount > 0) handlePayCredit(creditDetailId, amount)
-                      }
+                      setAmountPrompt({
+                        title: 'REGISTRAR ABONO',
+                        description: `Abono a la cuenta corriente de ${creditDetail.customer.name}.`,
+                        label: 'MONTO DEL ABONO (COP)',
+                        defaultValue: '',
+                        hint: `Saldo actual: ${formatCOP(Number(creditDetail.customer.creditBalance))}`,
+                        confirmLabel: 'REGISTRAR ABONO',
+                        min: 1,
+                        onConfirm: (amount) => handlePayCredit(creditDetailId, amount),
+                      })
                     }}
                     disabled={Number(creditDetail.customer.creditBalance) === 0}
                     className="px-3 py-2.5 bg-ok text-white font-bold uppercase text-xs rounded hover:bg-ok-strong disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1"
@@ -802,13 +822,21 @@ export default function CustomersPage() {
                         ),
                       },
                     ]}
-                    rows={creditDetail.transactions}
+                    rows={paginatedCreditHistory}
                     rowKey={(tx: any) => tx.id}
                     emptyMessage="Sin movimientos aún"
                     rowClassName="hover:bg-ash"
                     tableClassName="w-full text-xs"
                     theadClassName="bg-surface border-b border-line text-fg-muted sticky top-0"
                     wrapperClassName="border border-line rounded max-h-72 overflow-y-auto"
+                  />
+                  <Pagination
+                    currentPage={safeCreditHistoryPage}
+                    totalPages={creditHistoryTotalPages}
+                    totalItems={creditHistory.length}
+                    itemsPerPage={creditHistoryPerPage}
+                    onPageChange={setCreditHistoryPage}
+                    className="mt-2"
                   />
                 </div>
               </>

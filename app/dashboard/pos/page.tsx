@@ -1,11 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { AnimatePresence } from 'motion/react'
 import { createSale, getProducts, completeSale, generateInvoice, getCustomers, createCustomer, getCurrentCashierSessionSummary } from '@/app/actions/pos-actions'
 import { isSessionError, redirectToLogin } from '@/lib/hooks/use-protected-query'
 import { useCart } from '@/lib/hooks/use-cart'
+import { usePersistentState } from '@/lib/hooks/use-persistent-state'
+import {
+  clearPosDraftStorage,
+  POS_CUSTOMER_CREDIT_STORAGE_KEY,
+  POS_CUSTOMER_STORAGE_KEY,
+  POS_DISCOUNT_STORAGE_KEY,
+} from '@/lib/pos/draft-storage'
 import { calculateSaleTotals } from '@/lib/utils/pos-utils'
 import { CustomerDTO } from '@/lib/types'
 import type { PaymentSplit } from '@/lib/utils/payment-splits'
@@ -42,20 +49,25 @@ export default function DashboardPOSPage() {
     dianStatus: 'success' | 'pending'
     cufe?: string
   } | null>(null)
-  const [discount, setDiscount] = useState(0)
+  // Borrador de la venta actual: se persiste para que no se pierda al
+  // navegar a otra sección, cambiar de pestaña o recargar la página.
+  const [discount, setDiscount] = usePersistentState<number>(POS_DISCOUNT_STORAGE_KEY, 0)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
 
-  const [customer, setCustomer] = useState<CustomerDTO>(EMPTY_CUSTOMER)
+  const [customer, setCustomer] = usePersistentState<CustomerDTO>(
+    POS_CUSTOMER_STORAGE_KEY,
+    EMPTY_CUSTOMER
+  )
   const [showCustomerForm, setShowCustomerForm] = useState(false)
   const [customerError, setCustomerError] = useState<string | null>(null)
   const [customerList, setCustomerList] = useState<any[]>([])
-  const [customerCreditInfo, setCustomerCreditInfo] = useState<{
+  const [customerCreditInfo, setCustomerCreditInfo] = usePersistentState<{
     enabled: boolean
     limit: number
     balance: number
     status: 'AL_DIA' | 'EN_MORA' | 'BLOQUEADO'
-  } | null>(null)
+  } | null>(POS_CUSTOMER_CREDIT_STORAGE_KEY, null)
   const [confirmMoraOpen, setConfirmMoraOpen] = useState(false)
   const [form, setForm] = useState<CustomerFormValues>({
     documentType: 'CC',
@@ -110,6 +122,23 @@ export default function DashboardPOSPage() {
       console.error('Error loading customers:', error)
     }
   }
+
+  // Al rehidratar el borrador, refrescar cupo/saldo del cliente guardado para
+  // no mostrar un estado de crédito desactualizado (el servidor igual valida).
+  const creditSyncRef = useRef<string | null>(null)
+  useEffect(() => {
+    const doc = customer.documentNumber
+    if (!doc || creditSyncRef.current === doc) return
+    const match = customerList.find((c) => c.documentNumber === doc)
+    if (!match) return
+    creditSyncRef.current = doc
+    setCustomerCreditInfo({
+      enabled: match.creditEnabled === 'SI',
+      limit: Number(match.creditLimit || 0),
+      balance: Number(match.creditBalance || 0),
+      status: match.creditStatus || 'AL_DIA',
+    })
+  }, [customer.documentNumber, customerList, setCustomerCreditInfo])
 
   // Reset pagination to page 1 on search change
   useEffect(() => {
@@ -254,6 +283,11 @@ export default function DashboardPOSPage() {
         return
       }
 
+      // La venta ya quedó registrada: borrar el borrador persistido de inmediato
+      // para que no reaparezca si el cajero navega antes de que cierre el overlay.
+      // El estado en pantalla se limpia después, cuando el overlay termina.
+      clearPosDraftStorage()
+
       // 1) Generate local invoice / internal sales ticket (with proper enum)
       try {
         await generateInvoice({
@@ -314,16 +348,21 @@ export default function DashboardPOSPage() {
     }
   }
 
-  function handleNewSale() {
+  /** Limpia el borrador persistido: carrito, descuento y cliente. */
+  function clearSaleDraft() {
     clearCart()
+    setDiscount(0)
+    setCustomer(EMPTY_CUSTOMER)
+    setCustomerCreditInfo(null)
+  }
+
+  function handleNewSale() {
+    clearSaleDraft()
     setSaleId(null)
     setSaleSuccess(null)
     setStep('shopping')
-    setDiscount(0)
-    setCustomer(EMPTY_CUSTOMER)
     setShowCustomerForm(false)
     setCustomerError(null)
-    setCustomerCreditInfo(null)
   }
 
   function clearCustomer() {

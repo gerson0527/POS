@@ -19,6 +19,8 @@ interface NumberPromptModalProps {
   defaultValue?: string
   hint?: string
   confirmLabel?: string
+  /** Valor mínimo aceptado. Por defecto 0. */
+  min?: number
   onConfirm: (amount: number) => void
 }
 
@@ -36,6 +38,7 @@ export function NumberPromptModal({
   defaultValue = '',
   hint,
   confirmLabel = 'CONFIRMAR',
+  min = 0,
   onConfirm,
 }: NumberPromptModalProps) {
   const [value, setValue] = useState(defaultValue)
@@ -45,7 +48,7 @@ export function NumberPromptModal({
   }, [open, defaultValue])
 
   const parsed = Number(value)
-  const isValid = value.trim() !== '' && Number.isInteger(parsed) && parsed >= 0
+  const isValid = value.trim() !== '' && Number.isInteger(parsed) && parsed >= min
 
   function handleConfirm() {
     if (!isValid) return

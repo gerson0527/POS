@@ -23,6 +23,7 @@ import {
   publicStatusFromRuntime,
   type TenantAssistantInput,
 } from '@/lib/assistant/tenant-config'
+import { buildWhatsappLinkInstruction } from '@/lib/channels/whatsapp'
 
 export async function getAssistantStatus() {
   const actor = await requireActor(['ADMIN', 'MANAGER', 'CASHIER', 'VIEWER'])
@@ -32,7 +33,6 @@ export async function getAssistantStatus() {
     (runtime?.telegram ? await resolveTelegramBotUsername(runtime.telegram.botToken) : null)
   return {
     ...publicStatusFromRuntime(runtime, botUsername),
-    hasWhatsapp: false,
     tenantId: actor.tenantId,
   }
 }
@@ -80,7 +80,7 @@ export async function generateTelegramLinkCode(channel: 'telegram' | 'whatsapp' 
       return {
         success: false as const,
         message:
-          'Active el asistente y guarde el token de Telegram de su empresa antes de vincular.',
+          'Active el asistente y guarde las credenciales del canal antes de vincular.',
       }
     }
     if (channel === 'telegram' && !runtime.telegram) {
@@ -89,19 +89,30 @@ export async function generateTelegramLinkCode(channel: 'telegram' | 'whatsapp' 
         message: 'Guarde el TELEGRAM BOT TOKEN de su empresa en el formulario de arriba.',
       }
     }
+    if (channel === 'whatsapp' && !runtime.whatsapp) {
+      return {
+        success: false as const,
+        message:
+          'Guarde Access Token, Phone Number ID y Verify Token de WhatsApp en el formulario.',
+      }
+    }
 
     const result = await createChannelLinkCode(actor, channel)
     revalidatePath('/dashboard/settings')
 
     if (channel === 'whatsapp') {
+      const { deepLink, instruction } = buildWhatsappLinkInstruction(
+        runtime.whatsapp?.displayPhone,
+        result.code
+      )
       return {
         success: true as const,
         code: result.code,
         channel: result.channel,
         expiresAt: result.expiresAt.toISOString(),
         linkId: result.linkId,
-        deepLink: null as string | null,
-        instruction: `En WhatsApp envíe al bot: /vincular ${result.code}`,
+        deepLink,
+        instruction,
       }
     }
 

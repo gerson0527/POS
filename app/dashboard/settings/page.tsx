@@ -29,7 +29,7 @@ export default function SettingsPage() {
     { id: 'locations', label: 'UBICACIONES / SEDES', icon: MapPin },
     { id: 'numeration', label: 'RESOLUCIONES DIAN', icon: Hash },
     { id: 'factus', label: 'FACTURACIÓN ELECTRÓNICA (PROVEEDOR)', icon: Zap },
-    { id: 'assistant', label: 'ASISTENTE TELEGRAM', icon: Bot },
+    { id: 'assistant', label: 'ASISTENTE (TELEGRAM / WHATSAPP)', icon: Bot },
   ]
 
   return (

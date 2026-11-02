@@ -1,0 +1,1 @@
+ALTER TABLE "tenant" ADD COLUMN IF NOT EXISTS "creditTermDays" integer DEFAULT 15 NOT NULL;
