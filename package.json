@@ -5,8 +5,8 @@
   "scripts": {
     "predev": "npm run db:doctor -- --soft",
     "dev": "next dev",
-    "build": "next build && node scripts/prepare-tauri-dist.js",
-    "build:desktop": "npm run build && node scripts/prepare-postgres-dist.js",
+    "build": "next build",
+    "build:desktop": "npm run build && node scripts/prepare-tauri-dist.js && node scripts/prepare-postgres-dist.js",
     "start": "next start",
     "tauri:dev": "npx @tauri-apps/cli dev",
     "tauri:build": "npx @tauri-apps/cli build",
