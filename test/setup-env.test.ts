@@ -44,6 +44,7 @@ beforeEach(() => {
   vi.spyOn(process, 'cwd').mockReturnValue(directory)
   vi.stubEnv('POS_DESKTOP_ENV_FILE', desktopEnv)
   vi.stubEnv('DATABASE_URL', '')
+  vi.stubEnv('POS_DATABASE_MODE', '')
   pgCalls.connect.mockClear()
   pgCalls.query.mockClear()
   pgCalls.poolQuery.mockReset().mockResolvedValue({ rows: [{ has_admin: false }] })
@@ -72,9 +73,22 @@ describe('setup env file', () => {
   })
 
   it('requires first-run setup when the private database has no initialized user table', async () => {
+    vi.stubEnv('POS_DATABASE_MODE', 'local')
     vi.stubEnv('DATABASE_URL', 'postgresql://localhost/private-pos')
     const status = await (await GET()).json()
-    expect(status).toMatchObject({ dbConnected: true, setupRequired: true })
+    expect(status).toMatchObject({ databaseConfigured: true, dbConnected: true, setupRequired: true })
+  })
+
+  it('recognizes an installed local PostgreSQL connection as configured', async () => {
+    vi.stubEnv('POS_DATABASE_MODE', 'system-local')
+    vi.stubEnv('DATABASE_URL', 'postgresql://localhost/POS')
+    const status = await (await GET()).json()
+    expect(status).toMatchObject({ databaseConfigured: true, dbConnected: true, setupRequired: true })
+  })
+
+  it('asks for a database choice before connecting on a fresh desktop install', async () => {
+    const status = await (await GET()).json()
+    expect(status).toMatchObject({ databaseConfigured: false, dbConnected: false, setupRequired: true })
   })
 
   it.each([undefined, ''])('falls back to cwd/.env when desktop path is %s', async desktopPath => {

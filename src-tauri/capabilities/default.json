@@ -3,7 +3,19 @@
   "identifier": "default",
   "description": "Permisos principales de la aplicacion de escritorio",
   "windows": ["main"],
+  "remote": {
+    "urls": ["http://127.0.0.1:3000"]
+  },
   "permissions": [
-    "core:default"
+    "core:default",
+    "allow-start-backend-server",
+    "allow-configure-database",
+    "allow-check-backend-server",
+    "allow-create-local-sale",
+    "allow-print-escpos-ticket",
+    "allow-open-cash-drawer-pulse",
+    "allow-read-serial-scale-weight",
+    "allow-get-pending-offline-sales",
+    "allow-mark-sales-as-synced"
   ]
 }

@@ -101,6 +101,10 @@ function updateEnvFile(newDbUrl: string, dbMeta?: { user?: string; password?: st
 
 export async function GET() {
   const pgInstalled = Boolean(process.env.POS_DESKTOP_ENV_FILE) || checkPostgresInstalled()
+  const configuredMode = process.env.POS_DATABASE_MODE
+  const databaseConfigured = !process.env.POS_DESKTOP_ENV_FILE ||
+    configuredMode === 'local' || configuredMode === 'bundled' ||
+    configuredMode === 'system-local' || configuredMode === 'remote'
 
   let dbConnected = false
   let setupRequired = true
@@ -129,7 +133,11 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     pgInstalled,
+    databaseConfigured,
     dbConnected,
+    databaseError: databaseConfigured && !dbConnected
+      ? 'No se pudo conectar. Verifica que la base exista, que el usuario y contraseña sean correctos y que el usuario pueda aplicar migraciones.'
+      : undefined,
     setupRequired,
     hasEnv: fs.existsSync(getEnvPath()),
   })

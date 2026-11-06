@@ -1,6 +1,6 @@
 [package]
 name = "pos-retail-desktop"
-version = "3.0.2"
+version = "3.0.3"
 description = "Enterprise POS Desktop Application Container (Tauri 2.x)"
 authors = ["POS Retail Enterprise Team"]
 edition = "2021"

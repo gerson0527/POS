@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-print-escpos-ticket"
+description = "Enables the print_escpos_ticket command without any pre-configured scope."
+commands.allow = ["print_escpos_ticket"]
+
+[[permission]]
+identifier = "deny-print-escpos-ticket"
+description = "Denies the print_escpos_ticket command without any pre-configured scope."
+commands.deny = ["print_escpos_ticket"]

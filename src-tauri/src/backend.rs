@@ -58,7 +58,7 @@ fn backend_ready(address: SocketAddr) -> bool {
         .is_err()
         || stream
             .write_all(
-                b"GET /api/health HTTP/1.1\r\nHost: 127.0.0.1:3000\r\nConnection: close\r\n\r\n",
+                b"GET /api/ready HTTP/1.1\r\nHost: 127.0.0.1:3000\r\nConnection: close\r\n\r\n",
             )
             .is_err()
     {
@@ -134,9 +134,22 @@ pub fn read_env(app: &tauri::AppHandle) -> Result<BTreeMap<String, String>, Stri
     Ok(values)
 }
 
-pub fn save_env(app: &tauri::AppHandle, database_url: &str) -> Result<(), String> {
+pub fn save_env(
+    app: &tauri::AppHandle,
+    database_url: Option<&str>,
+    database_mode: Option<&str>,
+    database_name: Option<&str>,
+) -> Result<(), String> {
     let mut values = read_env(app)?;
-    values.insert("DATABASE_URL".into(), database_url.into());
+    if let Some(url) = database_url {
+        values.insert("DATABASE_URL".into(), url.into());
+    }
+    if let Some(mode) = database_mode {
+        values.insert("POS_DATABASE_MODE".into(), mode.into());
+    }
+    if let Some(name) = database_name {
+        values.insert("POS_DATABASE_NAME".into(), name.into());
+    }
     values
         .entry("BETTER_AUTH_URL".into())
         .or_insert_with(|| "http://localhost:3000".into());

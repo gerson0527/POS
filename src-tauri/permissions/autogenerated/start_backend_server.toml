@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-start-backend-server"
+description = "Enables the start_backend_server command without any pre-configured scope."
+commands.allow = ["start_backend_server"]
+
+[[permission]]
+identifier = "deny-start-backend-server"
+description = "Denies the start_backend_server command without any pre-configured scope."
+commands.deny = ["start_backend_server"]

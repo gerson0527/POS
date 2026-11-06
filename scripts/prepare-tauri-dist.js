@@ -66,9 +66,183 @@ function writeDesktopBootstrap(root) {
   fs.mkdirSync(out, { recursive: true })
   fs.writeFileSync(path.join(out, 'index.html'), `<!doctype html>
 <html lang="es">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>POS Retail</title></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#fafafa">
+  <title>POS Retail</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: "Segoe UI", Geist, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #09090b;
+      background: #fafafa;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 32px 20px;
+      background:
+        radial-gradient(ellipse at 50% 42%, rgba(234, 88, 12, .07), transparent 42%),
+        #fafafa;
+    }
+    main {
+      width: min(100%, 440px);
+      padding: 40px 36px 32px;
+      text-align: center;
+      background: rgba(255, 255, 255, .92);
+      border: 1px solid #e4e4e7;
+      border-radius: 12px;
+      box-shadow: 0 18px 55px rgba(24, 24, 27, .08), 0 2px 8px rgba(24, 24, 27, .04);
+    }
+    .brand {
+      display: grid;
+      width: 52px;
+      height: 52px;
+      place-items: center;
+      margin: 0 auto 20px;
+      color: #fff;
+      background: #ea580c;
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(234, 88, 12, .22);
+    }
+    .brand svg { width: 28px; height: 28px; }
+    .eyebrow {
+      margin: 0 0 8px;
+      color: #ea580c;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      color: #09090b;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -.035em;
+    }
+    .description {
+      margin: 9px 0 0;
+      color: #71717a;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .progress {
+      display: flex;
+      min-height: 42px;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 28px;
+      padding: 10px 12px;
+      color: #52525b;
+      background: #f4f4f5;
+      border: 1px solid #e4e4e7;
+      border-radius: 7px;
+      font-size: 12px;
+    }
+    .spinner {
+      width: 15px;
+      height: 15px;
+      flex: 0 0 auto;
+      border: 2px solid #fed7aa;
+      border-top-color: #ea580c;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    .error {
+      display: none;
+      margin-top: 22px;
+      padding: 12px 14px;
+      color: #b91c1c;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 7px;
+      font-size: 12px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+    button {
+      display: none;
+      width: 100%;
+      margin-top: 12px;
+      padding: 11px 16px;
+      color: #fff;
+      background: #ea580c;
+      border: 0;
+      border-radius: 7px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #c2410c; }
+    footer {
+      margin-top: 24px;
+      color: #a1a1aa;
+      font-size: 10px;
+      letter-spacing: .04em;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-color-scheme: dark) {
+      :root { color: #fafafa; background: #0b0b0b; }
+      body {
+        background:
+          radial-gradient(ellipse at 50% 42%, rgba(255, 106, 0, .1), transparent 42%),
+          #0b0b0b;
+      }
+      main {
+        background: rgba(20, 20, 20, .94);
+        border-color: #292929;
+        box-shadow: 0 18px 55px rgba(0, 0, 0, .3);
+      }
+      .brand { background: #ff6a00; box-shadow: 0 8px 20px rgba(255, 106, 0, .2); }
+      .eyebrow { color: #ff812f; }
+      h1 { color: #fafafa; }
+      .description, .progress { color: #a1a1aa; }
+      .progress { background: #171717; border-color: #292929; }
+      .spinner { border-color: #7c2d12; border-top-color: #ff812f; }
+      .error { color: #fca5a5; background: #291515; border-color: #542323; }
+      button { background: #ff6a00; }
+      button:hover { background: #ff812f; }
+      footer { color: #71717a; }
+    }
+    @media (max-width: 480px) {
+      main { padding: 32px 22px 26px; }
+      h1 { font-size: 20px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .spinner { animation-duration: 2s; }
+    }
+  </style>
+</head>
 <body>
-  <main><h1>POS Retail</h1><p id="status">Iniciando la base de datos y el sistema…</p></main>
+  <main>
+    <div class="brand" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M5 19V5h7.2a4.2 4.2 0 0 1 0 8.4H9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="m13 13 6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <p class="eyebrow">Punto de venta · DIAN</p>
+    <h1>POS Retail Enterprise</h1>
+    <p class="description">Sistema de punto de venta y facturación electrónica</p>
+    <div class="progress" role="status" aria-live="polite">
+      <span class="spinner" id="spinner" aria-hidden="true"></span>
+      <span id="status">Preparando el sistema…</span>
+    </div>
+    <div class="error" id="error" role="alert"></div>
+    <button id="retry" type="button" onclick="window.location.reload()">Reintentar inicio</button>
+    <footer>POS RETAIL ENTERPRISE DIAN</footer>
+  </main>
   <script>
     (async () => {
       const status = document.getElementById('status')
@@ -78,13 +252,20 @@ function writeDesktopBootstrap(root) {
         await invoke('start_backend_server')
         const response = await fetch('http://127.0.0.1:3000/api/setup')
         const readiness = await response.json()
-        if (!response.ok || !readiness.dbConnected) {
-          throw new Error(readiness.error || 'No se pudo conectar con la base privada del POS.')
+        if (!response.ok) {
+          throw new Error(readiness.error || 'No se pudo verificar la configuración inicial del POS.')
         }
-        const destination = readiness.setupRequired ? '/desktop-setup' : '/'
+        if (readiness.databaseConfigured && !readiness.dbConnected) {
+          throw new Error(readiness.error || 'No se pudo conectar con la base de datos configurada.')
+        }
+        const destination = !readiness.databaseConfigured || readiness.setupRequired ? '/desktop-setup' : '/'
         window.location.replace('http://127.0.0.1:3000' + destination)
       } catch (error) {
-        status.textContent = 'No se pudo iniciar POS Retail: ' + (error && error.message ? error.message : String(error))
+        document.getElementById('spinner').style.display = 'none'
+        document.getElementById('error').style.display = 'block'
+        document.getElementById('error').textContent =
+          'No se pudo iniciar el sistema: ' + (error && error.message ? error.message : String(error))
+        document.getElementById('retry').style.display = 'block'
       }
     })()
   </script>
@@ -303,8 +484,12 @@ function selfTest() {
       }
       if (app) assert.ok(fs.readFileSync(path.join(destination, 'server.js'), 'utf8').includes('./apps/pos/server.js'))
       requireFile(path.join(root, 'out/index.html'))
-      assert.match(fs.readFileSync(path.join(root, 'out/index.html'), 'utf8'), /start_backend_server/)
-      assert.match(fs.readFileSync(path.join(root, 'out/index.html'), 'utf8'), /127\.0\.0\.1:3000/)
+      const bootstrap = fs.readFileSync(path.join(root, 'out/index.html'), 'utf8')
+      assert.match(bootstrap, /start_backend_server/)
+      assert.match(bootstrap, /127\.0\.0\.1:3000/)
+      assert.match(bootstrap, /prefers-color-scheme: dark/)
+      assert.match(bootstrap, /Reintentar inicio/)
+      assert.match(bootstrap, /Preparando el sistema/)
       write(root, 'src-tauri/backend/stale-again.txt')
       prepareBackend(root, node)
       assert.equal(fs.existsSync(path.join(destination, 'stale-again.txt')), false)

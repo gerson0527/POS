@@ -94,9 +94,133 @@ fn mark_sales_as_synced(sale_ids: Vec<String>) -> Result<bool, String> {
 /// Starts the bundled private PostgreSQL before the local application server.
 #[tauri::command]
 fn start_backend_server(app: tauri::AppHandle, restart: Option<bool>) -> Result<bool, String> {
-    let database = postgres::ensure_running(&app)?;
-    backend::save_env(&app, &database.database_url)?;
+    let values = backend::read_env(&app)?;
+    let mode = values.get("POS_DATABASE_MODE").map(String::as_str);
+    let database = match mode {
+        Some("remote" | "system-local") => None,
+        Some("bundled" | "local") => Some(postgres::ensure_running(
+            &app,
+            values
+                .get("POS_DATABASE_NAME")
+                .map(String::as_str)
+                .unwrap_or(postgres::DEFAULT_DATABASE_NAME),
+        )?),
+        Some(_) => return Err("La configuración del tipo de base de datos no es válida.".into()),
+        None if values.contains_key("DATABASE_URL") => Some(postgres::ensure_running(
+            &app,
+            postgres::DEFAULT_DATABASE_NAME,
+        )?),
+        None => None,
+    };
+    if let Some(database) = database {
+        backend::save_env(&app, Some(&database.database_url), None, None)?;
+    } else {
+        backend::save_env(&app, None, None, None)?;
+    }
     backend::start(&app, restart.unwrap_or(false))
+}
+
+#[tauri::command]
+fn configure_database(
+    app: tauri::AppHandle,
+    mode: String,
+    database_name: Option<String>,
+    host: Option<String>,
+    port: Option<String>,
+    username: Option<String>,
+    password: Option<String>,
+    database_url: Option<String>,
+) -> Result<bool, String> {
+    let (url, name) = match mode.as_str() {
+        "bundled" => {
+            let name = database_name
+                .as_deref()
+                .ok_or("Indica el nombre de la base de datos local")?;
+            let database = postgres::ensure_running(&app, name)?;
+            (database.database_url, Some(name))
+        }
+        "system-local" => {
+            let name = database_name
+                .as_deref()
+                .ok_or("Indica el nombre de la base de datos local")?;
+            if !postgres::valid_database_name(name) {
+                return Err("El nombre debe iniciar con letra o _ y contener solo letras, números y _ (máximo 63 caracteres).".into());
+            }
+            let host = host.as_deref().unwrap_or("127.0.0.1");
+            let port = port
+                .as_deref()
+                .unwrap_or("5432")
+                .parse::<u16>()
+                .map_err(|_| "El puerto de PostgreSQL debe ser un número entre 1 y 65535.")?;
+            let username = username
+                .as_deref()
+                .ok_or("Indica el usuario de PostgreSQL")?;
+            let password = password.as_deref().unwrap_or("");
+            if port == 0
+                || !valid_postgres_host(host)
+                || username.is_empty()
+                || username.contains(['\n', '\r'])
+            {
+                return Err("El host o usuario de PostgreSQL no es válido.".into());
+            }
+            postgres::stop(&app);
+            let url = format!(
+                "postgresql://{}:{}@{}:{}/{}",
+                backend::url_component(username),
+                backend::url_component(password),
+                host,
+                port,
+                backend::url_component(name),
+            );
+            (url, Some(name))
+        }
+        "remote" => {
+            let url = database_url
+                .as_deref()
+                .ok_or("Indica la URL de conexión de PostgreSQL")?;
+            if !(url.starts_with("postgres://") || url.starts_with("postgresql://"))
+                || url.contains(['`', '\n', '\r'])
+            {
+                return Err("La conexión debe ser una URL PostgreSQL válida.".into());
+            }
+            postgres::stop(&app);
+            (url.to_string(), database_name.as_deref())
+        }
+        _ => return Err("Selecciona una opción de base de datos válida.".into()),
+    };
+    backend::save_env(&app, Some(&url), Some(&mode), name)?;
+    backend::start(&app, true)
+}
+
+fn valid_postgres_host(host: &str) -> bool {
+    !host.is_empty()
+        && host.len() <= 253
+        && host.is_ascii()
+        && host
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-'))
+        && !host.starts_with('.')
+        && !host.ends_with('.')
+        && !host.contains("..")
+        && host
+            .split('.')
+            .all(|label| !label.is_empty() && !label.starts_with('-') && !label.ends_with('-'))
+}
+
+#[cfg(test)]
+mod setup_tests {
+    use super::valid_postgres_host;
+
+    #[test]
+    fn validates_local_postgres_hosts() {
+        assert!(valid_postgres_host("127.0.0.1"));
+        assert!(valid_postgres_host("localhost"));
+        assert!(valid_postgres_host("db.example.com"));
+        assert!(!valid_postgres_host(""));
+        assert!(!valid_postgres_host("-postgres"));
+        assert!(!valid_postgres_host("postgres..internal"));
+        assert!(!valid_postgres_host("localhost;DROP DATABASE"));
+    }
 }
 
 fn main() {
@@ -111,6 +235,7 @@ fn main() {
             get_pending_offline_sales,
             mark_sales_as_synced,
             start_backend_server,
+            configure_database,
             backend::check_backend_server
         ])
         .build(tauri::generate_context!())

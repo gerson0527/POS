@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-configure-database"
+description = "Enables the configure_database command without any pre-configured scope."
+commands.allow = ["configure_database"]
+
+[[permission]]
+identifier = "deny-configure-database"
+description = "Denies the configure_database command without any pre-configured scope."
+commands.deny = ["configure_database"]

@@ -2493,7 +2493,7 @@ dependencies = [
 
 [[package]]
 name = "pos-retail-desktop"
-version = "3.0.2"
+version = "3.0.3"
 dependencies = [
  "chrono",
  "env_logger",

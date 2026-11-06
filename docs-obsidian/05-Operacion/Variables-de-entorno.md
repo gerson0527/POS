@@ -28,7 +28,7 @@ En el mismo ejemplo aparecen comentados nombres de compatibilidad/optativos: `DI
 
 | Grupo | Nombres |
 |---|---|
-| App/Auth/hosting | `POS_DESKTOP_ENV_FILE`, `VERCEL_ENV`, `VERCEL_URL`, `VERCEL_PROJECT_PRODUCTION_URL`, `V0_RUNTIME_URL`, `DATABASE_URL_UNPOOLED` |
+| App/Auth/hosting | `POS_DESKTOP_ENV_FILE`, `POS_DATABASE_MODE`, `POS_DATABASE_NAME`, `VERCEL_ENV`, `VERCEL_URL`, `VERCEL_PROJECT_PRODUCTION_URL`, `V0_RUNTIME_URL`, `DATABASE_URL_UNPOOLED` |
 | Tests DB | `TEST_DATABASE_URL`, `RUN_DB_TESTS` |
 | Semilla y setup | `SETUP_ADMIN_EMAIL`, `SETUP_ADMIN_NAME`, `SETUP_ADMIN_PASSWORD`, `SETUP_COMPANY_NAME`, `SETUP_COMPANY_NIT`, `SETUP_COMPANY_EMAIL`, `SETUP_COMPANY_PHONE`, `SETUP_COMPANY_ADDRESS` |
 | Asistente LLM/STT | `ASSISTANT_ENABLED`, `ASSISTANT_DRAFT_TTL_MINUTES`, `ASSISTANT_LLM_API_KEY`, `ASSISTANT_LLM_BASE_URL`, `ASSISTANT_LLM_MODEL`, `ASSISTANT_LLM_TIMEOUT_MS`, `ASSISTANT_STT_PROVIDER`, `ASSISTANT_STT_API_KEY`, `ASSISTANT_STT_MODEL`, `ASSISTANT_STT_BASE_URL` |
@@ -37,7 +37,7 @@ En el mismo ejemplo aparecen comentados nombres de compatibilidad/optativos: `DI
 | Render PDF | `LAMBDA_TASK_ROOT`, `VERCEL_REGION`, `PUPPETEER_SANDBOX` |
 | Rama heredada | `TAURI_DB_PATH` (consultada por `tenant-connection.ts`; no se halló uso activo de `getTenantDb()` en otros módulos) |
 
-`lib/assistant/config.ts` también lee variables WhatsApp, pese a que varios nombres aparecen solo comentados en `.env.example`. `src-tauri` mantiene su propio `.env` en el directorio de datos de la app.
+`lib/assistant/config.ts` también lee variables WhatsApp, pese a que varios nombres aparecen solo comentados en `.env.example`. `src-tauri` mantiene su propio `.env` en el directorio de datos de la app; `POS_DATABASE_MODE` indica si usa PostgreSQL del sistema (`system-local`), privado incluido (`bundled`) o remoto (`remote`), y `POS_DATABASE_NAME` registra el nombre elegido.
 
 ## Secretos y configuración por tenant
 

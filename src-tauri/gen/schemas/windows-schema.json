@@ -177,6 +177,114 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Enables the check_backend_server command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-check-backend-server",
+          "markdownDescription": "Enables the check_backend_server command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the configure_database command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-configure-database",
+          "markdownDescription": "Enables the configure_database command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the create_local_sale command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-create-local-sale",
+          "markdownDescription": "Enables the create_local_sale command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_pending_offline_sales command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-pending-offline-sales",
+          "markdownDescription": "Enables the get_pending_offline_sales command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the mark_sales_as_synced command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-mark-sales-as-synced",
+          "markdownDescription": "Enables the mark_sales_as_synced command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_cash_drawer_pulse command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-open-cash-drawer-pulse",
+          "markdownDescription": "Enables the open_cash_drawer_pulse command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the print_escpos_ticket command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-print-escpos-ticket",
+          "markdownDescription": "Enables the print_escpos_ticket command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the read_serial_scale_weight command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-serial-scale-weight",
+          "markdownDescription": "Enables the read_serial_scale_weight command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the start_backend_server command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-start-backend-server",
+          "markdownDescription": "Enables the start_backend_server command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the check_backend_server command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-check-backend-server",
+          "markdownDescription": "Denies the check_backend_server command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the configure_database command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-configure-database",
+          "markdownDescription": "Denies the configure_database command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the create_local_sale command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-create-local-sale",
+          "markdownDescription": "Denies the create_local_sale command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_pending_offline_sales command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-pending-offline-sales",
+          "markdownDescription": "Denies the get_pending_offline_sales command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the mark_sales_as_synced command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-mark-sales-as-synced",
+          "markdownDescription": "Denies the mark_sales_as_synced command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_cash_drawer_pulse command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-open-cash-drawer-pulse",
+          "markdownDescription": "Denies the open_cash_drawer_pulse command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the print_escpos_ticket command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-print-escpos-ticket",
+          "markdownDescription": "Denies the print_escpos_ticket command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the read_serial_scale_weight command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-serial-scale-weight",
+          "markdownDescription": "Denies the read_serial_scale_weight command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the start_backend_server command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-start-backend-server",
+          "markdownDescription": "Denies the start_backend_server command without any pre-configured scope."
+        },
+        {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",
           "type": "string",
           "const": "core:default",

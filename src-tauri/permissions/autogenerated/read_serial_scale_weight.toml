@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-read-serial-scale-weight"
+description = "Enables the read_serial_scale_weight command without any pre-configured scope."
+commands.allow = ["read_serial_scale_weight"]
+
+[[permission]]
+identifier = "deny-read-serial-scale-weight"
+description = "Denies the read_serial_scale_weight command without any pre-configured scope."
+commands.deny = ["read_serial_scale_weight"]

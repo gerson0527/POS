@@ -12,7 +12,7 @@ use tauri::Manager;
 
 const MAJOR: u32 = 17;
 const DEFAULT_PORT: u16 = 55432;
-const DATABASE: &str = "pos_retail_enterprise";
+pub const DEFAULT_DATABASE_NAME: &str = "pos_retail_enterprise";
 const ADMIN: &str = "pos_retail_admin";
 const USER: &str = "pos_retail_app";
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(15);
@@ -49,7 +49,7 @@ impl Credentials {
         if self.port < 1024
             || self.user != USER
             || self.admin != ADMIN
-            || self.database_name != DATABASE
+            || !valid_database_name(&self.database_name)
             || !secret(&self.password)
             || !secret(&self.admin_password)
             || self.password == self.admin_password
@@ -76,6 +76,13 @@ impl Credentials {
     fn secrets(&self) -> [&str; 2] {
         [&self.password, &self.admin_password]
     }
+}
+
+pub fn valid_database_name(name: &str) -> bool {
+    let mut bytes = name.bytes();
+    matches!(bytes.next(), Some(b'a'..=b'z' | b'A'..=b'Z' | b'_'))
+        && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+        && name.len() <= 63
 }
 
 struct Paths {
@@ -565,13 +572,21 @@ fn validate_version(data: &Path) -> Result<bool, String> {
     Ok(true)
 }
 
-fn credentials(paths: &Paths, initialized: bool) -> Result<Credentials, String> {
+fn credentials(
+    paths: &Paths,
+    initialized: bool,
+    database_name: &str,
+) -> Result<Credentials, String> {
+    if !valid_database_name(database_name) {
+        return Err("El nombre debe iniciar con letra o _ y contener solo letras, números y _ (máximo 63 caracteres).".into());
+    }
     if paths.credentials.exists() {
         let text = fs::read(&paths.credentials)
             .map_err(|e| format!("No se pudieron leer credenciales: {e}"))?;
-        let result: Credentials = serde_json::from_slice(&text)
+        let mut result: Credentials = serde_json::from_slice(&text)
             .map_err(|_| "credentials.json inválido; no se regenerará".to_string())?;
         result.validate()?;
+        result.database_name = database_name.to_string();
         return Ok(result);
     }
     if initialized {
@@ -587,7 +602,7 @@ fn credentials(paths: &Paths, initialized: bool) -> Result<Credentials, String> 
         password: random_secret()?,
         admin: ADMIN.into(),
         admin_password: random_secret()?,
-        database_name: DATABASE.into(),
+        database_name: database_name.into(),
     };
     result.validate()?;
     let temporary = Temporary::create(
@@ -828,8 +843,14 @@ fn bootstrap(running: &Running) -> Result<(), String> {
         &running.credentials.secrets(),
     )?;
     drop(password);
-    let script = Temporary::create(&running.paths.root, "bootstrap", br#"SELECT 'CREATE DATABASE pos_retail_enterprise OWNER pos_retail_app' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'pos_retail_enterprise') \gexec
-"#)?;
+    let database_name = &running.credentials.database_name;
+    let create_database = format!("CREATE DATABASE \"{database_name}\" OWNER {USER}");
+    let script_contents = format!(
+        "SELECT {} WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = {}) \\gexec\n",
+        sql_literal(&create_database),
+        sql_literal(database_name),
+    );
+    let script = Temporary::create(&running.paths.root, "bootstrap", script_contents.as_bytes())?;
     checked(
         psql(running, "postgres", true)
             .arg("--file")
@@ -839,8 +860,8 @@ fn bootstrap(running: &Running) -> Result<(), String> {
         COMMAND_TIMEOUT,
         &running.credentials.secrets(),
     )?;
-    let result = checked(psql(running, DATABASE, false).arg("--command").arg("SELECT current_database(), current_user, (SELECT rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls FROM pg_roles WHERE rolname = current_user), pg_get_userbyid((SELECT datdba FROM pg_database WHERE datname = current_database()))"), &running.paths, "app-ready", COMMAND_TIMEOUT, &running.credentials.secrets())?;
-    if result.stdout.trim() != format!("{DATABASE}\t{USER}\tf\t{USER}") {
+    let result = checked(psql(running, database_name, false).arg("--command").arg("SELECT current_database(), current_user, (SELECT rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls FROM pg_roles WHERE rolname = current_user), pg_get_userbyid((SELECT datdba FROM pg_database WHERE datname = current_database()))"), &running.paths, "app-ready", COMMAND_TIMEOUT, &running.credentials.secrets())?;
+    if result.stdout.trim() != format!("{database_name}\t{USER}\tf\t{USER}") {
         return Err(
             "La base/rol de aplicación existente no cumple el contrato privado; no se modificará"
                 .into(),
@@ -896,9 +917,15 @@ fn stop_running(running: &mut Running) -> Result<(), String> {
     Ok(())
 }
 
-pub fn ensure_running(app: &tauri::AppHandle) -> Result<ManagedConnection, String> {
+pub fn ensure_running(
+    app: &tauri::AppHandle,
+    database_name: &str,
+) -> Result<ManagedConnection, String> {
     if !cfg!(windows) {
         return Err("La distribución PostgreSQL privada requiere Windows".into());
+    }
+    if !valid_database_name(database_name) {
+        return Err("El nombre debe iniciar con letra o _ y contener solo letras, números y _ (máximo 63 caracteres).".into());
     }
     let state = app.state::<PostgresState>();
     let mut state = state
@@ -906,6 +933,7 @@ pub fn ensure_running(app: &tauri::AppHandle) -> Result<ManagedConnection, Strin
         .lock()
         .map_err(|_| "Estado PostgreSQL bloqueado por un fallo previo")?;
     if let Some(running) = state.as_mut() {
+        running.credentials.database_name = database_name.to_string();
         let _lock = instance_lock(&running.paths)?;
         if let Some(child) = running.child.as_mut() {
             if child.try_wait().map_err(|e| e.to_string())?.is_some() {
@@ -952,7 +980,7 @@ pub fn ensure_running(app: &tauri::AppHandle) -> Result<ManagedConnection, Strin
         }
     }
     let initialized = validate_version(&paths.data)?;
-    let credentials = credentials(&paths, initialized)?;
+    let credentials = credentials(&paths, initialized, database_name)?;
     let resource = app
         .path()
         .resource_dir()
@@ -1073,8 +1101,8 @@ mod tests {
     fn metadata_persists_and_does_not_rotate_passwords() {
         let directory = TestDirectory::new();
         let paths = directory.paths();
-        let first = credentials(&paths, false).unwrap();
-        let second = credentials(&paths, true).unwrap();
+        let first = credentials(&paths, false, DEFAULT_DATABASE_NAME).unwrap();
+        let second = credentials(&paths, true, DEFAULT_DATABASE_NAME).unwrap();
         assert_eq!(first.password, second.password);
         assert_eq!(first.admin_password, second.admin_password);
         assert_eq!(first.port, second.port);
@@ -1089,9 +1117,9 @@ mod tests {
     fn corrupt_metadata_and_missing_credentials_are_not_replaced() {
         let directory = TestDirectory::new();
         let paths = directory.paths();
-        assert!(credentials(&paths, true).is_err());
+        assert!(credentials(&paths, true, DEFAULT_DATABASE_NAME).is_err());
         fs::write(&paths.credentials, "{broken-secret").unwrap();
-        assert!(credentials(&paths, false).is_err());
+        assert!(credentials(&paths, false, DEFAULT_DATABASE_NAME).is_err());
         assert_eq!(
             fs::read_to_string(&paths.credentials).unwrap(),
             "{broken-secret"
@@ -1101,7 +1129,7 @@ mod tests {
     fn metadata_rejects_injection_and_incompatible_versions() {
         let directory = TestDirectory::new();
         let paths = directory.paths();
-        let mut metadata = credentials(&paths, false).unwrap();
+        let mut metadata = credentials(&paths, false, DEFAULT_DATABASE_NAME).unwrap();
         metadata.user = "unsafe';--".into();
         assert!(metadata.validate().is_err());
         metadata.user = USER.into();
@@ -1196,7 +1224,7 @@ mod tests {
     fn psql_uses_explicit_connection_and_no_password_arguments() {
         let directory = TestDirectory::new();
         let paths = directory.paths();
-        let credentials = credentials(&paths, false).unwrap();
+        let credentials = credentials(&paths, false, DEFAULT_DATABASE_NAME).unwrap();
         let running = Running {
             paths,
             credentials,
@@ -1206,7 +1234,7 @@ mod tests {
             child: None,
             identity: None,
         };
-        let cmd = psql(&running, DATABASE, false);
+        let cmd = psql(&running, DEFAULT_DATABASE_NAME, false);
         let args: Vec<_> = cmd
             .get_args()
             .map(|a| a.to_string_lossy().into_owned())
@@ -1221,6 +1249,25 @@ mod tests {
         assert!(cmd
             .get_envs()
             .any(|(k, v)| k == "PGCONNECT_TIMEOUT" && v == Some(std::ffi::OsStr::new("3"))));
+    }
+
+    #[test]
+    fn database_name_is_validated_and_can_be_selected_per_installation() {
+        assert!(valid_database_name("pos_retail_enterprise"));
+        assert!(valid_database_name("_pos2026"));
+        assert!(!valid_database_name(""));
+        assert!(!valid_database_name("9pos"));
+        assert!(!valid_database_name("pos-retail"));
+        assert!(!valid_database_name("pos\"; DROP DATABASE postgres;--"));
+        assert!(!valid_database_name(&"a".repeat(64)));
+
+        let directory = TestDirectory::new();
+        let paths = directory.paths();
+        let created = credentials(&paths, false, "ventas_local").unwrap();
+        assert_eq!(created.database_name, "ventas_local");
+        let selected = credentials(&paths, true, "pos_nueva").unwrap();
+        assert_eq!(selected.database_name, "pos_nueva");
+        assert!(selected.connection().database_url.ends_with("/pos_nueva"));
     }
     #[test]
     fn logs_redact_both_secrets() {

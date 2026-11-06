@@ -5,6 +5,7 @@ tags:
 estado: documentada
 ruta-codigo:
   - app/api/
+  - app/api/ready/route.ts
   - app/actions/
   - proxy.ts
   - lib/api/
@@ -20,7 +21,8 @@ La UI usa principalmente Server Actions. Los siguientes endpoints son los maneja
 |---|---|---|
 | `/api/auth/[...all]` | Delegado a Better Auth | Inicio de sesión/registro y demás endpoints auth |
 | `/api/health` | GET | `SELECT 1`; estado y uptime; respuesta 503 si DB falla |
-| `/api/setup` | GET, POST | Diagnóstico/configuración inicial DB y empresa; revisar el control de acceso de instalación |
+| `/api/ready` | GET | Disponibilidad del proceso Next, sin depender de la conexión a BD |
+| `/api/setup` | GET, POST | Diagnóstico/configuración inicial de BD y empresa; el escritorio permite elegir local/remota |
 | `/api/backup` | POST | Exporta SQL; `requireActor(['ADMIN','MANAGER'])` |
 | `/api/cron/fiscal-outbox` | GET, POST | Procesa cola; requiere `CRON_SECRET` |
 | `/api/channels/telegram` | GET, POST | Estado/webhook; POST verifica secreto de webhook antes de recibir mensajes |
