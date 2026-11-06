@@ -63,23 +63,40 @@ export function MovementsTable({
               header: 'TIPO OPERACIÓN',
               thClassName: 'px-5 py-3.5',
               cellClassName: 'px-5 py-3.5',
-              render: (m: any) =>
-                m.movementType === 'IN' ? (
-                  <span className="inline-flex items-center gap-1 text-success font-bold bg-ok-dim border border-ok-line px-2 py-0.5 rounded text-[10px]">
-                    <ArrowDownLeft className="w-3 h-3" /> ENTRADA
+              render: (m: any) => {
+                const type = String(m.movementType || '').toUpperCase()
+                if (type === 'IN' || type === 'RETURN') {
+                  return (
+                    <span className="inline-flex items-center gap-1 text-success font-bold bg-ok-dim border border-ok-line px-2 py-0.5 rounded text-[10px]">
+                      <ArrowDownLeft className="w-3 h-3" />
+                      {type === 'RETURN' ? 'DEVOLUCIÓN CLIENTE' : 'ENTRADA'}
+                    </span>
+                  )
+                }
+                if (type === 'OUT' || type === 'SALE') {
+                  return (
+                    <span className="inline-flex items-center gap-1 text-danger font-bold bg-alert-dim border border-alert-line px-2 py-0.5 rounded text-[10px]">
+                      <ArrowUpRight className="w-3 h-3" />
+                      {type === 'SALE' ? 'VENTA' : 'SALIDA'}
+                    </span>
+                  )
+                }
+                return (
+                  <span className="inline-flex items-center gap-1 text-warning font-bold bg-warn-bg-3 border border-warn-bg-5 px-2 py-0.5 rounded text-[10px]">
+                    AJUSTE
                   </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-danger font-bold bg-alert-dim border border-alert-line px-2 py-0.5 rounded text-[10px]">
-                    <ArrowUpRight className="w-3 h-3" /> SALIDA
-                  </span>
-                ),
+                )
+              },
             },
             {
               key: 'quantity',
               header: 'CANTIDAD',
               thClassName: 'px-5 py-3.5',
               cellClassName: 'px-5 py-3.5 text-fg',
-              render: (m: any) => `${m.quantity} unidades`,
+              render: (m: any) => {
+                const quantity = Number(m.quantity || 0)
+                return `${quantity > 0 ? '+' : ''}${quantity} unidades`
+              },
             },
             {
               key: 'notes',

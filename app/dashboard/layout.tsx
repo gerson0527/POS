@@ -16,6 +16,7 @@ import {
   UserCheck,
   Wallet,
   Tags,
+  RotateCcw,
   LogOut,
   Menu,
   X,
@@ -123,6 +124,7 @@ export default function DashboardLayout({
     { href: '/dashboard/pos', label: 'Punto de venta', icon: ShoppingCart },
     { href: '/dashboard/cashier', label: 'Cajas', icon: Wallet },
     { href: '/dashboard/invoices', label: 'Facturas', icon: FileText },
+    { href: '/dashboard/returns', label: 'Devoluciones', icon: RotateCcw },
     { href: '/dashboard/inventory', label: 'Inventario', icon: Package },
     { href: '/dashboard/categories', label: 'Categorías', icon: Tags },
     { href: '/dashboard/customers', label: 'Clientes', icon: UserCheck },
@@ -155,6 +157,7 @@ export default function DashboardLayout({
     if (pathname.includes('/pos')) return 'Punto de venta'
     if (pathname.includes('/cashier')) return 'Cajas'
     if (pathname.includes('/invoices')) return 'Facturas'
+    if (pathname.includes('/returns')) return 'Devoluciones a cliente'
     if (pathname.includes('/inventory')) return 'Inventario'
     if (pathname.includes('/categories')) return 'Categorías'
     if (pathname.includes('/customers')) return 'Clientes'

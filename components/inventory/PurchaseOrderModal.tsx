@@ -10,6 +10,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Label } from '@/components/ui/Label'
 import { useToast } from '@/components/ui/ToastProvider'
 import { createPurchaseOrder } from '@/app/actions/pos-actions'
+import { formatCOP } from '@/lib/utils/pos-utils'
 
 interface PurchaseOrderModalProps {
   open: boolean
@@ -48,7 +49,7 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
       products.map((p) => ({
         value: p.id,
         label: `${p.name}${p.sku ? ` (SKU: ${p.sku})` : ' (Sin SKU)'}`,
-        description: `Costo: $${p.cost || 0} · Precio Venta: $${p.unitPrice || 0}`,
+        description: `Costo: ${formatCOP(Number(p.cost) || 0)} · Precio Venta: ${formatCOP(Number(p.unitPrice) || 0)}`,
         searchText: `${p.name} ${p.sku || ''}`,
       })),
     [products]
@@ -232,6 +233,11 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
                 onChange={(e) => handlePOCostChange(e.target.value)}
                 className="bg-panel p-3 font-bold h-11"
               />
+              {Number(poForm.cost) > 0 && (
+                <span className="text-[10px] text-fg-muted font-mono block mt-1">
+                  {formatCOP(Number(poForm.cost))}
+                </span>
+              )}
             </div>
             <div>
               <Label className="mb-1.5">PRECIO VENTA ($)</Label>
@@ -242,6 +248,11 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
                 onChange={(e) => handlePOUnitPriceChange(e.target.value)}
                 className="bg-panel p-3 font-bold h-11"
               />
+              {Number(poForm.unitPrice) > 0 && (
+                <span className="text-[10px] text-success font-mono font-bold block mt-1">
+                  {formatCOP(Number(poForm.unitPrice))}
+                </span>
+              )}
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -301,6 +312,11 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
                 onChange={(e) => setPoForm({ ...poForm, total: e.target.value })}
                 className="border-accent text-accent font-bold text-sm"
               />
+              {Number(poForm.total) > 0 && (
+                <span className="text-[10px] text-accent font-mono font-bold block mt-1">
+                  {formatCOP(Number(poForm.total))}
+                </span>
+              )}
             </div>
           </div>
 
@@ -314,7 +330,7 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
                 className="accent-accent"
               />
               <Label htmlFor="updateCatalogProduct" className="cursor-pointer text-[11px]">
-                Actualizar automáticamente costo (${poForm.cost || 0}), precio venta (${poForm.unitPrice || 0}) y margen ({poForm.margin}%) en el catálogo de productos.
+                Actualizar automáticamente costo ({formatCOP(Number(poForm.cost) || 0)}), precio venta ({formatCOP(Number(poForm.unitPrice) || 0)}) y margen ({poForm.margin}%) en el catálogo de productos.
               </Label>
             </div>
           )}
@@ -360,7 +376,7 @@ export function PurchaseOrderModal({ open, onClose, suppliers, products, onSubmi
           </div>
 
           <p className="text-xs text-fg leading-relaxed">
-            El sistema detectó que para el producto <span className="text-accent font-bold">"{zeroProfitWarningModal.productName}"</span>, el <span className="font-bold text-fg">Precio de Venta (${zeroProfitWarningModal.unitPrice})</span> es menor o igual al <span className="font-bold text-red-soft">Costo Unitario (${zeroProfitWarningModal.cost})</span>.
+            El sistema detectó que para el producto <span className="text-accent font-bold">"{zeroProfitWarningModal.productName}"</span>, el <span className="font-bold text-fg">Precio de Venta ({formatCOP(zeroProfitWarningModal.unitPrice)})</span> es menor o igual al <span className="font-bold text-red-soft">Costo Unitario ({formatCOP(zeroProfitWarningModal.cost)})</span>.
           </p>
 
           <div className="bg-rose-surface border border-danger-bg rounded p-3 text-[11px] text-red-soft space-y-1">

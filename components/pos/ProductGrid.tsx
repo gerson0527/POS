@@ -52,10 +52,10 @@ export function ProductGrid({
               key={product.id}
               onClick={() => onAdd(product)}
               title={product.name}
-              className="bg-panel border border-line rounded-[6px] p-2.5 cursor-pointer hover:border-accent hover:bg-night-mid transition-[background-color,border-color,transform] duration-150 active:scale-[0.98] flex flex-col justify-between group h-[110px]"
+              className="bg-panel border border-line rounded-[6px] p-2.5 cursor-pointer hover:border-accent hover:bg-night-mid transition-[background-color,border-color,transform] duration-150 active:scale-[0.98] flex flex-col justify-between group h-[110px] min-w-0 overflow-hidden"
             >
-              <div>
-                <div className="flex items-center justify-between gap-1 mb-1">
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-1 mb-1 min-w-0">
                   <span className="font-mono text-[9px] text-fg-muted uppercase tracking-wider font-bold truncate">
                     {product.sku || `SKU-${product.id.substring(0, 6)}`}
                   </span>
@@ -69,11 +69,11 @@ export function ProductGrid({
                 </h3>
               </div>
 
-              <div className="pt-1.5 border-t border-line-soft flex items-center justify-between mt-auto">
-                <span className="font-mono text-[11px] font-bold text-success">
+              <div className="pt-1.5 border-t border-line-soft flex items-center justify-between gap-1 mt-auto min-w-0">
+                <span className="font-mono text-[11px] font-bold text-success truncate min-w-0" title={formatCOP(Number(product.unitPrice))}>
                   {formatCOP(Number(product.unitPrice))}
                 </span>
-                <div className="w-5 h-5 rounded bg-panel-hover border border-line-strong flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white font-bold text-xs transition-[background-color,color,transform] duration-150 group-active:scale-90">
+                <div className="w-5 h-5 shrink-0 rounded bg-panel-hover border border-line-strong flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white font-bold text-xs transition-[background-color,color,transform] duration-150 group-active:scale-90">
                   +
                 </div>
               </div>

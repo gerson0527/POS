@@ -22,6 +22,11 @@ const securityHeaders = [
 
 const nextConfig = {
   output: 'standalone',
+  // El asistente lee configuración del disco; no incluir instaladores ni builds
+  // nativos en el tracing de Next, que acabarían dentro del siguiente instalador.
+  outputFileTracingExcludes: {
+    '/*': ['./src-tauri/**/*', './dist-installers/**/*', './.next/standalone/**/*'],
+  },
   turbopack: {
     root: process.cwd(),
   },

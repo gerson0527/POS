@@ -80,10 +80,8 @@ describe('buildInvoiceReference', () => {
 })
 
 describe('buildPayments', () => {
-  it('sin pagos → efectivo por el total exacto', () => {
-    expect(buildPayments([], 119000)).toEqual([
-      { payment_form: '1', payment_method_code: '10', amount: '119000.00' },
-    ])
+  it('sin pagos no inventa un pago en efectivo', () => {
+    expect(() => buildPayments([], 119000)).toThrow(/no tiene pagos/)
   })
 
   it('un solo pago → el monto se fuerza al total exacto de la factura', () => {

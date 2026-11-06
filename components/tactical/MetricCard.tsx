@@ -62,42 +62,43 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        'bg-panel border border-line border-l-2 rounded-[6px] p-4 md:p-5 flex flex-col justify-between transition-[border-color,transform] duration-150 hover:border-line-strong hover:-translate-y-0.5',
+        'bg-panel border border-line border-l-2 rounded-[6px] p-4 md:p-5 flex flex-col justify-between transition-[border-color,transform] duration-150 hover:border-line-strong hover:-translate-y-0.5 min-w-0 overflow-hidden',
         accent.border,
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <span className="text-xs font-semibold text-fg-muted">
+      <div className="flex items-start justify-between gap-2 mb-2 min-w-0">
+        <span className="text-xs font-semibold text-fg-muted truncate" title={title}>
           {title}
         </span>
         {icon && <div className="text-fg-muted shrink-0">{icon}</div>}
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-1 min-w-0">
         <div
+          title={typeof value === 'string' || typeof value === 'number' ? String(value) : undefined}
           className={cn(
-            'text-2xl md:text-3xl font-bold tracking-tight text-fg',
+            'text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-fg truncate tabular-nums',
             accentValue && accent.text,
           )}
         >
           {value}
         </div>
         {(subtext || trend) && (
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs min-w-0 flex-wrap">
             {trend && (
-              <span className={`font-semibold inline-flex items-center gap-1 ${trendColor}`}>
+              <span className={`font-semibold inline-flex items-center gap-1 shrink-0 ${trendColor}`}>
                 {trendDirection === 'up' && <TrendingUp className="w-3 h-3" />}
                 {trendDirection === 'down' && <TrendingDown className="w-3 h-3" />}
                 {trend}
               </span>
             )}
-            {subtext && <span className="text-fg-muted truncate">{subtext}</span>}
+            {subtext && <span className="text-fg-muted truncate min-w-0" title={subtext}>{subtext}</span>}
           </div>
         )}
       </div>
 
-      {action && <div className="pt-2">{action}</div>}
+      {action && <div className="pt-2 min-w-0">{action}</div>}
     </div>
   )
 }

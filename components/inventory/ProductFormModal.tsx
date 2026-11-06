@@ -166,6 +166,11 @@ export function ProductFormModal({
                   }}
                   className="font-bold"
                 />
+                {Number(form.unitPrice) > 0 && (
+                  <span className="text-[10px] text-success font-mono font-bold block mt-1">
+                    {formatCOP(Number(form.unitPrice))}
+                  </span>
+                )}
               </div>
               <div>
                 <Label>Costo</Label>
@@ -180,6 +185,11 @@ export function ProductFormModal({
                     onChange({ ...form, cost: e.target.value, margin: m })
                   }}
                 />
+                {Number(form.cost) > 0 && (
+                  <span className="text-[10px] text-fg-muted font-mono block mt-1">
+                    {formatCOP(Number(form.cost))}
+                  </span>
+                )}
               </div>
               <div>
                 <Label>Margen %</Label>

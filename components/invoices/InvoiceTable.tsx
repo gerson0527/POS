@@ -243,6 +243,14 @@ export function InvoiceTable({
               const { fiscal } = invoiceFlags(inv)
               // Con CUFE ya emitida: nunca botón de transmitir (aunque el listado
               // estuviera desactualizado). Un clic no debe parecer que “manda todas”.
+              const hasPayment =
+                Array.isArray(inv.payments) &&
+                inv.payments.some((payment: { amount?: unknown }) => Number(payment?.amount) > 0)
+              if (!hasPayment) {
+                return (
+                  <span className="text-[10px] font-bold uppercase text-alert">Sin pago</span>
+                )
+              }
               if (fiscal.isAccepted || fiscal.isTransmitted) {
                 return (
                   <div className="flex flex-col items-center gap-1">

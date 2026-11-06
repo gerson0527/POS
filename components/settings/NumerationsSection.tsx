@@ -21,6 +21,7 @@ import {
 import {
   NUMERATION_DOCUMENT_TYPES,
   NUMERATION_DOCUMENT_TYPE_LABELS,
+  isInternalNumeration,
 } from '@/lib/fiscal/numeration'
 import { formatInvoiceNumber } from '@/lib/utils/pos-utils'
 import type { NumerationItem } from './types'
@@ -61,6 +62,7 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
   const [showNumerationForm, setShowNumerationForm] = useState(false)
   const [editingNumerationId, setEditingNumerationId] = useState<string | null>(null)
   const [numerationForm, setNumerationForm] = useState(EMPTY_NUMERATION_FORM)
+  const editingInternal = numerations.some(num => num.id === editingNumerationId && isInternalNumeration(num))
 
   useEffect(() => {
     let cancelled = false
@@ -132,7 +134,7 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
     setSaving(true)
     try {
       if (editingNumerationId) {
-        await updateNumeration(editingNumerationId, {
+        const result = await updateNumeration(editingNumerationId, {
           resolution: numerationForm.resolution,
           prefix: numerationForm.prefix,
           startRange: numerationForm.startRange,
@@ -140,9 +142,13 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
           currentNumber: numerationForm.currentNumber,
           documentType: numerationForm.documentType,
         })
+        if (!result.success) {
+          toast(result.message, 'error')
+          return
+        }
         toast('¡RESOLUCIÓN DIAN ACTUALIZADA CON ÉXITO!')
       } else {
-        await createNumeration({
+        const result = await createNumeration({
           resolution: numerationForm.resolution,
           prefix: numerationForm.prefix,
           startRange: numerationForm.startRange,
@@ -150,6 +156,10 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
           currentNumber: numerationForm.currentNumber,
           documentType: numerationForm.documentType,
         })
+        if (!result.success) {
+          toast(result.message, 'error')
+          return
+        }
         toast('¡RESOLUCIÓN FISCAL REGISTRADA CORRECTAMENTE!')
       }
       setShowNumerationForm(false)
@@ -164,7 +174,11 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
   async function handleToggleNumerationStatus(num: NumerationItem) {
     const newStatus = num.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
     try {
-      await updateNumeration(num.id, { status: newStatus })
+      const result = await updateNumeration(num.id, { status: newStatus })
+      if (!result.success) {
+        toast(result.message, 'error')
+        return
+      }
       toast(`¡RESOLUCIÓN ${num.resolution} CAMBIADA A ${newStatus}!`)
       await loadNumerationsData()
     } catch (err: any) {
@@ -175,7 +189,11 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
   async function handleDeleteNumeration(id: string) {
     if (!(await confirmAction({ title: 'CONFIRMAR ELIMINACIÓN', message: '¿Está seguro de eliminar esta resolución fiscal DIAN?', confirmLabel: 'ELIMINAR', tone: 'danger' }))) return
     try {
-      await deleteNumeration(id)
+      const result = await deleteNumeration(id)
+      if (!result.success) {
+        toast(result.message, 'error')
+        return
+      }
       toast('¡RESOLUCIÓN ELIMINADA CON ÉXITO!')
       await loadNumerationsData()
     } catch (err: any) {
@@ -287,6 +305,13 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
               </button>
             </div>
 
+            {editingInternal && (
+              <p className="text-[11px] text-fg-muted">
+                Puede cambiar el prefijo interno antes de emitir el primer comprobante. La referencia
+                VENTA-INTERNA-POS y el tipo de documento se conservan para identificar esta numeración.
+                Este prefijo no configura la numeración electrónica de Factus/DIAN.
+              </p>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>
@@ -297,6 +322,7 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
                   required
                   placeholder="Ej: 18760000001"
                   value={numerationForm.resolution}
+                  readOnly={editingInternal}
                   onChange={(e) => setNumerationForm({ ...numerationForm, resolution: e.target.value })}
                   className="bg-raised text-fg px-4 py-2 outline-none"
                 />
@@ -308,6 +334,7 @@ export function NumerationsSection({ refreshKey = 0, onLoadingChange }: Numerati
                 </Label>
                 <Select
                   value={numerationForm.documentType}
+                  disabled={editingInternal}
                   onChange={(e) => setNumerationForm({ ...numerationForm, documentType: e.target.value })}
                   className="bg-raised text-fg px-4 py-2 outline-none font-normal"
                 >

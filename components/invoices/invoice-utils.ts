@@ -87,7 +87,10 @@ export function fiscalUiStatus(inv: any) {
   // Sin cron local las ventas EN COLA se quedan eternamente: el usuario debe
   // poder reintentar desde /dashboard/invoices. Un rechazo DIAN no se reintenta
   // con el mismo payload (requiere corrección / nota crédito).
-  const canTransmit = !cufe && !isRejected && !noProviderConfigured
+  const hasPayment = Array.isArray(inv?.payments)
+    ? inv.payments.some((payment: { amount?: unknown }) => Number(payment?.amount) > 0)
+    : Boolean(inv?.paymentMethod) && inv.paymentMethod !== 'SIN PAGO'
+  const canTransmit = hasPayment && !cufe && !isRejected && !noProviderConfigured
   // No mostrar errores viejos del outbox si la factura ya tiene CUFE o el
   // evento quedó DONE (p. ej. cliente se completó después del primer fallo).
   const outboxLastError =

@@ -359,37 +359,37 @@ export default function CashierPage() {
                 )}
               </div>
 
-              <div className="bg-surface border border-line-dim rounded-lg p-3">
-                <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">BASE INICIAL</p>
-                <p className="text-base font-black text-fg mt-1">
+              <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+                <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">BASE INICIAL</p>
+                <p className="text-base font-black text-fg mt-1 truncate" title={formatCOP(activeSessionSummary.openingBase)}>
                   {formatCOP(activeSessionSummary.openingBase)}
                 </p>
               </div>
 
-              <div className="bg-surface border border-line-dim rounded-lg p-3">
-                <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">EFECTIVO ({activeSessionSummary.cashCount || 0})</p>
-                <p className="text-base font-black text-success mt-1">
+              <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+                <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">EFECTIVO ({activeSessionSummary.cashCount || 0})</p>
+                <p className="text-base font-black text-success mt-1 truncate" title={formatCOP(activeSessionSummary.cashSales)}>
                   {formatCOP(activeSessionSummary.cashSales)}
                 </p>
               </div>
 
-              <div className="bg-surface border border-line-dim rounded-lg p-3">
-                <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">TRANSFERENCIAS</p>
-                <p className="text-base font-black text-cyan mt-1">
+              <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+                <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">TRANSFERENCIAS</p>
+                <p className="text-base font-black text-cyan mt-1 truncate" title={formatCOP(activeSessionSummary.transferSales || 0)}>
                   {formatCOP(activeSessionSummary.transferSales || 0)}
                 </p>
               </div>
 
-              <div className="bg-surface border border-line-dim rounded-lg p-3">
-                <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">T. CRÉDITO ({activeSessionSummary.creditCardCount || 0})</p>
-                <p className="text-base font-black text-warning mt-1">
+              <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+                <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">T. CRÉDITO ({activeSessionSummary.creditCardCount || 0})</p>
+                <p className="text-base font-black text-warning mt-1 truncate" title={formatCOP(activeSessionSummary.creditCardSales || activeSessionSummary.cardSales)}>
                   {formatCOP(activeSessionSummary.creditCardSales || activeSessionSummary.cardSales)}
                 </p>
               </div>
 
-              <div className="bg-surface border border-line-dim rounded-lg p-3">
-                <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">T. DÉBITO ({activeSessionSummary.debitCardCount || 0})</p>
-                <p className="text-base font-black text-purple mt-1">
+              <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+                <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">T. DÉBITO ({activeSessionSummary.debitCardCount || 0})</p>
+                <p className="text-base font-black text-purple mt-1 truncate" title={formatCOP(activeSessionSummary.debitCardSales || 0)}>
                   {formatCOP(activeSessionSummary.debitCardSales || 0)}
                 </p>
               </div>
@@ -490,28 +490,28 @@ export default function CashierPage() {
           </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-surface border border-line-dim rounded-lg p-3">
-            <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">VENTAS DEL DÍA</p>
-            <p className="text-base font-black text-success mt-1">
+          <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+            <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">VENTAS DEL DÍA</p>
+            <p className="text-base font-black text-success mt-1 truncate" title={formatCOP(consolidation.totalSales)}>
               {formatCOP(consolidation.totalSales)}
             </p>
-            <p className="text-[10px] text-fg-muted">{consolidation.salesCount} ventas</p>
+            <p className="text-[10px] text-fg-muted truncate">{consolidation.salesCount} ventas</p>
           </div>
-          <div className="bg-surface border border-line-dim rounded-lg p-3">
-            <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">EFECTIVO</p>
-            <p className="text-base font-black text-fg mt-1">
+          <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+            <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">EFECTIVO</p>
+            <p className="text-base font-black text-fg mt-1 truncate" title={formatCOP(consolidation.cashSales)}>
               {formatCOP(consolidation.cashSales)}
             </p>
           </div>
-          <div className="bg-surface border border-line-dim rounded-lg p-3">
-            <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">TARJETA / TRANSFERENCIA</p>
-            <p className="text-base font-black text-fg mt-1">
+          <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+            <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">TARJETA / TRANSFERENCIA</p>
+            <p className="text-base font-black text-fg mt-1 truncate" title={formatCOP(consolidation.cardSales + consolidation.transferSales)}>
               {formatCOP(consolidation.cardSales + consolidation.transferSales)}
             </p>
           </div>
-          <div className="bg-surface border border-line-dim rounded-lg p-3">
-            <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">CRÉDITO</p>
-            <p className="text-base font-black text-fg mt-1">
+          <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+            <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">CRÉDITO</p>
+            <p className="text-base font-black text-fg mt-1 truncate" title={formatCOP(consolidation.creditSales)}>
               {formatCOP(consolidation.creditSales)}
             </p>
           </div>
@@ -586,7 +586,7 @@ export default function CashierPage() {
               render: (h: any) => {
                 const diff = Number(h.difference || 0)
                 if (h.status === 'OPEN') return <span className="text-fg-muted">En curso...</span>
-                if (diff === 0) return <span className="text-ok">✓ Exacto ($0)</span>
+                if (diff === 0) return <span className="text-ok">✓ Exacto ({formatCOP(0)})</span>
                 if (diff > 0) return <span className="text-cyan">Sobrante +{formatCOP(diff)}</span>
                 return <span className="text-alert">Faltante -{formatCOP(Math.abs(diff))}</span>
               },
@@ -764,6 +764,11 @@ export default function CashierPage() {
                     className="pl-7 font-bold text-base"
                   />
                 </div>
+                {Number(openingBalance) > 0 && (
+                  <p className="text-[11px] text-success font-bold mt-1 font-mono">
+                    {formatCOP(Number(openingBalance))}
+                  </p>
+                )}
                 <p className="text-[10px] text-fg-muted mt-1">
                   Monto en efectivo asignado para dar cambio / vueltas al inicio de la jornada.
                 </p>
@@ -853,6 +858,11 @@ export default function CashierPage() {
                   className="pl-7 font-bold text-base"
                 />
               </div>
+              {Number(movementAmount) > 0 && (
+                <p className="text-[11px] text-success font-bold mt-1 font-mono">
+                  {formatCOP(Number(movementAmount))}
+                </p>
+              )}
             </div>
 
             <div>
@@ -939,6 +949,11 @@ export default function CashierPage() {
                     className="w-full bg-input border border-line focus:border-alert p-2.5 pl-7 rounded text-fg font-semibold text-lg"
                   />
                 </div>
+                {Number(actualCash) > 0 && (
+                  <p className="text-[11px] text-accent font-bold mt-1 font-mono">
+                    {formatCOP(Number(actualCash))}
+                  </p>
+                )}
               </div>
 
               {/* Resultado Arqueo */}
@@ -951,7 +966,7 @@ export default function CashierPage() {
                 <span>RESULTADO DEL ARQUEO:</span>
                 <span>
                   {currentDiff === 0
-                    ? '✓ CAJA CUADRADA EXACTA ($0)'
+                    ? `✓ CAJA CUADRADA EXACTA (${formatCOP(0)})`
                     : currentDiff > 0
                       ? `SOBRANTE: +${formatCOP(currentDiff)}`
                       : `FALTANTE: -${formatCOP(Math.abs(currentDiff))}`}
@@ -1130,7 +1145,7 @@ export default function CashierPage() {
                   <span>
                     {selectedZReport.difference !== undefined
                       ? formatCOP(selectedZReport.difference)
-                      : '$0'}
+                      : formatCOP(0)}
                   </span>
                 </div>
               </div>

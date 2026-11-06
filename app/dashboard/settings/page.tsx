@@ -9,6 +9,7 @@ import {
   Zap,
   RefreshCw,
   Bot,
+  DatabaseBackup,
 } from 'lucide-react'
 import { TacticalButton } from '@/components/tactical/TacticalButton'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -18,6 +19,7 @@ import { LocationsSection } from '@/components/settings/LocationsSection'
 import { NumerationsSection } from '@/components/settings/NumerationsSection'
 import { FactusSection } from '@/components/settings/FactusSection'
 import { AssistantSection } from '@/components/settings/AssistantSection'
+import { BackupSection } from '@/components/settings/BackupSection'
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general')
@@ -30,6 +32,7 @@ export default function SettingsPage() {
     { id: 'numeration', label: 'RESOLUCIONES DIAN', icon: Hash },
     { id: 'factus', label: 'FACTURACIÓN ELECTRÓNICA (PROVEEDOR)', icon: Zap },
     { id: 'assistant', label: 'ASISTENTE (TELEGRAM / WHATSAPP)', icon: Bot },
+    { id: 'backup', label: 'COPIA DE SEGURIDAD', icon: DatabaseBackup },
   ]
 
   return (
@@ -84,6 +87,8 @@ export default function SettingsPage() {
         {activeTab === 'assistant' && (
           <AssistantSection refreshKey={refreshKey} onLoadingChange={setLoading} />
         )}
+
+        {activeTab === 'backup' && <BackupSection />}
       </div>
     </div>
   )

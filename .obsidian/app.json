@@ -1,0 +1,20 @@
+{
+  "alwaysUpdateLinks": true,
+  "attachmentFolderPath": "docs/obsidian/attachments",
+  "newFileLocation": "folder",
+  "newFileFolderPath": "docs/obsidian",
+  "userIgnoreFilters": [
+    ".git",
+    ".next",
+    ".vercel",
+    ".cache",
+    ".zed",
+    ".env",
+    ".env.local",
+    ".env.*",
+    "node_modules",
+    "out",
+    "dist-installers",
+    "target"
+  ]
+}

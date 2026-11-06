@@ -170,8 +170,12 @@ export async function getAllInvoices() {
     return m
   }
 
-  const invoices = sales.map((s) => {
+  const invoices = sales.flatMap((s) => {
     const payments = paymentsBySale.get(s.id) || []
+    const status = String(s.status || '').toUpperCase()
+    const hasPayment = payments.some((payment) => Number(payment.amount) > 0)
+    // Una venta sin pago (borrador al abrir el cobro, o anulada) no es factura.
+    if ((status !== 'COMPLETED' && status !== 'CONFIRMED') || !hasPayment) return []
     const items = itemsBySale.get(s.id) || []
 
     const primaryPayment = payments[0] || null
@@ -183,7 +187,7 @@ export async function getAllInvoices() {
         ? `MIXTO (${mappedMethods.join(' + ')})`
         : primaryPayment
         ? mapMethodName(primaryPayment.method)
-        : 'SIN PAGO'
+        : ''
 
     const paymentReferenceLabel =
       primaryPayment?.reference ? primaryPayment.reference : ''

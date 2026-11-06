@@ -5,6 +5,8 @@
 > y verificado contra la documentación vigente de Factus
 > (`developers.factus.com.co/facturas/crear-y-validar`, Preguntas frecuentes).
 >
+> **Nota de vigencia (2026-11-06):** análisis histórico. El árbol actual contiene cambios posteriores que contradicen algunos hallazgos, entre ellos procesamiento/reconciliación del outbox y un cron configurado en `vercel.json`. No tomar la lista de fallos como estado actual sin volver a verificar cada punto contra el código. Ver [[ARQUITECTURA_POS_DIAN_COLOMBIA]] para el mapa vigente.
+>
 > **Alcance acordado:** solo el flujo venta → factura → persistencia del resultado de
 > Factus. Sin voz, sin chat, sin agentes de IA, sin reemplazar Factus.
 > Nota para fases futuras: el proveedor de IA elegido será **opencode**; la

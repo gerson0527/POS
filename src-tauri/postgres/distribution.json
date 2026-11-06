@@ -1,0 +1,37 @@
+{
+  "version": "17.11",
+  "revision": "5",
+  "platform": "windows-x64",
+  "archive": "postgresql-17.11-5-windows-x64-binaries.zip",
+  "url": "https://get.enterprisedb.com/postgresql/postgresql-17.11-5-windows-x64-binaries.zip",
+  "sha256": "80379b2c04d51c30225532e0ae04509899141e9957ed096fe749d7fd9df8f82f",
+  "checksumSource": "https://get.enterprisedb.com/postgresql/postgresql-17.11-5-windows-x64-binaries.zip.sha256",
+  "source": "https://www.enterprisedb.com/download-postgresql-binaries",
+  "requiredTools": [
+    "postgres.exe",
+    "pg_ctl.exe",
+    "initdb.exe",
+    "psql.exe",
+    "pg_isready.exe"
+  ],
+  "prerequisites": {
+    "windows": "Windows x64 with Universal CRT (Windows 10/Server 2016 or newer)",
+    "visualCpp": "Microsoft Visual C++ 2015-2022 compatible x64 runtime; NOT supplied by this staging script",
+    "observedVisualCppImports": [
+      "VCRUNTIME140.dll",
+      "VCRUNTIME140_1.dll",
+      "MSVCP140.dll"
+    ],
+    "universalCrt": "api-ms-win-crt-* imports require the Windows Universal CRT",
+    "documentation": "https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files",
+    "installation": "Parent packaging must provide a licensed app-local runtime for no-admin offline deployment. Never install a system redistributable here."
+  },
+  "licensing": {
+    "notices": [
+      "licenses/server_license.txt",
+      "licenses/commandlinetools_3rd_party_licenses.txt"
+    ],
+    "review": "Preserve all notices. Third-party libraries include LGPL components: corresponding-source/relinking obligations require distributor review before shipping. Copying notices alone is not a source offer.",
+    "postgresLicense": "https://www.postgresql.org/about/licence/"
+  }
+}

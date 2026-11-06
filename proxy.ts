@@ -34,8 +34,35 @@ function unauthorizedResponse() {
   )
 }
 
+const TAURI_ORIGINS = new Set([
+  'tauri://localhost',
+  'http://tauri.localhost',
+  'https://tauri.localhost',
+])
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  if (process.env.POS_DESKTOP_ENV_FILE && (pathname === '/api/health' || pathname === '/api/setup')) {
+    const origin = request.headers.get('origin')
+    const isSetup = pathname === '/api/setup'
+    const isAllowedMethod = request.method === 'GET' || (isSetup && request.method === 'POST')
+    const isPreflight = request.method === 'OPTIONS'
+    const allowedOrigin = origin !== null && TAURI_ORIGINS.has(origin)
+    const response = isPreflight && allowedOrigin
+      ? new NextResponse(null, { status: 204 })
+      : NextResponse.next()
+
+    response.headers.append('Vary', 'Origin')
+    if (allowedOrigin && (isAllowedMethod || isPreflight)) {
+      response.headers.set('Access-Control-Allow-Origin', origin)
+      if (isPreflight) {
+        response.headers.set('Access-Control-Allow-Methods', isSetup ? 'GET, POST, OPTIONS' : 'GET, OPTIONS')
+        if (isSetup) response.headers.set('Access-Control-Allow-Headers', 'Content-Type')
+      }
+    }
+    return addSecurityHeaders(response)
+  }
 
   const isPublicPath = PUBLIC_PATHS.some(path => pathname.startsWith(path))
   if (isPublicPath) {

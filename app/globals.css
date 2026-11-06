@@ -531,12 +531,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   /* 2) ...salvo el área imprimible marcada con #invoice-printable / #z-report-printable */
   #invoice-printable,
   #invoice-printable *,
+  #return-printable,
+  #return-printable *,
   #z-report-printable,
   #z-report-printable * {
     visibility: visible !important;
   }
 
   #invoice-printable,
+  #return-printable,
   #z-report-printable {
     position: absolute !important;
     top: 0 !important;
@@ -561,6 +564,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
   /* ...salvo dentro del área imprimible: ahí sí se descartan los controles */
   #invoice-printable .no-print,
+  #return-printable .no-print,
   #z-report-printable .no-print {
     display: none !important;
   }

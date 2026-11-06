@@ -1,7 +1,7 @@
 // Servicio de dominio de ventas. Recibe el actor explícito (userId, tenantId,
 // rol): no lee cookies ni headers, así que lo pueden invocar las Server Actions
 // y los canales externos (bot) con exactamente las mismas validaciones.
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
 import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
@@ -22,6 +22,92 @@ import { getInvoiceProvider } from '@/lib/invoicing'
 import { computeCreditDueDate, DEFAULT_CREDIT_TERM_DAYS } from '@/lib/credit/terms'
 
 export const SALE_ROLES = ['ADMIN', 'MANAGER', 'CASHIER'] as const
+
+/** Anula borradores del turno que nunca recibieron pago, para que no aparezcan como factura. */
+async function cancelUnpaidDrafts(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tenantId: string,
+  cashierSessionId: string
+) {
+  const drafts = await tx
+    .select({ id: schema.sale.id })
+    .from(schema.sale)
+    .where(
+      and(
+        eq(schema.sale.tenantId, tenantId),
+        eq(schema.sale.cashierSessionId, cashierSessionId),
+        eq(schema.sale.status, SaleStatus.DRAFT)
+      )
+    )
+
+  if (!drafts.length) return
+
+  const ids = drafts.map((draft) => draft.id)
+  const paid = await tx
+    .select({ saleId: schema.payment.saleId })
+    .from(schema.payment)
+    .where(inArray(schema.payment.saleId, ids))
+  const paidIds = new Set(paid.map((row) => row.saleId))
+  const cancelIds = ids.filter((id) => !paidIds.has(id))
+  if (!cancelIds.length) return
+
+  await tx
+    .update(schema.sale)
+    .set({
+      status: SaleStatus.CANCELLED,
+      notes: sql`trim(both ' ' from concat(coalesce(${schema.sale.notes}, ''), ' [ANULADA SIN PAGO]'))`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(schema.sale.tenantId, tenantId),
+        eq(schema.sale.status, SaleStatus.DRAFT),
+        inArray(schema.sale.id, cancelIds)
+      )
+    )
+}
+
+export async function cancelUnpaidDraft(actor: ActorContext, saleId: string) {
+  assertActorRole(actor, [...SALE_ROLES])
+  const { userId, tenantId, role } = actor
+
+  await db.transaction(async (tx) => {
+    const rows = await tx
+      .select()
+      .from(schema.sale)
+      .where(and(eq(schema.sale.id, saleId), eq(schema.sale.tenantId, tenantId)))
+      .limit(1)
+      .for('update')
+
+    const sale = rows[0]
+    if (!sale || sale.status !== SaleStatus.DRAFT) return
+    if (role === 'CASHIER' && sale.userId !== userId) {
+      throw new Error('No puede anular una venta de otro cajero.')
+    }
+
+    const payments = await tx
+      .select({ id: schema.payment.id })
+      .from(schema.payment)
+      .where(eq(schema.payment.saleId, saleId))
+      .limit(1)
+    if (payments.length) return
+
+    await tx
+      .update(schema.sale)
+      .set({
+        status: SaleStatus.CANCELLED,
+        notes: sql`trim(both ' ' from concat(coalesce(${schema.sale.notes}, ''), ' [ANULADA SIN PAGO]'))`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(schema.sale.id, saleId),
+          eq(schema.sale.tenantId, tenantId),
+          eq(schema.sale.status, SaleStatus.DRAFT)
+        )
+      )
+  })
+}
 
 export interface CreateSaleResult {
   saleId: string
@@ -107,6 +193,10 @@ export async function createSale(
   const result = await db.transaction(async (tx) => {
     // Serializa la asignación de ticket por tenant dentro de la transacción.
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${tenantId}))`)
+
+    // Un borrador se crea al abrir el cobro. Si el cajero vuelve atrás o
+    // factura otra vez, ese ticket no puede quedar como factura sin pago.
+    await cancelUnpaidDrafts(tx, tenantId, session.id)
 
     const maxTicketResult = await tx
       .select({ maxTicket: sql<number>`coalesce(max(${schema.sale.ticketNumber}), 0)` })

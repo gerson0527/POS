@@ -1,6 +1,6 @@
 [package]
 name = "pos-retail-desktop"
-version = "3.0.0"
+version = "3.0.2"
 description = "Enterprise POS Desktop Application Container (Tauri 2.x)"
 authors = ["POS Retail Enterprise Team"]
 edition = "2021"
@@ -18,3 +18,4 @@ serialport = "4.3"
 chrono = { version = "0.4", features = ["serde"] }
 log = "0.4"
 env_logger = "0.11"
+getrandom = "0.2"

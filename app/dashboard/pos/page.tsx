@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { AnimatePresence } from 'motion/react'
-import { createSale, getProducts, completeSale, generateInvoice, getCustomers, createCustomer, getCurrentCashierSessionSummary } from '@/app/actions/pos-actions'
+import { createSale, cancelUnpaidDraft, getProducts, completeSale, generateInvoice, getCustomers, createCustomer, getCurrentCashierSessionSummary } from '@/app/actions/pos-actions'
 import { isSessionError, redirectToLogin } from '@/lib/hooks/use-protected-query'
 import { useCart } from '@/lib/hooks/use-cart'
 import { usePersistentState } from '@/lib/hooks/use-persistent-state'
@@ -548,7 +548,14 @@ export default function DashboardPOSPage() {
           total={totals.total}
           loading={loading}
           customerCredit={customerCreditInfo}
-          onBack={() => setStep('shopping')}
+          onBack={() => {
+            const pendingSaleId = saleId
+            setStep('shopping')
+            setSaleId(null)
+            if (pendingSaleId) {
+              void cancelUnpaidDraft(pendingSaleId)
+            }
+          }}
           onComplete={handleCompleteSale}
         />
       )}

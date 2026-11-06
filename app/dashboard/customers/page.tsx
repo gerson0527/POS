@@ -327,7 +327,7 @@ export default function CustomersPage() {
       />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <MetricCard title="TOTAL REGISTRADOS" value={stats.total} icon={<UserCheck className="w-4 h-4" />} accentColor="neutral" accentValue />
         <MetricCard title="ACTIVOS" value={stats.active} icon={<CheckCircle2 className="w-4 h-4" />} accentColor="green" accentValue />
         <MetricCard title="CON CRÉDITO" value={stats.withCredit} icon={<Wallet className="w-4 h-4" />} accentColor="orange" accentValue />
@@ -690,20 +690,24 @@ export default function CustomersPage() {
             ) : creditDetail ? (
               <>
                 {/* Credit Stats */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-input border border-line rounded p-3">
-                    <div className="text-[10px] text-fg-muted uppercase font-bold">Cupo Asignado</div>
-                    <div className="text-lg font-bold text-accent mt-1">{formatCOP(Number(creditDetail.customer.creditLimit))}</div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-input border border-line rounded p-3 min-w-0 overflow-hidden">
+                    <div className="text-[10px] text-fg-muted uppercase font-bold truncate">Cupo Asignado</div>
+                    <div className="text-lg font-bold text-accent mt-1 truncate" title={formatCOP(Number(creditDetail.customer.creditLimit))}>
+                      {formatCOP(Number(creditDetail.customer.creditLimit))}
+                    </div>
                   </div>
-                  <div className="bg-input border border-line rounded p-3">
-                    <div className="text-[10px] text-fg-muted uppercase font-bold">Saldo Actual</div>
-                    <div className={`text-lg font-bold mt-1 ${Number(creditDetail.customer.creditBalance) > 0 ? 'text-alert' : 'text-ok'}`}>
+                  <div className="bg-input border border-line rounded p-3 min-w-0 overflow-hidden">
+                    <div className="text-[10px] text-fg-muted uppercase font-bold truncate">Saldo Actual</div>
+                    <div className={`text-lg font-bold mt-1 truncate ${Number(creditDetail.customer.creditBalance) > 0 ? 'text-alert' : 'text-ok'}`} title={formatCOP(Number(creditDetail.customer.creditBalance))}>
                       {formatCOP(Number(creditDetail.customer.creditBalance))}
                     </div>
                   </div>
-                  <div className="bg-input border border-line rounded p-3">
-                    <div className="text-[10px] text-fg-muted uppercase font-bold">Disponible</div>
-                    <div className="text-lg font-bold text-ok mt-1">{formatCOP(creditDetail.available)}</div>
+                  <div className="bg-input border border-line rounded p-3 min-w-0 overflow-hidden">
+                    <div className="text-[10px] text-fg-muted uppercase font-bold truncate">Disponible</div>
+                    <div className="text-lg font-bold text-ok mt-1 truncate" title={formatCOP(creditDetail.available)}>
+                      {formatCOP(creditDetail.available)}
+                    </div>
                   </div>
                 </div>
 

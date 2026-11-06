@@ -25,6 +25,8 @@ npm-debug.log*
 tsconfig.tsbuildinfo
 packages/*/dist/
 src-tauri/target/
+src-tauri/backend/
+src-tauri/.backend-*/
 
 # Neon CLI context (IDs de proyecto, no secretos)
 .neon/

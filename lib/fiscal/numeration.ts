@@ -93,5 +93,5 @@ export function normalizeNumerationInput(input: NumerationInput): NumerationValu
 }
 
 export function isInternalNumeration(values: { resolution: string; prefix: string }): boolean {
-  return values.resolution === INTERNAL_NUMERATION.resolution && values.prefix === INTERNAL_NUMERATION.prefix
+  return values.resolution === INTERNAL_NUMERATION.resolution
 }

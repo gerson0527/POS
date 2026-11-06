@@ -7,12 +7,11 @@ REM Inicia el contenedor nativo de escritorio Tauri 2.x (Rust + SQLite)
 REM
 REM Ejecuta automaticamente:
 REM   1. Verificacion de Rust/Cargo
-REM   2. Cierre de procesos bloqueados
-REM   3. Verificacion de conexion a PostgreSQL
-REM   4. Verificacion de configuracion de Factus/DIAN
-REM   5. Compilacion de paquetes compartidos del monorepo
-REM   6. Generacion de iconos Tauri (si faltan)
-REM   7. Arranque de la aplicacion Tauri
+REM   2. Verificacion de Base de Datos y .env (con Setup interactivo)
+REM   3. Compilacion de paquetes compartidos del monorepo
+REM   4. Generacion de iconos Tauri (si faltan)
+REM   5. Recordatorio de facturacion DIAN
+REM   6. Arranque de la aplicacion Tauri
 REM ============================================================
 
 echo.
@@ -30,6 +29,11 @@ REM Cerrar procesos de compilacion Rust bloqueados previamente
 taskkill /F /IM cargo.exe >nul 2>&1
 taskkill /F /IM rustc.exe >nul 2>&1
 
+REM Liberar puerto 3000 de servidores dev previos para que Next.js inicie limpiamente
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000 ^| findstr LISTENING') do (
+    taskkill /F /PID %%a >nul 2>&1
+)
+
 REM 1. Verificar disponibilidad de Rust y Cargo
 echo [1/6] Verificando entorno de compilacion Rust nativo...
 where cargo >nul 2>&1
@@ -43,14 +47,28 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-REM 2. Verificar conexion a base de datos PostgreSQL
+REM 2. Verificar conexion a base de datos PostgreSQL y .env
 echo [2/6] Verificando conexion a Base de Datos PostgreSQL...
+if not exist ".env" (
+    echo.
+    echo       AVISO: No se encontro el archivo .env de configuracion.
+    set /p RUN_SETUP="      Deseas ejecutar el Asistente de Configuracion de Base de Datos ahora? (S/n): "
+    if /i not "!RUN_SETUP!"=="n" (
+        call setup-database.bat
+    )
+)
+
 node scripts/check-db.js
 if errorlevel 1 (
     echo.
     echo       AVISO CRITICO: La base de datos no respondio correctamente.
-    echo       Verifique que el servicio PostgreSQL este iniciado en el puerto 5432.
-    echo.
+    set /p RUN_SETUP_RETRY="      Deseas ejecutar el Asistente para configurar la conexion ahora? (S/n): "
+    if /i not "!RUN_SETUP_RETRY!"=="n" (
+        call setup-database.bat
+        echo.
+        echo       Reverificando base de datos...
+        node scripts/check-db.js
+    )
 ) else (
     REM Si la BD responde, verificar configuracion de Factus/DIAN
     echo.
@@ -64,14 +82,6 @@ echo [3/6] Verificando paquetes compartidos del monorepo...
 if not exist "packages\shared-domain\dist" (
     echo       Construyendo @pos/shared-domain...
     call npx tsc -p packages/shared-domain/tsconfig.json
-)
-if not exist "packages\fiscal-dian\dist" (
-    echo       Construyendo @pos/fiscal-dian...
-    call npx tsc -p packages/fiscal-dian/tsconfig.json
-)
-if not exist "packages\hardware-sdk\dist" (
-    echo       Construyendo @pos/hardware-sdk...
-    call npx tsc -p packages/hardware-sdk/tsconfig.json
 )
 if not exist "packages\sync-engine\dist" (
     echo       Construyendo @pos/sync-engine...

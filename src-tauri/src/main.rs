@@ -2,6 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::{Deserialize, Serialize};
+mod backend;
+mod postgres;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SaleLineDTO {
@@ -54,14 +56,18 @@ fn create_local_sale(_dto: CreateSaleDTO) -> Result<SaleResult, String> {
 
 #[tauri::command]
 fn print_escpos_ticket(_sale_data: serde_json::Value) -> Result<bool, String> {
-    println!("[Rust Native Hardware] Building raw ESC/POS binary buffer for thermal receipt printer...");
+    println!(
+        "[Rust Native Hardware] Building raw ESC/POS binary buffer for thermal receipt printer..."
+    );
     println!("[Rust Native Hardware] Emitting ESC/POS init: 0x1B 0x40 | Paper Cut: 0x1D 0x56 0x42");
     Ok(true)
 }
 
 #[tauri::command]
 fn open_cash_drawer_pulse() -> Result<bool, String> {
-    println!("[Rust Native Hardware] Sending 24V RJ11 pulse to cash drawer relay (0x1B 0x70 0x00)...");
+    println!(
+        "[Rust Native Hardware] Sending 24V RJ11 pulse to cash drawer relay (0x1B 0x70 0x00)..."
+    );
     Ok(true)
 }
 
@@ -78,20 +84,41 @@ fn get_pending_offline_sales() -> Result<Vec<String>, String> {
 
 #[tauri::command]
 fn mark_sales_as_synced(sale_ids: Vec<String>) -> Result<bool, String> {
-    println!("[Rust Sync Worker] Marked {} sales as synced with NestJS Cloud.", sale_ids.len());
+    println!(
+        "[Rust Sync Worker] Marked {} sales as synced with NestJS Cloud.",
+        sale_ids.len()
+    );
     Ok(true)
+}
+
+/// Starts the bundled private PostgreSQL before the local application server.
+#[tauri::command]
+fn start_backend_server(app: tauri::AppHandle, restart: Option<bool>) -> Result<bool, String> {
+    let database = postgres::ensure_running(&app)?;
+    backend::save_env(&app, &database.database_url)?;
+    backend::start(&app, restart.unwrap_or(false))
 }
 
 fn main() {
     tauri::Builder::default()
+        .manage(backend::BackendState::default())
+        .manage(postgres::PostgresState::default())
         .invoke_handler(tauri::generate_handler![
             create_local_sale,
             print_escpos_ticket,
             open_cash_drawer_pulse,
             read_serial_scale_weight,
             get_pending_offline_sales,
-            mark_sales_as_synced
+            mark_sales_as_synced,
+            start_backend_server,
+            backend::check_backend_server
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                backend::stop(app);
+                postgres::stop(app);
+            }
+        });
 }

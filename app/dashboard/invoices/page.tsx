@@ -218,7 +218,11 @@ export default function InvoicesPage() {
     return true
   })
 
-  const completedInvoices = dateFilteredInvoices.filter((i) => i.status === 'COMPLETED' || i.status === 'CONFIRMED' || i.status === 'DRAFT')
+  const completedInvoices = dateFilteredInvoices.filter((i) => {
+    const status = String(i.status || '').toUpperCase()
+    const hasPayment = Array.isArray(i.payments) && i.payments.some((payment: { amount?: unknown }) => Number(payment.amount) > 0)
+    return (status === 'COMPLETED' || status === 'CONFIRMED') && hasPayment
+  })
   const totalBilled = completedInvoices.reduce((acc, curr) => acc + Number(curr.total || 0), 0)
   const invoiceCount = completedInvoices.length
   const avgTicket = invoiceCount > 0 ? totalBilled / invoiceCount : 0

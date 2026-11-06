@@ -57,8 +57,13 @@ describe('INTERNAL_NUMERATION', () => {
     expect(NUMERATION_DOCUMENT_TYPES).toContain(INTERNAL_NUMERATION.documentType)
   })
 
-  it('se reconoce como numeración interna por resolución + prefijo', () => {
+  it('se reconoce por resolución aunque el prefijo sea personalizado', () => {
     expect(isInternalNumeration(INTERNAL_NUMERATION)).toBe(true)
-    expect(isInternalNumeration({ resolution: '18764000001', prefix: 'SETP' })).toBe(false)
+    expect(isInternalNumeration({ ...INTERNAL_NUMERATION, prefix: 'SETT' })).toBe(true)
+  })
+
+  it('no identifica otra resolución como interna por compartir prefijo', () => {
+    expect(isInternalNumeration({ resolution: '18764000001', prefix: 'REC' })).toBe(false)
+    expect(isInternalNumeration({ resolution: '18764000001', prefix: 'SETT' })).toBe(false)
   })
 })

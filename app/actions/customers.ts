@@ -392,7 +392,7 @@ export async function payCustomerCredit(input: {
 
     if (balance <= 0) throw new Error('El cliente no tiene saldo pendiente.')
     if (payment > balance) {
-      throw new Error(`El abono no puede superar el saldo de $${balance.toFixed(2)}.`)
+      throw new Error(`El abono no puede superar el saldo de $${balance.toLocaleString('es-CO')}.`)
     }
 
     const newBalance = Math.round((balance - payment) * 100) / 100

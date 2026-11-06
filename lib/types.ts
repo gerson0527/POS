@@ -83,7 +83,8 @@ export enum EventType {
   INVOICE_GENERATED = 'INVOICE_GENERATED',
   INVOICE_SENT_DIAN = 'INVOICE_SENT_DIAN',
   INVOICE_ACCEPTED = 'INVOICE_ACCEPTED',
-  INVENTORY_ADJUSTED = 'INVENTORY_ADJUSTED'
+  INVENTORY_ADJUSTED = 'INVENTORY_ADJUSTED',
+  CUSTOMER_RETURN_COMPLETED = 'CUSTOMER_RETURN_COMPLETED'
 }
 
 // DTOs
@@ -180,6 +181,27 @@ export interface GenerateInvoiceDTO {
   saleId: string
   resolution: string
   prefix: string
+}
+
+/**
+ * Medio por el que se reintegra el valor al cliente en una devolución.
+ * `NONE` = devolución solo de producto (entra a inventario, la factura original
+ * no se modifica y no se registra egreso de dinero).
+ */
+export type RefundMethod = 'NONE' | 'CASH' | 'CARD' | 'TRANSFER' | 'CREDIT_BALANCE'
+
+export interface CreateCustomerReturnDTO {
+  saleId: string
+  items: {
+    saleItemId: string
+    quantity: number
+  }[]
+  /** Opcional: por defecto `NONE` (solo devolución de producto). */
+  refundMethod?: RefundMethod
+  /** Opcional: si no se envía se registra un motivo genérico. */
+  reason?: string
+  notes?: string
+  refundReference?: string
 }
 
 // Responses

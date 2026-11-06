@@ -4,7 +4,7 @@
 import { db } from '@/lib/db'
 import * as schema from '@/lib/db/schema'
 import { AuditAction } from '@/lib/types'
-import { and, eq, desc, gte, lte, ne, or, type SQL } from 'drizzle-orm'
+import { and, eq, desc, gte, lte, ne, type SQL } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import {
   INTERNAL_NUMERATION,
@@ -13,6 +13,7 @@ import {
   type NumerationInput,
 } from '@/lib/fiscal/numeration'
 import { getUserId, getTenantId, logAudit, requireRole } from './_shared'
+import { safeAction } from './_result'
 
 export async function getNumerations() {
   const userId = await getUserId()
@@ -59,17 +60,13 @@ async function assertNoActiveDuplicate(
 ) {
   if (status !== 'ACTIVE') return
 
-  // La numeración interna REC (tickets POS) coexiste con rangos DIAN del mismo
-  // documentType; no entra en la regla "solo una activa por tipo".
+  // Los comprobantes internos coexisten con rangos DIAN del mismo tipo,
+  // independientemente del prefijo configurado antes de su primera emisión.
   const conditions: SQL[] = [
     eq(schema.numeration.tenantId, tenantId),
     eq(schema.numeration.documentType, documentType),
     eq(schema.numeration.status, 'ACTIVE'),
-    // NOT (resolution=REC AND prefix=REC) ≡ resolution≠… OR prefix≠…
-    or(
-      ne(schema.numeration.resolution, INTERNAL_NUMERATION.resolution),
-      ne(schema.numeration.prefix, INTERNAL_NUMERATION.prefix)
-    )!,
+    ne(schema.numeration.resolution, INTERNAL_NUMERATION.resolution),
   ]
   if (excludeId) conditions.push(ne(schema.numeration.id, excludeId))
 
@@ -85,6 +82,10 @@ async function assertNoActiveDuplicate(
 }
 
 export async function createNumeration(input: NumerationInput) {
+  return safeAction(() => createNumerationInternal(input), 'No se pudo guardar la resolución. Intenta de nuevo.')
+}
+
+async function createNumerationInternal(input: NumerationInput) {
   const userId = await getUserId()
   await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
@@ -110,10 +111,14 @@ export async function createNumeration(input: NumerationInput) {
 
   await logAudit(tenantId, userId, AuditAction.CREATE, 'numeration', id, values)
   revalidatePath('/dashboard/settings')
-  return { id, success: true }
+  return { id, success: true as const }
 }
 
-export async function updateNumeration(
+export async function updateNumeration(id: string, input: Partial<NumerationInput>) {
+  return safeAction(() => updateNumerationInternal(id, input), 'No se pudo actualizar la resolución. Intenta de nuevo.')
+}
+
+async function updateNumerationInternal(
   id: string,
   input: {
     resolution?: string
@@ -154,10 +159,23 @@ export async function updateNumeration(
   if (isInternalNumeration(existing)) {
     if (
       values.resolution !== existing.resolution ||
-      values.prefix !== existing.prefix ||
       values.documentType !== existing.documentType
     ) {
       throw new Error('La numeración interna del POS no se puede renombrar ni cambiar de tipo.')
+    }
+    if (values.prefix !== existing.prefix) {
+      const documents = await db
+        .select({ id: schema.fiscalDocument.id })
+        .from(schema.fiscalDocument)
+        .where(and(
+          eq(schema.fiscalDocument.tenantId, tenantId),
+          eq(schema.fiscalDocument.documentType, existing.documentType),
+          eq(schema.fiscalDocument.prefix, existing.prefix)
+        ))
+        .limit(1)
+      if (existing.currentNumber >= existing.startRange || documents.length > 0) {
+        throw new Error('No se puede cambiar el prefijo de la numeración interna después de emitir comprobantes. Conserve el prefijo para mantener el historial.')
+      }
     }
     if (values.status !== 'ACTIVE') {
       throw new Error(
@@ -187,10 +205,14 @@ export async function updateNumeration(
 
   await logAudit(tenantId, userId, AuditAction.UPDATE, 'numeration', id, values)
   revalidatePath('/dashboard/settings')
-  return { success: true }
+  return { success: true as const }
 }
 
 export async function deleteNumeration(id: string) {
+  return safeAction(() => deleteNumerationInternal(id), 'No se pudo eliminar la resolución. Intenta de nuevo.')
+}
+
+async function deleteNumerationInternal(id: string) {
   const userId = await getUserId()
   await requireRole(userId, ['ADMIN', 'MANAGER'])
   const tenantId = await getTenantId(userId)
@@ -218,5 +240,5 @@ export async function deleteNumeration(id: string) {
 
   await logAudit(tenantId, userId, AuditAction.DELETE, 'numeration', id, {})
   revalidatePath('/dashboard/settings')
-  return { success: true }
+  return { success: true as const }
 }

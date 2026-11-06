@@ -314,6 +314,11 @@ export function PaymentModal({ open, saleId, total, loading, customerCredit, onB
                         onChange={(e) => setLineAmount(line.id, e.target.value)}
                         className="bg-veil px-3 py-2 font-mono text-xs outline-none font-bold"
                       />
+                      {Number(line.amount) > 0 && (
+                        <span className="text-[10px] text-success font-mono font-bold block mt-0.5">
+                          {formatCOP(Number(line.amount))}
+                        </span>
+                      )}
                     </div>
                   </div>
 

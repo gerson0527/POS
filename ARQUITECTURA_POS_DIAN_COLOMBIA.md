@@ -1,8 +1,10 @@
 # ARQUITECTURA: SISTEMA POS CON FACTURACIÓN ELECTRÓNICA DIAN (COLOMBIA)
 
-**Versión:** 4.0 — documento de solo lo implementado
+**Versión:** 5.0 — actualización basada en el árbol de trabajo actual (2026-11-06)
 **Stack real:** Next.js 16 (App Router) · React 19 · TypeScript strict · Drizzle ORM · PostgreSQL · Better Auth · Tailwind v4 · Vitest · Tauri (opcional)
 **Provedor fiscal:** Factus (api.factus.com.co / api-sandbox.factus.com.co) — XML/QR a nombre del usuario final, certificado del proveedor
+
+> Esta nota describe el código presente en el árbol de trabajo, que puede incluir cambios aún no confirmados. Contrasta cada flujo con su implementación antes de usarla como contrato de producción.
 
 ---
 
@@ -17,20 +19,21 @@ No hay NestJS, Prisma, Redis, BullMQ ni microservicios: es un monolito Next.js c
 ```
 UI React (app/, components/)  —  páginas del dashboard, modales, Tailwind v4
         │
-Server Actions (app/actions/) —  única puerta de escritura; 'use server' en línea 1
+Server Actions (app/actions/) —  operaciones del UI con sesión/roles; 'use server' en línea 1
         │
-Lógica de dominio (lib/)      —  facturación, fiscal, catálogos, utils puras
+Lógica de dominio (lib/)      —  ventas, fiscal, inventario, devoluciones, backup y canales
         │
 Drizzle (lib/db/schema/)      —  esquema por dominio; migraciones drizzle-kit
         │
 PostgreSQL                    —  BD master + 1 BD física por tenant
         ↕
-API Factus (HTTPS + OAuth2)   —  bills/validate, bills/send, numbering-ranges
+API Factus (HTTPS + OAuth2)   —  bills/validate, consulta de factura/enlaces y numbering-ranges
 ```
 
-- **Sin API REST propia para el UI**: el frontend llama Server Actions directamente. Existe una API pública mínima bajo `/api/v1` (requiere sesión + header `X-Tenant-ID`).
-- **Sin colas**: la emisión de facturas es síncrona desde la acción; los fallos se reintentan a mano desde `/dashboard/invoices`.
+- **Sin API REST propia para el UI**: el frontend llama Server Actions directamente. Existen endpoints API para integraciones, cron, salud, setup y backup; `/api/v1` requiere sesión + header `X-Tenant-ID`.
+- **Cola fiscal durable**: `fiscal_outbox` registra la emisión junto con la venta; `/api/cron/fiscal-outbox` procesa pendientes con reintentos y reconciliación. El modo MANUAL excluye sus eventos del cron hasta la transmisión explícita.
 - **Edge**: `proxy.ts` (middleware) protege rutas, exige tenant en `/api/v1` y agrega headers de seguridad OWASP.
+- **APIs de apoyo**: backup SQL autenticado en `/api/backup`, salud en `/api/health`, canales en `/api/channels/*` y cron fiscal.
 
 ## 3. Multi-tenant: una BD por tenant
 
@@ -43,7 +46,7 @@ Patrón **database-per-tenant** (no RLS):
 
 - `lib/db/tenant-connection.ts` — `getTenantDb(slug)` con cache de pools; slug `default` usa el master.
 - `lib/db/tenant-provisioner.ts` — `CREATE DATABASE pos_tenant_<slug>` + `runMigrations()` al crear un tenant (`createTenantWithAdmin` en `app/actions/tenants.ts`).
-- Modo Tauri (escritorio): cada tenant es un archivo SQLite `<data_dir>/tenants/<slug>.db` (detección por `TAURI_DB_PATH`).
+- Modo Tauri (escritorio): el runtime actual inicia un PostgreSQL 17 privado empaquetado y configura el backend local con su URL. `src-tauri/src/postgres.rs` gestiona el proceso y los datos de la aplicación. Hay comentarios/rama heredados sobre SQLite y `TAURI_DB_PATH` en `lib/db/tenant-connection.ts`; no asumir que representan el camino activo de escritorio sin verificar el arranque.
 - `tenant.dbSlug` identifica la BD; `tenant.factus*` guarda las credenciales del proveedor por empresa.
 
 ## 4. Sesión, roles y aislamiento
@@ -55,23 +58,21 @@ Patrón **database-per-tenant** (no RLS):
 - **Auditoría**: `logAudit()` y `publishEvent()` (`app/actions/_shared.ts`) escriben en `audit_log` y `event`.
 - Errores de sesión tipados en `lib/auth/errors.ts` (`CODE: detalle`).
 
-## 5. Modelo de datos (30 tablas Drizzle)
+## 5. Modelo de datos
 
 Esquema en `lib/db/schema/` (fuente única; migraciones con `npm run db:generate` / `db:migrate`):
 
-| Dominio | Archivo | Tablas |
+| Dominio | Archivo | Responsabilidad |
 |---------|---------|--------|
-| Auth (Better Auth) | `auth.ts` | `user`, `session`, `account`, `verification` |
-| Tenancy | `tenancy.ts` | `tenant`, `user_tenant`, `location` |
-| Catálogo e inventario | `catalog.ts` | `category`, `product`, `product_category`, `inventory`, `inventory_movement`, `stock_alert` |
-| Clientes | `customers.ts` | `customer`, `customer_credit_transaction` |
-| Ventas y caja | `sales.ts` | `cashier_session`, `cash_movement`, `sale`, `sale_item`, `payment` |
-| Fiscal | `fiscal.ts` | `numeration` (consecutivos locales), `fiscal_document` (facturas electrónicas) |
-| Compras | `purchasing.ts` | `supplier`, `purchase_order`, `purchase_order_item` |
-| Auditoría | `audit.ts` | `audit_log`, `event` |
-| Plataforma | `platform.ts` | `api_key`, `webhook`, `subscription` |
+| Auth y tenancy | `auth.ts`, `tenancy.ts` | Usuarios, sesiones, empresas, membresías y sedes |
+| Catálogo e inventario | `catalog.ts` | Productos, categorías, existencias y movimientos |
+| Clientes y ventas | `customers.ts`, `sales.ts` | Clientes/crédito, turnos de caja, ventas, ítems y pagos |
+| Devoluciones | `returns.ts` | Devoluciones y sus ítems |
+| Fiscal | `fiscal.ts`, `outbox.ts` | Numeración interna, documentos DIAN y cola de emisión/reconciliación |
+| Compras y auditoría | `purchasing.ts`, `audit.ts` | Proveedores/órdenes, bitácora y eventos |
+| Plataforma y asistente | `platform.ts`, `assistant.ts` | Claves API y entidades de canales, mensajes, borradores y alias |
 
-Tipos de identidad: `text` con ids legibles (`sale_...`, `fact_...`, `num_...`); montos `numeric`; fechas `timestamp`.
+El índice de esquemas es `lib/db/schema/index.ts`; las migraciones versionadas están en `drizzle/`. Tipos de identidad: `text` con ids legibles; montos `numeric`; fechas `timestamp`.
 
 ## 6. Flujo de venta (POS)
 
@@ -79,7 +80,7 @@ Tipos de identidad: `text` con ids legibles (`sale_...`, `fact_...`, `num_...`);
 2. **Pago** — `components/pos/PaymentModal.tsx`: modo único o **split** (varios métodos por venta). Reglas puras en `lib/utils/payment-splits.ts`:
    - `|suma pagos − total| ≤ 100` COP (redondeo a la centena vía `roundToNearest100`).
    - Medios no-efectivo exigen referencia (voucher/datáfono).
-3. **`completeSale`** (`app/actions/sales.ts`): crea `payment`(s), decrementa `inventory`, marca la venta; descuento opcional por porcentaje.
+3. **`completeSale`** (`app/actions/sales.ts` → `lib/sales/service.ts`): completa la venta con sus pagos y cambios de inventario; la emisión fiscal se encola en `fiscal_outbox` dentro del flujo transaccional.
 4. **Ticket local** — `generateInvoice()` reserva consecutivo de la tabla `numeration` (prefijo REC, folio de tickets internos) con fallback automático: si no hay resolución configurada, se crea una por defecto; **una numeración faltante nunca bloquea la venta**.
 5. **Grid POS** — el stock mostrado descuenta cantidades del carrito en tiempo real (solo vista; la validación real es en `useCart`/server).
 
@@ -97,14 +98,14 @@ Credenciales en la tabla `tenant` (`factusClientId/Secret/Username/Password`, `f
 
 1. **Idempotencia**: si `fiscal_document` ya tiene CUFE para la venta, se retorna sin re-enviar.
 2. `loadInvoiceContext()` + `buildInvoicePayload()` (`lib/invoicing/build-bill.ts`): cliente, ítems con IVA, pagos, totales exactos.
-3. `FactusProvider.sendInvoice()` (`lib/invoicing/factus.ts`): OAuth2 con `TokenCache` (`factus-http.ts`) → `POST /v2/bills/validate` → si ok, `POST /v2/bills/send`.
+3. `FactusProvider.sendInvoice()` (`lib/invoicing/factus.ts`): OAuth2 con token cacheado → `POST /v2/bills/validate`; luego consulta los enlaces de la factura. El código contempla 409 por factura pendiente, expiración del token y reconciliación ante respuestas inciertas.
 4. Respuesta mapeada (`factus-mappers.ts`): se persiste `fiscal_document` con **CUFE**, estado DIAN (`mapFiscalStatus` en `lib/catalogs/dian-status.ts`), XML, PDF y links.
 5. **QR**: `qrCodeContent` = URL de consulta DIAN devuelta por Factus; fallback local `dianQrUrl(cufe, environment)` (`lib/fiscal/cufe.ts`) → `https://catalogo-vpfe[-hab].dian.gov.co/document/searchqr?documentkey=<CUFE>`.
 6. Errores: `InvoiceProviderError` con `CODE:` + status HTTP; el detalle crudo se conserva para diagnóstico.
 
 ### 7.3 Estados y reintentos
 
-Estados fiscales centralizados en `lib/catalogs/dian-status.ts` (transmitida, rechazada, pendiente…). El botón **TRANSMITIR DIAN** en `/dashboard/invoices` re-emite documentos pendientes/rechazados a mano. No hay worker automático.
+Estados fiscales centralizados en `lib/catalogs/dian-status.ts` (transmitida, rechazada, pendiente…). `lib/fiscal/outbox.ts` reclama eventos pendientes de forma concurrente segura, aplica reintentos con backoff y puede reconciliar resultados externos inciertos. El endpoint `app/api/cron/fiscal-outbox/route.ts` está programado en `vercel.json`; la emisión manual se gestiona desde `/dashboard/invoices`. Los eventos con aprobación manual requerida no los toma el cron.
 
 ### 7.4 Numeración: dos mundos
 
@@ -124,43 +125,44 @@ Estados fiscales centralizados en `lib/catalogs/dian-status.ts` (transmitida, re
 
 ## 9. Frontend
 
-Rutas bajo `app/dashboard/`: `pos` / `pos-terminal` (venta), `invoices` (directorio + detalle + XML), `inventory`, `customers` (crédito interno: cupo, abonos, bloqueo), `cashier`, `cash-closure` (cierre Z), `reports`, `users`, `settings` (empresa, Factus, numeraciones, usuarios), `onboarding`, `categories`, `dian`.
+Rutas bajo `app/dashboard/`: `pos` / `pos-terminal` (venta), `invoices` (directorio + detalle + XML), `inventory`, `customers` (crédito interno: cupo, abonos, bloqueo), `returns`, `cashier`, `cash-closure` (cierre Z), `reports`, `users`, `settings` (empresa, Factus, numeraciones, usuarios y backup), `onboarding`, `categories`, `dian`.
 
 Componentes: `components/ui/*` (DataTable, modales, NumberPromptModal — reemplazo del `prompt()` nativo), `components/tactical/*` (SectionPanel, TacticalButton), `components/pos/*`, `components/invoices/*`, `components/settings/*`. Tema oscuro con 89 design tokens en `@theme inline` (Tailwind v4). Gráficos con Recharts; QR con `qrcode.react`.
 
 ## 10. Estructura del repo
 
 ```
-app/                  páginas App Router + actions/ (Server Actions por dominio)
-components/           UI (ui/, tactical/, pos/, invoices/, settings/, ...)
+app/                  páginas App Router, Server Actions y endpoints API
+  dashboard/          POS, caja, inventario, clientes, facturas, devoluciones, reportes y ajustes
+  api/                auth, backup, channels, cron, health, reports, setup y v1
+components/           UI por dominio (pos/, invoices/, inventory/, returns/, settings/, tactical/)
 lib/
-  auth/               session-context, errors
-  db/                 index, tenant-connection, tenant-provisioner, migrate, schema/
-  invoicing/          Factus: types, factus-http, factus, build-bill, emit-invoice, mappers
-  fiscal/             cufe.ts (CUFE + QR DIAN)
-  catalogs/           dian-status, payment-methods, customers
-  utils/              payment-splits, pos-utils, date-ranges, format
-  hooks/              use-cart, use-protected-query
-  reports/            render, pdf-generator (Puppeteer)
+  auth/, db/          autenticación, tenancy, conexiones y esquemas Drizzle
+  sales/, pos/, cash/ servicios de venta, punto de venta y caja
+  fiscal/, invoicing/ cola fiscal, Factus, payloads, CUFE y estado DIAN
+  inventory/, returns/ inventario y devoluciones
+  backup/, assistant/, channels/ respaldo y asistente por canales
+  reports/, api/      reportes y utilidades de API
+drizzle/              migraciones SQL y journal
+test/                 Vitest organizado por dominio e integración
+scripts/              migraciones, seed, diagnóstico, preparación desktop y asistente
+src-tauri/            runtime desktop, backend Next empaquetado y PostgreSQL privado
+postman-dian/         colecciones de prueba
+docs/obsidian/        notas operativas del vault
 proxy.ts              middleware (auth, tenant, headers)
-drizzle/              migraciones generadas
-test/                 vitest (7 archivos, 70 tests)
-scripts/              seed, db-migrate
-src-tauri/            empaquetado escritorio (opcional)
-postman-dian/         colecciones de prueba API
 ```
 
 ## 11. Calidad y verificación
 
-Gate obligatorio tras cada cambio (en Windows usar `C:\nvm4w\nodejs\node.exe` si el `node` del PATH está roto):
+Comprobaciones disponibles en `package.json`:
 
 ```powershell
-node .\node_modules\typescript\bin\tsc --noEmit          # 0 errores
-node .\node_modules\vitest\vitest.mjs run                # 70/70 (7 archivos)
-node .\node_modules\next\dist\bin\next build             # build limpio
+npm run typecheck
+npm test
+npm run build
 ```
 
-Tests: `test/pos/payment-splits` (split + clasificador de medio de pago), `test/invoicing/build-bill`, `test/invoicing/factus-mappers`, `test/fiscal/cufe`, `test/catalogs/*`, `test/reports/escape`.
+Tests: `test/` se organiza por acciones, asistente, auth, backup, caja, catálogos, crédito, DB, fiscal, inventario, facturación, POS, reportes y devoluciones. Ejecuta `npm test` para la suite actual; no se fija aquí un conteo, porque cambia con el árbol de trabajo.
 
 Smoke: dev server en :3000; rutas públicas 200/307; `/api/v1/invoices` sin sesión → 401.
 
@@ -169,9 +171,9 @@ Smoke: dev server en :3000; rutas públicas 200/307; `/api/v1/invoices` sin sesi
 - **Scripts npm**: `dev` (corre `predev` → `db:doctor --soft`), `build`, `typecheck`, `test`, `db:generate`, `db:migrate`, `db:push`, `db:studio`, `db:seed`, `db:doctor`, `tauri:dev`, `tauri:build`.
 - **Variables**: `DATABASE_URL` (o `POSTGRES_*`), `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`; credenciales Factus NO van en env: van por tenant en BD (con cifrado).
 - **Docker**: `docker-compose.yml` (Postgres) + Dockerfiles de app; `start.bat` / `stop.bat` locales.
-- **Usuario admin semilla**: `admin@posdian.com` / `Admin123456!` (cambiar en producción).
-- **DB local de desarrollo**: `postgresql://...@localhost:5432/pruebas_POS`.
+- **Configuración**: usar `.env.example` como referencia y crear `.env` local con secretos propios; no copiar valores de ejemplo ni documentar credenciales reales en el vault.
+- **Desktop**: Tauri empaqueta el backend de producción y PostgreSQL privado; `npm run build:desktop` prepara la distribución.
 
 ## 13. Fuera de alcance actual
 
-No implementado (era diseño aspiracional de versiones anteriores): NestJS/Prisma/BullMQ/Redis, colas y workers, S3, Prometheus/Datadog, firma XML propia (la firma la hace Factus), RLS a nivel SQL, contingencia DIAN offline, agente de hardware ESC/POS, portal de cliente, compras RADIAN, conectores ERP, DRP/Kubernetes. La pestaña "RESOLUCIONES DIAN" de settings solo gestiona tickets locales REC; la numeración fiscal electrónica se controla con los rangos de Factus.
+No implementado: NestJS/Prisma/Redis/BullMQ, firma XML propia (la firma la hace Factus), RLS a nivel SQL, contingencia DIAN offline completa, portal de cliente, compras RADIAN, conectores ERP y DRP/Kubernetes. La cola fiscal sí está implementada mediante `fiscal_outbox`; no confundirla con BullMQ. Los comandos nativos de impresión, báscula y ventas offline en `src-tauri/src/main.rs` son actualmente demostrativos, no una integración de hardware/contingencia lista para producción. La pestaña "RESOLUCIONES DIAN" gestiona numeración local REC; la numeración fiscal electrónica se controla con los rangos de Factus.

@@ -113,8 +113,8 @@ export async function createPurchaseOrder(input: {
     input.notes,
     input.productName ? `Producto: ${input.productName}` : null,
     input.quantity ? `Cantidad: ${input.quantity}` : null,
-    input.cost !== undefined ? `Costo: $${input.cost}` : null,
-    input.unitPrice !== undefined ? `Precio Venta: $${input.unitPrice}` : null,
+    input.cost !== undefined ? `Costo: $${Number(input.cost).toLocaleString('es-CO')}` : null,
+    input.unitPrice !== undefined ? `Precio Venta: $${Number(input.unitPrice).toLocaleString('es-CO')}` : null,
     input.margin !== undefined ? `Margen: ${input.margin}%` : null,
   ]
     .filter(Boolean)

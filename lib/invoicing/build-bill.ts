@@ -126,7 +126,7 @@ export function buildItems(items: any[], discountPercentage = 0): InvoiceItemPay
  *  el cobro en efectivo a la centena, así que reconciliamos aquí el monto. */
 export function buildPayments(payments: any[], invoiceTotal: number): InvoicePaymentDetailPayload[] {
   if (!payments || payments.length === 0) {
-    return [{ payment_form: '1', payment_method_code: '10', amount: toMoneyString(invoiceTotal) }]
+    throw new Error('La venta no tiene pagos registrados; no se puede emitir la factura.')
   }
   if (payments.length === 1) {
     const p = payments[0]

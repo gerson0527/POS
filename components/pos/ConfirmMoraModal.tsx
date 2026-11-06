@@ -39,15 +39,15 @@ export function ConfirmMoraModal({ open, customer, creditInfo, onClose, onConfir
           <strong className="text-alert">crédito en mora</strong>.
         </div>
         <div className="grid grid-cols-2 gap-2 mt-2">
-          <div className="bg-input p-2 rounded">
-            <div className="text-[9px] text-fg-muted uppercase font-bold">Saldo pendiente</div>
-            <div className="text-alert font-bold">
+          <div className="bg-input p-2 rounded min-w-0 overflow-hidden">
+            <div className="text-[9px] text-fg-muted uppercase font-bold truncate">Saldo pendiente</div>
+            <div className="text-alert font-bold truncate" title={formatCOP(creditInfo.balance)}>
               {formatCOP(creditInfo.balance)}
             </div>
           </div>
-          <div className="bg-input p-2 rounded">
-            <div className="text-[9px] text-fg-muted uppercase font-bold">Cupo total</div>
-            <div className="text-fg font-bold">
+          <div className="bg-input p-2 rounded min-w-0 overflow-hidden">
+            <div className="text-[9px] text-fg-muted uppercase font-bold truncate">Cupo total</div>
+            <div className="text-fg font-bold truncate" title={formatCOP(creditInfo.limit)}>
               {formatCOP(creditInfo.limit)}
             </div>
           </div>

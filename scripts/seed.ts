@@ -6,8 +6,39 @@ import { runMigrations } from '../lib/db/migrate'
 import * as schema from '../lib/db/schema'
 import { eq } from 'drizzle-orm'
 
-export async function runSeed() {
+export interface SeedConfig {
+  /** Email del administrador principal */
+  adminEmail?: string
+  /** Nombre completo del administrador */
+  adminName?: string
+  /** Contraseña del administrador (mínimo 12 caracteres) */
+  adminPassword?: string
+  /** Nombre legal / razón social de la empresa */
+  companyName?: string
+  /** NIT de la empresa (ej: 901234567-8) */
+  companyNit?: string
+  /** Email de facturación de la empresa */
+  companyEmail?: string
+  /** Teléfono de la empresa */
+  companyPhone?: string
+  /** Dirección de la empresa */
+  companyAddress?: string
+}
+
+export async function runSeed(config?: SeedConfig) {
+  // Prioridad: config explícito → variables de entorno → valores por defecto
+  const adminEmail     = config?.adminEmail     || process.env.SETUP_ADMIN_EMAIL     || 'admin@posretail.co'
+  const adminName      = config?.adminName      || process.env.SETUP_ADMIN_NAME      || 'Administrador POS'
+  const adminPassword  = config?.adminPassword  || process.env.SETUP_ADMIN_PASSWORD  || 'Admin12345pos!'
+  const companyName    = config?.companyName    || process.env.SETUP_COMPANY_NAME    || 'Comercializadora POS Retail S.A.S.'
+  const companyNit     = config?.companyNit     || process.env.SETUP_COMPANY_NIT     || '901234567-8'
+  const companyEmail   = config?.companyEmail   || process.env.SETUP_COMPANY_EMAIL   || 'facturacion@posretail.co'
+  const companyPhone   = config?.companyPhone   || process.env.SETUP_COMPANY_PHONE   || '+57 601 555 0199'
+  const companyAddress = config?.companyAddress || process.env.SETUP_COMPANY_ADDRESS || 'Carrera 15 # 93-47, Bogotá, D.C.'
+
   console.log('🌱 Iniciando Generación de Semilla POS DIAN (10 Proveedores, 100 Productos, Inventarios & Clientes)...')
+  console.log(`   Empresa : ${companyName}`)
+  console.log(`   Admin   : ${adminEmail}`)
 
   await runMigrations(pool, { adoptExisting: true })
 
@@ -16,9 +47,9 @@ export async function runSeed() {
   // 0. Usuario Administrador
   const usersToSeed = [
     {
-      email: 'gersongio0527@gmail.com',
-      password: '12345678password',
-      name: 'Gerson Ortiz',
+      email: adminEmail,
+      password: adminPassword,
+      name: adminName,
       role: 'ADMIN',
     },
   ]
@@ -78,17 +109,17 @@ export async function runSeed() {
   if (!existingTenants.length) {
     await db.insert(schema.tenant).values({
       id: tenantId,
-      name: 'Comercializadora POS Retail S.A.S.',
-      nit: '901234567-8',
-      legalName: 'Comercializadora POS Retail S.A.S.',
-      email: 'facturacion@posretail.co',
-      phone: '+57 601 555 0199',
-      address: 'Carrera 15 # 93-47, Bogotá, D.C.',
+      name: companyName,
+      nit: companyNit,
+      legalName: companyName,
+      email: companyEmail,
+      phone: companyPhone,
+      address: companyAddress,
       dianEnvironment: 'TEST',
       status: 'ACTIVE',
       onboardingCompleted: 'SI',
       onboardingCompletedAt: new Date(),
-      onboardingCompletedBy: 'admin@posdian.com',
+      onboardingCompletedBy: adminEmail,
       createdAt: new Date(),
       updatedAt: new Date(),
     })
@@ -97,11 +128,18 @@ export async function runSeed() {
     await db
       .update(schema.tenant)
       .set({
+        name: companyName,
+        legalName: companyName,
+        nit: companyNit,
+        email: companyEmail,
+        phone: companyPhone,
+        address: companyAddress,
         onboardingCompleted: 'SI',
         onboardingCompletedAt: new Date(),
-        onboardingCompletedBy: 'admin@posdian.com',
+        onboardingCompletedBy: adminEmail,
       })
       .where(eq(schema.tenant.id, tenantId))
+    console.log('✅ Tenant actualizado con datos de la empresa')
   }
 
   // 2. Sucursales (3 Sólidas en Principales Ciudades)
@@ -352,7 +390,7 @@ export async function runSeed() {
   console.log('🎉 SEED COMPLETO COMPLETADO CON ÉXITO.')
   console.log('----------------------------------------------------')
   console.log('📊 RESUMEN BASE DE DATOS POSTGRESQL:')
-  console.log('   - Tenant: 1 (Comercializadora POS Retail S.A.S.)')
+  console.log(`   - Empresa  : ${companyName} (NIT ${companyNit})`)
   console.log('   - Sucursales: 3 (Bogotá, Medellín, Cali)')
   console.log('   - Proveedores: 10 Empresas Mayoristas')
   console.log('   - Clientes: 10 Clientes Frecuentes')
@@ -362,8 +400,8 @@ export async function runSeed() {
   console.log('----------------------------------------------------')
   console.log('🔐 CUENTA DE ACCESO CREADA:')
   console.log('   - URL Login: http://localhost:3000/login')
-  console.log('   - Admin: gersongio0527@gmail.com (rota la contraseña por un canal seguro)')
-  console.log('   - Panel de Administración Multi-Tenant: /dashboard/users (Pestaña "Empresas / SAS")')
+  console.log(`   - Admin: ${adminEmail}`)
+  console.log('   - (Cambia la contraseña por seguridad en el primer ingreso)')
   console.log('----------------------------------------------------')
 }
 

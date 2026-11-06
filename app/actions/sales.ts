@@ -29,6 +29,7 @@ import {
   SALE_ROLES,
   createSale as createSaleForActor,
   completeSale as completeSaleForActor,
+  cancelUnpaidDraft as cancelUnpaidDraftForActor,
 } from '@/lib/sales/service'
 import { safeAction } from './_result'
 
@@ -44,6 +45,16 @@ async function createSaleInternal(input: CreateSaleDTO) {
   const result = await createSaleForActor(actor, input)
   revalidatePath('/pos')
   return { ...result, success: true as const }
+}
+
+export async function cancelUnpaidDraft(saleId: string) {
+  return safeAction(async () => {
+    const actor = await requireActor([...SALE_ROLES])
+    await cancelUnpaidDraftForActor(actor, saleId)
+    revalidatePath('/dashboard/invoices')
+    revalidatePath('/dashboard/pos')
+    return { success: true as const }
+  }, 'No se pudo anular el borrador sin pago.')
 }
 
 export async function getSale(saleId: string) {
@@ -88,15 +99,14 @@ async function getOrCreateInternalNumeration(tenantId: string) {
       .where(
         and(
           eq(schema.numeration.tenantId, tenantId),
-          eq(schema.numeration.resolution, INTERNAL_NUMERATION.resolution),
-          eq(schema.numeration.prefix, INTERNAL_NUMERATION.prefix)
+          eq(schema.numeration.resolution, INTERNAL_NUMERATION.resolution)
         )
       )
       .limit(1)
 
   const existing = await find()
   if (existing[0]) {
-    // REC es infraestructura del POS: si quedó inactiva o con tipo erróneo
+    // La numeración interna es infraestructura del POS: si quedó inactiva o con tipo erróneo
     // (p. ej. al activar otro DOCUMENTO_EQUIVALENTE_POS), se repara sola.
     const needsRepair =
       existing[0].status !== 'ACTIVE' ||
@@ -176,24 +186,24 @@ export async function generateInvoice(input: GenerateInvoiceDTO) {
     }
   }
 
-  // El comprobante interno REC es un documento SEPARADO de la factura
-  // electrónica: nunca se sobrescribe con el número fiscal de Factus.
+  const num = await getOrCreateInternalNumeration(tenantId)
+
+  // El tipo distingue el comprobante interno de la factura electrónica aunque
+  // compartan prefijo. Se conservan también los comprobantes REC anteriores.
   const existingDoc = existingDocs.find(
     (doc) =>
       doc.documentType === INTERNAL_NUMERATION.documentType &&
-      doc.prefix === INTERNAL_NUMERATION.prefix
+      (doc.prefix === num.prefix || doc.prefix === INTERNAL_NUMERATION.prefix)
   )
 
   // Idempotencia del comprobante interno: si ya existe uno pendiente, se reutiliza.
-  if (existingDoc?.fullNumber && existingDoc.prefix === INTERNAL_NUMERATION.prefix) {
+  if (existingDoc?.fullNumber) {
     return {
       invoiceId: existingDoc.id,
       invoiceNumber: existingDoc.fullNumber,
       success: true,
     }
   }
-
-  const num = await getOrCreateInternalNumeration(tenantId)
 
   const result = await db.transaction(async (tx) => {
     // Reserva atómica del consecutivo: una sola sentencia evita duplicados por

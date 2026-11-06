@@ -8,6 +8,7 @@ import { useSyncManager } from '@/hooks/useSyncManager'
 import { useTelemetryDiagnostics } from '@/hooks/useTelemetryDiagnostics'
 import { useToast } from '@/components/ui/ToastProvider'
 import { DataTable } from '@/components/ui/DataTable'
+import { formatCOP } from '@/lib/utils/pos-utils'
 import {
   ShoppingCart,
   Printer,
@@ -109,50 +110,50 @@ export default function POSTerminalDualPage() {
             onClick={handleCheckout}
             disabled={isProcessing || cart.length === 0}
           >
-            <ShoppingCart className="w-3.5 h-3.5 mr-1" /> PROCESAR COBRO (${total.toLocaleString('es-CO')})
+            <ShoppingCart className="w-3.5 h-3.5 mr-1" /> PROCESAR COBRO ({formatCOP(total)})
           </TacticalButton>
         </div>
       </div>
 
       {/* STATUS BADGES BAR */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-        <div className="bg-surface border border-line-dim rounded-lg p-3">
-          <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">ENTORNO DE EJECUCIÓN</p>
-          <div className="flex items-center gap-1.5 mt-1 text-accent font-bold">
+        <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+          <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">ENTORNO DE EJECUCIÓN</p>
+          <div className="flex items-center gap-1.5 mt-1 text-accent font-bold min-w-0">
             <Cpu className="w-4 h-4 shrink-0 text-accent" />
             <span className="truncate">{isTauri ? 'TAURI 2.X DESKTOP' : 'WEB BROWSER CLOUD'}</span>
           </div>
         </div>
 
-        <div className="bg-surface border border-line-dim rounded-lg p-3">
-          <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">ESTADO RED / OFFLINE</p>
-          <div className="flex items-center gap-1.5 mt-1 font-bold">
+        <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+          <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">ESTADO RED / OFFLINE</p>
+          <div className="flex items-center gap-1.5 mt-1 font-bold min-w-0">
             {isOnline ? (
               <>
                 <Wifi className="w-4 h-4 text-ok shrink-0" />
-                <span className="text-ok">ONLINE CLOUD</span>
+                <span className="text-ok truncate">ONLINE CLOUD</span>
               </>
             ) : (
               <>
                 <WifiOff className="w-4 h-4 text-alert shrink-0" />
-                <span className="text-alert">OFFLINE (OUTBOX)</span>
+                <span className="text-alert truncate">OFFLINE (OUTBOX)</span>
               </>
             )}
           </div>
         </div>
 
-        <div className="bg-surface border border-line-dim rounded-lg p-3">
-          <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">COLA DE SINCRONIZACIÓN</p>
-          <p className="text-sm font-black text-cyan mt-1">
+        <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+          <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">COLA DE SINCRONIZACIÓN</p>
+          <p className="text-sm font-black text-cyan mt-1 truncate">
             {queueSummary.pending} pendientes / {queueSummary.synced} sinc
           </p>
         </div>
 
-        <div className="bg-surface border border-line-dim rounded-lg p-3">
-          <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider">LATENCIA CHECKOUT</p>
-          <div className="flex items-center gap-1.5 mt-1 font-bold text-success">
+        <div className="bg-surface border border-line-dim rounded-lg p-3 min-w-0 overflow-hidden">
+          <p className="text-[9px] text-fg-muted font-bold uppercase tracking-wider truncate">LATENCIA CHECKOUT</p>
+          <div className="flex items-center gap-1.5 mt-1 font-bold text-success min-w-0">
             <Activity className="w-4 h-4 text-success shrink-0" />
-            <span>{metricsSummary.avgCheckoutLatencyMs} ms</span>
+            <span className="truncate">{metricsSummary.avgCheckoutLatencyMs} ms</span>
           </div>
         </div>
 
@@ -182,7 +183,7 @@ export default function POSTerminalDualPage() {
                     header: 'PRECIO UNIDAD',
                     align: 'right',
                     cellClassName: 'font-mono',
-                    render: (item: any) => `$${item.price.toLocaleString('es-CO')}`,
+                    render: (item: any) => formatCOP(item.price),
                   },
                   {
                     key: 'ivaRate',
@@ -197,7 +198,7 @@ export default function POSTerminalDualPage() {
                     align: 'right',
                     cellClassName: 'font-bold font-mono text-success',
                     render: (item: any) =>
-                      `$${(item.price * item.qty * (1 + item.ivaRate / 100)).toLocaleString('es-CO')}`,
+                      formatCOP(item.price * item.qty * (1 + item.ivaRate / 100)),
                   },
                 ]}
                 rows={cart}
@@ -210,15 +211,15 @@ export default function POSTerminalDualPage() {
               <div className="bg-night p-4 border border-line-soft rounded-lg space-y-2 text-xs">
                 <div className="flex justify-between text-fg-muted">
                   <span>Subtotal Neto:</span>
-                  <span className="text-fg font-semibold">${subtotal.toLocaleString('es-CO')}</span>
+                  <span className="text-fg font-semibold">{formatCOP(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-fg-muted">
                   <span>IVA Recaudado:</span>
-                  <span className="text-cyan font-bold">+${taxAmount.toLocaleString('es-CO')}</span>
+                  <span className="text-cyan font-bold">+{formatCOP(taxAmount)}</span>
                 </div>
                 <div className="flex justify-between text-base font-black text-accent border-t border-line-soft pt-2">
                   <span>TOTAL A COBRAR:</span>
-                  <span>${total.toLocaleString('es-CO')}</span>
+                  <span>{formatCOP(total)}</span>
                 </div>
               </div>
 
